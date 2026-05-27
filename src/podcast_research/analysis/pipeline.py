@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def get_llm_provider(provider_name: str) -> LLMProvider:
     if provider_name == "mock":
         return MockLLMProvider()
-    if provider_name == "openai-compatible":
+    if provider_name in ("openai-compatible", "openai_compatible"):
         from podcast_research.llm.openai_compatible_provider import OpenAICompatibleProvider
         from podcast_research.config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
         if not LLM_API_KEY:

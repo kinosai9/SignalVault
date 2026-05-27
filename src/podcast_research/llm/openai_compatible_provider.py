@@ -52,7 +52,7 @@ class OpenAICompatibleProvider(LLMProvider):
         self.timeout = timeout
 
     def _chat(self, system: str, user: str) -> str:
-        url = f"{self.base_url}/v1/chat/completions"
+        url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

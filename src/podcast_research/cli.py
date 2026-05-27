@@ -1,4 +1,4 @@
-"""CLI 入口：python -m podcast_research <subtitle_file> --mock"""
+"""CLI 入口：python -m podcast_research <subtitle_file>"""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from podcast_research.analysis.pipeline import analyze as run_analyze
-from podcast_research.config import ensure_dirs
+from podcast_research.config import LLM_PROVIDER, ensure_dirs
 from podcast_research.logging_config import setup_logging
 
 console = Console()
@@ -20,13 +20,13 @@ app = typer.Typer(
 @app.callback()
 def main(
     subtitle_file: Path = typer.Option(None, help="字幕文件路径 (.srt/.txt)"),
-    mock: bool = typer.Option(True, help="使用 mock LLM（P0 默认）"),
+    mock: bool = typer.Option(None, help="使用 mock 规则引擎（覆盖 .env 配置）"),
     output: Path | None = typer.Option(None, "-o", help="报告输出目录"),
     verbose: bool = typer.Option(False, "-v", help="详细日志"),
 ) -> None:
     """分析本地字幕文件，生成结构化投资研究报告。"""
     if subtitle_file is None:
-        console.print("请提供字幕文件路径。用法: python -m podcast_research <subtitle_file>")
+        console.print("请提供字幕文件路径。用法: python -m podcast_research --subtitle-file <file>")
         raise typer.Exit(code=1)
 
     if not subtitle_file.exists():
@@ -37,10 +37,18 @@ def main(
     setup_logging(level)
     ensure_dirs()
 
-    console.print(Panel(f"分析字幕: {subtitle_file}", title="投资播客研究助手"))
+    # 确定 provider：--mock 强制 mock，否则从 .env 读取
+    if mock is True:
+        provider = "mock"
+    elif mock is False:
+        provider = "openai-compatible"
+    else:
+        provider = LLM_PROVIDER
+
+    console.print(Panel(f"分析字幕: {subtitle_file}\nLLM provider: {provider}", title="投资播客研究助手"))
 
     try:
-        result = run_analyze(subtitle_file, provider_name="mock", output_dir=output)
+        result = run_analyze(subtitle_file, provider_name=provider, output_dir=output)
     except Exception as e:
         console.print(f"[red]分析失败: {e}[/red]")
         raise typer.Exit(code=1)
