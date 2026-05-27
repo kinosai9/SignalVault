@@ -33,6 +33,8 @@ data/reports/*
 data/subtitles/*.srt
 data/subtitles/*.txt
 !data/subtitles/sample.srt
+data/subtitle.srt
+data/transcripts/
 logs/*
 !logs/.gitkeep
 

@@ -16,6 +16,9 @@ class Episode(Base):
     subtitle_path: Mapped[str] = mapped_column(String(500), default="")
     subtitle_format: Mapped[str] = mapped_column(String(10), default="")
     subtitle_hash: Mapped[str] = mapped_column(String(64), default="")
+    source_url: Mapped[str] = mapped_column(String(500), default="")
+    video_id: Mapped[str] = mapped_column(String(50), default="")
+    language: Mapped[str] = mapped_column(String(20), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -25,6 +28,8 @@ class Report(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[int] = mapped_column(Integer, nullable=False)
     report_version: Mapped[int] = mapped_column(Integer, default=1)
+    focus_areas: Mapped[str] = mapped_column(Text, default="")
+    analysis_depth: Mapped[str] = mapped_column(String(20), default="standard")
     llm_provider: Mapped[str] = mapped_column(String(50), default="mock")
     llm_model: Mapped[str] = mapped_column(String(100), default="mock-v1")
     prompt_version: Mapped[str] = mapped_column(String(50), default="v0.1")

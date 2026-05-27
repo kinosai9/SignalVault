@@ -54,3 +54,75 @@ def test_report_includes_view_matrix() -> None:
     for v in extraction.investment_views:
         assert v.target_name in report
         assert (v.view_direction_label or v.view_direction) in report
+
+
+def test_report_shows_youtube_source_info() -> None:
+    """报告应展示 YouTube 数据来源信息。"""
+    provider = MockLLMProvider()
+    extraction = ExtractionResult(
+        source_info={
+            "source_type": "youtube",
+            "source_url": "https://www.youtube.com/watch?v=test123",
+            "video_id": "test123",
+            "language": "zh-Hans",
+            "is_generated": False,
+            "transcript_segment_count": 100,
+            "channel_name": "",
+            "title": "",
+            "fetched_at": "2026-05-27T10:00:00",
+        },
+    )
+    report = provider.render_report(extraction)
+    assert "数据来源" in report
+    assert "YouTube" in report
+    assert "test123" in report
+    assert "zh-Hans" in report
+    assert "100" in report
+    assert "原始链接" in report
+
+
+def test_report_shows_local_source_info() -> None:
+    """报告应展示本地字幕文件来源信息。"""
+    provider = MockLLMProvider()
+    extraction = ExtractionResult(
+        source_info={
+            "source_type": "local",
+            "source_path": "data/subtitles/sample.srt",
+        },
+    )
+    report = provider.render_report(extraction)
+    assert "数据来源" in report
+    assert "本地字幕文件" in report
+    assert "sample.srt" in report
+
+
+def test_report_no_source_info_still_renders() -> None:
+    """没有 source_info 时报告仍正常渲染。"""
+    provider = MockLLMProvider()
+    extraction = ExtractionResult()
+    report = provider.render_report(extraction)
+    assert "免责声明" in report
+    assert "执行摘要" in report
+
+
+def test_mock_english_zero_views_valid_report() -> None:
+    """英文字幕在 mock provider 下 0 观点仍生成合法报告。"""
+    provider = MockLLMProvider()
+    english_text = "The Federal Reserve raised interest rates by 25 basis points today."
+    english_segments = "[00:00:01.000-00:00:10.000] The Federal Reserve raised interest rates by 25 basis points today."
+    extraction = provider.extract_facts(english_text, english_segments)
+    extraction.source_info = {
+        "source_type": "youtube",
+        "video_id": "test_en",
+        "language": "en",
+        "transcript_segment_count": 1,
+    }
+    # 英文内容 mock 下应为 0 观点
+    assert len(extraction.investment_views) == 0
+    # 但仍能生成合法报告
+    report = provider.render_report(extraction)
+    assert "免责声明" in report
+    assert "执行摘要" in report
+    assert "0" in report  # 0 条观点
+    assert "数据来源" in report
+    assert "YouTube" in report

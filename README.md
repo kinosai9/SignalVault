@@ -14,8 +14,17 @@
 # 安装
 pip install -e ".[dev]"
 
-# mock 模式分析（P0 默认）
+# mock 模式分析本地字幕文件（P0-A 默认）
 python -m podcast_research --subtitle-file data/subtitles/sample.srt
+
+# mock 模式分析 YouTube 视频字幕（P0-B）
+python -m podcast_research --youtube-url "https://www.youtube.com/watch?v=VIDEO_ID" --mock
+
+# 指定字幕语言优先级
+python -m podcast_research --youtube-url "https://www.youtube.com/watch?v=VIDEO_ID" --youtube-lang "zh-Hans,en" --mock
+
+# 指定关注点和分析深度
+python -m podcast_research --subtitle-file your_subtitle.srt --focus "新能源,港股,AI算力" --depth deep
 
 # 查看报告
 cat data/reports/sample_report.md
@@ -37,6 +46,38 @@ python -m podcast_research --subtitle-file your_subtitle.srt --no-mock
 
 > P0 阶段仅使用规则引擎 mock provider，不调用真实 LLM API。
 
+### Mock Provider 定位说明
+
+mock provider 是基于中文关键词匹配的规则引擎，**仅用于工程闭环测试**：
+
+- 验证 pipeline 串联、数据入库、报告渲染等工程链路是否正常
+- 不代表真实语义抽取能力
+- 英文字幕、复杂投资观点、隐含逻辑链需要使用真实 LLM provider
+- 默认 `pytest` 使用 mock provider，不调用真实 API
+- 真实 LLM 测试作为手动集成验证，不进入默认测试
+
+英文视频在 mock 模式下输出 0 条观点是**预期行为**，不是 bug。
+
+## 手动集成测试：YouTube + Real LLM
+
+在 .env 中配置好真实 LLM 后，可对 YouTube 视频进行端到端验证：
+
+```bash
+python -m podcast_research \
+  --youtube-url "https://www.youtube.com/watch?v=jJRAvZNGUvI" \
+  --focus "美股,AI投资,宏观政策,科技股" \
+  --depth standard \
+  --no-mock
+```
+
+**注意事项**：
+
+- 需要在 `.env` 中配置 `LLM_PROVIDER`、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`
+- 调用真实 LLM API 会产生费用
+- 长视频（如 2000+ 段字幕）可能触发 token 上限，当前未实现分块处理
+- 如果失败，优先检查 `logs/` 目录下的日志文件
+- **绝对不要**将 API Key 打印到终端或写入日志
+
 ## 项目结构
 
 ```text
@@ -46,7 +87,10 @@ src/podcast_research/
   logging_config.py      # 日志：console + RotatingFileHandler
   analysis/
     models.py            # Pydantic v2 数据模型（两阶段抽取 schema）
-    pipeline.py          # 主分析流水线
+    pipeline.py          # 主分析流水线（analyze + analyze_from_transcript）
+  adapters/
+    base.py              # TranscriptAdapter 基类 + TranscriptResult
+    youtube_transcript.py # YouTube 字幕 Adapter（youtube-transcript-api）
   subtitles/
     parser.py            # SRT/TXT 解析器
     cleaner.py           # 清洗：去空行、合并短段、去重、标记广告
@@ -62,10 +106,12 @@ src/podcast_research/
   utils/
     hash.py              # 文件哈希（字幕重复检测）
     timestamp.py         # 时间戳格式化
+    youtube.py           # YouTube URL 解析
 tests/                    # pytest 测试
 data/
   subtitles/             # 字幕文件存放
   reports/               # 报告输出
+  transcripts/youtube/   # YouTube 字幕缓存
   podcast_analyst.db     # SQLite 数据库（运行时生成）
 logs/                     # 日志
 ```
@@ -91,7 +137,8 @@ logs/                     # 日志
 
 | 阶段 | 目标 | 状态 |
 |------|------|------|
-| P0 | CLI 单集分析闭环（本地字幕 + mock LLM） | **进行中** |
+| P0-A | CLI 本地字幕分析闭环（mock LLM） | **已完成** |
+| P0-B | CLI YouTube 字幕 Adapter（mock LLM） | **进行中** |
 | P1 | 本地报告查看页（FastAPI + HTML） | 待启动 |
 | P2 | 小宇宙链接导入 + 真实 LLM | 待启动 |
 | P3 | 历史报告全局查询（FTS5 + LLM 问答） | 待启动 |

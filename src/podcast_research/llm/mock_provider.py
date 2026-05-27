@@ -74,11 +74,53 @@ class MockLLMProvider(LLMProvider):
             "> **免责声明**：本报告仅为播客内容的结构化整理，不构成任何投资建议。",
             "> 所有观点均来自播客嘉宾原文，不代表分析工具的判断。",
             "",
-            "---",
-            "",
-            "## 执行摘要",
-            "",
         ]
+
+        # 数据来源展示
+        source_info = extraction.source_info
+        if source_info:
+            lines.append("## 数据来源")
+            lines.append("")
+            source_type = source_info.get("source_type", "")
+            if source_type == "youtube":
+                lines.append(f"- **来源**：YouTube")
+                vid = source_info.get("video_id", "")
+                if vid:
+                    lines.append(f"- **视频 ID**：{vid}")
+                lang = source_info.get("language", "")
+                if lang:
+                    lines.append(f"- **字幕语言**：{lang}")
+                seg_count = source_info.get("transcript_segment_count", 0)
+                if seg_count:
+                    lines.append(f"- **字幕段数**：{seg_count}")
+                is_gen = source_info.get("is_generated", False)
+                lines.append(f"- **字幕类型**：{'自动生成' if is_gen else '人工上传'}")
+                channel = source_info.get("channel_name", "")
+                if channel:
+                    lines.append(f"- **频道**：{channel}")
+                title = source_info.get("title", "")
+                if title:
+                    lines.append(f"- **标题**：{title}")
+                url = source_info.get("source_url", "")
+                if url:
+                    lines.append(f"- **原始链接**：{url}")
+            else:
+                path = source_info.get("source_path", "")
+                lines.append(f"- **来源**：本地字幕文件")
+                if path:
+                    lines.append(f"- **文件**：{path}")
+            lines.append("")
+
+        # 关注点展示
+        if extraction.focus_areas:
+            focus_display = ", ".join(extraction.focus_areas)
+            lines.append(f"**关注点**：{focus_display}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+        lines.append("## 执行摘要")
+        lines.append("")
 
         view_count = len(extraction.investment_views)
         entity_names = ", ".join(e.name for e in extraction.mentioned_entities) or "未识别标的"

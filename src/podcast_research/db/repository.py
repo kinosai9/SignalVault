@@ -13,21 +13,45 @@ from podcast_research.db.models import (
 )
 
 
-def save_episode(session: Session, title: str, subtitle_path: str, subtitle_format: str, subtitle_hash: str) -> int:
+def save_episode(
+    session: Session,
+    title: str,
+    subtitle_path: str,
+    subtitle_format: str,
+    subtitle_hash: str,
+    source: str = "local",
+    source_url: str = "",
+    video_id: str = "",
+    language: str = "",
+) -> int:
     ep = Episode(
+        source=source,
         title=title,
         subtitle_path=subtitle_path,
         subtitle_format=subtitle_format,
         subtitle_hash=subtitle_hash,
+        source_url=source_url,
+        video_id=video_id,
+        language=language,
     )
     session.add(ep)
     session.flush()
     return ep.id
 
 
-def save_report(session: Session, episode_id: int, extraction: ExtractionResult, report_markdown: str, llm_provider: str = "mock", llm_model: str = "mock-v1") -> int:
+def save_report(
+    session: Session,
+    episode_id: int,
+    extraction: ExtractionResult,
+    report_markdown: str,
+    llm_provider: str = "mock",
+    llm_model: str = "mock-v1",
+    analysis_depth: str = "standard",
+) -> int:
     rep = Report(
         episode_id=episode_id,
+        focus_areas=json.dumps(extraction.focus_areas, ensure_ascii=False),
+        analysis_depth=analysis_depth,
         llm_provider=llm_provider,
         llm_model=llm_model,
         extraction_json=json.dumps(extraction.model_dump(), ensure_ascii=False),

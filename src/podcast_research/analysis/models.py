@@ -64,6 +64,8 @@ class Entity(BaseModel):
 
 class ExtractionResult(BaseModel):
     metadata: dict = Field(default_factory=dict)
+    source_info: dict = Field(default_factory=dict, description="数据来源信息：source_type, source_url, video_id, language, is_generated, channel_name, fetched_at, transcript_segment_count")
+    focus_areas: list[str] = Field(default_factory=lambda: ["通用投资研究"], description="用户关注点列表")
     mentioned_entities: list[Entity] = Field(default_factory=list)
     investment_views: list[InvestmentView] = Field(default_factory=list)
     risks: list[Risk] = Field(default_factory=list)

@@ -13,6 +13,7 @@ DB_PATH = Path(os.getenv("DB_PATH", str(DATA_DIR / "podcast_analyst.db")))
 
 SUBTITLE_DIR = DATA_DIR / "subtitles"
 REPORT_DIR = DATA_DIR / "reports"
+TRANSCRIPT_CACHE_DIR = DATA_DIR / "transcripts" / "youtube"
 
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mock")
 LLM_MODEL = os.getenv("LLM_MODEL", "mock-v1")
@@ -23,5 +24,5 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 
 def ensure_dirs() -> None:
-    for d in [DATA_DIR, LOG_DIR, SUBTITLE_DIR, REPORT_DIR]:
+    for d in [DATA_DIR, LOG_DIR, SUBTITLE_DIR, REPORT_DIR, TRANSCRIPT_CACHE_DIR]:
         d.mkdir(parents=True, exist_ok=True)
