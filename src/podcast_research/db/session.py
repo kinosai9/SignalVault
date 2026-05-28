@@ -38,3 +38,12 @@ def get_session() -> Session:
     if _SessionLocal is None:
         init_engine()
     return _SessionLocal()
+
+
+def reset_engine() -> None:
+    """重置全局 engine（供测试 teardown 使用）。"""
+    global _engine, _SessionLocal
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
+    _SessionLocal = None

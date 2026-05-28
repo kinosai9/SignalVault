@@ -4,9 +4,9 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P0 CLI 单集分析验证器
+## 当前阶段：P1 报告库查询 + 本地 API
 
-跑通最短闭环：本地字幕文件 → 解析 → 清洗 → LLM/规则引擎抽取 → Markdown 报告 → SQLite 入库 → CLI 输出。
+在 P0 分析闭环基础上，支持 CLI 查看和检索已入库报告，并提供本地只读 FastAPI API。
 
 ## 快速开始
 
@@ -32,6 +32,68 @@ cat data/reports/sample_report.md
 # 运行测试
 python -m pytest tests/ -v
 ```
+
+## 报告库查询（P1-A）
+
+分析命令生成的报告自动入库，可通过 `reports` 子命令查询：
+
+```bash
+# 列出所有报告
+python -m podcast_research reports list
+python -m podcast_research reports list --source youtube --limit 10
+
+# 查看报告详情
+python -m podcast_research reports show 1
+python -m podcast_research reports show 1 --full    # 输出完整 Markdown
+
+# 搜索报告（LIKE 匹配报告内容、投资标的、逻辑链）
+python -m podcast_research reports search "NVIDIA"
+
+# 汇总投资标的
+python -m podcast_research reports targets
+
+# 来源统计
+python -m podcast_research reports sources
+```
+
+## 启动本地 API 服务（P1-B）
+
+启动本地只读 API 服务，可通过 HTTP 访问报告库：
+
+```bash
+# 启动服务
+python -m podcast_research serve
+
+# 自定义 host 和 port
+python -m podcast_research serve --host 127.0.0.1 --port 8000
+
+# 开发模式（代码变更自动重载）
+python -m podcast_research serve --reload
+```
+
+启动后访问：
+- API 文档 (Swagger): http://127.0.0.1:8000/docs
+- 健康检查: http://127.0.0.1:8000/api/health
+- 报告列表: http://127.0.0.1:8000/api/reports?limit=20
+- 报告详情: http://127.0.0.1:8000/api/reports/1
+- 核心观点: http://127.0.0.1:8000/api/reports/1/views
+- 搜索: http://127.0.0.1:8000/api/search?q=NVIDIA
+
+### API 端点一览
+
+| 端点 | 说明 |
+|------|------|
+| `GET /api/health` | 健康检查 |
+| `GET /api/reports` | 报告列表（?limit=20&source=youtube） |
+| `GET /api/reports/{id}` | 报告详情（含 views/signals/markdown） |
+| `GET /api/reports/{id}/views` | 报告投资观点 |
+| `GET /api/reports/{id}/signals` | 报告待验证信号 |
+| `GET /api/entities?type=stock&limit=100` | 实体列表 |
+| `GET /api/targets?limit=100` | 投资标的汇总 |
+| `GET /api/sources` | 来源统计 |
+| `GET /api/search?q=NVIDIA&limit=20` | 搜索报告 |
+
+> 注意：API 为本地只读服务，不支持分析任务提交、报告编辑或删除。默认绑定 127.0.0.1:8000。
 
 ## 真实 LLM 使用（后续阶段）
 
@@ -102,7 +164,14 @@ src/podcast_research/
   db/
     models.py            # SQLAlchemy ORM（5 张核心表）
     session.py           # SQLite session 管理
-    repository.py        # 数据写入方法
+    repository.py        # 数据写入 + 查询方法
+  api/
+    app.py               # FastAPI app 工厂
+    schemas.py           # Pydantic 响应 schema
+    routes/
+      health.py          # GET /api/health
+      reports.py         # GET /api/reports/*, /api/entities, /api/targets, /api/sources
+      search.py          # GET /api/search
   utils/
     hash.py              # 文件哈希（字幕重复检测）
     timestamp.py         # 时间戳格式化
@@ -139,7 +208,9 @@ logs/                     # 日志
 |------|------|------|
 | P0-A | CLI 本地字幕分析闭环（mock LLM） | **已完成** |
 | P0-B | CLI YouTube 字幕 Adapter（mock LLM） | **已完成** |
-| P1 | 本地报告查看页（FastAPI + HTML） | 待启动 |
+| P1-A | CLI 报告库查询（list/show/search/targets/sources） | **已完成** |
+| P1-B | FastAPI 只读 API（/api/reports/*, /api/search 等） | **已完成** |
+| P1-C | Jinja2 极简 HTML 报告页面 | 待启动 |
 | P2 | 小宇宙链接导入 + 真实 LLM | 待启动 |
 | P3 | 历史报告全局查询（FTS5 + LLM 问答） | 待启动 |
 | P4 | 多期观点对比 | 待启动 |

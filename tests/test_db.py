@@ -7,7 +7,7 @@ from pathlib import Path
 from podcast_research.analysis.models import ExtractionResult, InvestmentView, TrackingSignal, Entity
 from podcast_research.db.models import Episode, Report, InvestmentViewRecord
 from podcast_research.db.repository import save_episode, save_report, save_investment_views, save_entities
-from podcast_research.db.session import init_db, get_session
+from podcast_research.db.session import init_db, get_session, reset_engine
 
 
 def _make_extraction() -> ExtractionResult:
@@ -43,6 +43,7 @@ def test_init_db_creates_tables() -> None:
     assert "tracking_signals" in tables
     assert "entities" in tables
     session.close()
+    reset_engine()
 
 
 def test_save_and_query_episode() -> None:
@@ -58,6 +59,7 @@ def test_save_and_query_episode() -> None:
     assert ep.title == "测试播客"
     assert ep.subtitle_format == "srt"
     session.close()
+    reset_engine()
 
 
 def test_save_and_query_report() -> None:
@@ -81,3 +83,4 @@ def test_save_and_query_report() -> None:
     assert view.target_name == "宁德时代"
     assert view.view_direction == "bullish"
     session.close()
+    reset_engine()

@@ -216,13 +216,63 @@
 
 ---
 
-## P1：本地报告查看页
+## P1-A：CLI 报告库查询
 
-- [ ] FastAPI 项目初始化
-- [ ] 报告列表 API
-- [ ] 报告详情 API
-- [ ] InvestmentView 查询 API
-- [ ] 简单 HTML 页面
+> P1-A 在 P0 分析闭环基础上，新增 CLI reports 子命令查看和检索已入库报告。
+> 不做 FastAPI、Web UI、RAG、FTS5、向量库。
+
+### 24. Repository 查询层
+
+- [x] session.py 增加 reset_engine()（测试 teardown）
+- [x] list_reports(limit, source_type) — 报告列表
+- [x] get_report(report_id) — 报告基本信息
+- [x] get_report_detail(report_id) — 报告 + 观点 + 信号
+- [x] search_reports(keyword, limit) — LIKE 搜索 report_markdown + target_name + logic_chain
+- [x] list_targets(limit) — 标的汇总（出现次数、最近方向）
+- [x] list_sources() — 来源统计
+- [x] source_type 推断（video_id → youtube / source_url 匹配 / 默认 local）
+
+### 25. CLI reports 子命令
+
+- [x] callback 加 ctx.invoked_subcommand 守卫（向后兼容）
+- [x] reports list [--limit] [--source]
+- [x] reports show <id> [--full]
+- [x] reports search <keyword> [--limit]
+- [x] reports targets [--limit]
+- [x] reports sources
+
+### 26. P1-A 测试
+
+- [x] conftest.py 共享 fixtures（db_session + seeded_db）
+- [x] test_reports.py — repository 查询 15 tests
+- [x] test_cli_reports.py — CLI 子命令 11 tests
+- [x] 原有 82 个测试不被破坏（总计 108 passed）
+
+### 27. P1-A Hardening
+
+- [x] DB 隔离修复：db_session fixture 在 setup 阶段先 reset_engine()，防止全局 engine 残留污染临时数据库
+- [x] _extract_excerpt() markdown 格式清理（去除 `|*-#_`` 符号）
+- [x] _extract_excerpt() BMP 外字符过滤（emoji 等），避免 Windows GBK 终端编码崩溃
+- [x] CLAUDE.md 更新：P1-A 已完成
+- [x] README.md 路线图更新：P1-A 已完成
+
+---
+
+## P1-B：FastAPI 只读 API
+
+- [x] FastAPI 项目初始化
+- [x] 报告列表 API（GET /api/reports）
+- [x] 报告详情 API（GET /api/reports/{id}）
+- [x] 核心观点 API（GET /api/reports/{id}/views）
+- [x] 待验证信号 API（GET /api/reports/{id}/signals）
+- [x] 实体列表 API（GET /api/entities）
+- [x] 标的汇总 API（GET /api/targets）
+- [x] 来源统计 API（GET /api/sources）
+- [x] 搜索 API（GET /api/search）
+- [x] CLI serve 命令
+- [x] API 测试（test_api_health.py, test_api_reports.py, test_api_search.py）
+- [x] 测试数据库隔离（复用 db_session fixture）
+- [x] README / TODO / CLAUDE.md 更新
 
 ---
 

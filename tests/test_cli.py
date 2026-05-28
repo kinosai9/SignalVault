@@ -11,8 +11,8 @@ SAMPLE_SRT = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sa
 runner = CliRunner()
 
 
-def test_cli_mock_analyze() -> None:
-    result = runner.invoke(app, ["--subtitle-file", str(SAMPLE_SRT)])
+def test_cli_mock_analyze(db_session, tmp_path) -> None:
+    result = runner.invoke(app, ["--subtitle-file", str(SAMPLE_SRT), "-o", str(tmp_path)])
     assert result.exit_code == 0
     assert "分析完成" in result.output
 
@@ -22,20 +22,20 @@ def test_cli_missing_file() -> None:
     assert result.exit_code == 1
 
 
-def test_cli_with_focus() -> None:
+def test_cli_with_focus(db_session, tmp_path) -> None:
     result = runner.invoke(
         app,
-        ["--subtitle-file", str(SAMPLE_SRT), "--focus", "新能源,港股,AI算力", "--mock"],
+        ["--subtitle-file", str(SAMPLE_SRT), "--focus", "新能源,港股,AI算力", "--mock", "-o", str(tmp_path)],
     )
     assert result.exit_code == 0
     assert "分析完成" in result.output
     assert "新能源" in result.output or "港股" in result.output or "AI算力" in result.output
 
 
-def test_cli_with_depth() -> None:
+def test_cli_with_depth(db_session, tmp_path) -> None:
     result = runner.invoke(
         app,
-        ["--subtitle-file", str(SAMPLE_SRT), "--depth", "standard", "--mock"],
+        ["--subtitle-file", str(SAMPLE_SRT), "--depth", "standard", "--mock", "-o", str(tmp_path)],
     )
     assert result.exit_code == 0
     assert "分析完成" in result.output
@@ -65,7 +65,7 @@ MOCK_TRANSCRIPT_DATA = [
 
 
 @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
-def test_cli_youtube_url_mock(mock_api_class: MagicMock) -> None:
+def test_cli_youtube_url_mock(mock_api_class: MagicMock, db_session, tmp_path) -> None:
     """--youtube-url + --mock 模式完整测试（不调用真实 API）。"""
     mock_transcript = MagicMock()
     mock_transcript.language_code = "zh-Hans"
@@ -80,7 +80,7 @@ def test_cli_youtube_url_mock(mock_api_class: MagicMock) -> None:
 
     result = runner.invoke(
         app,
-        ["--youtube-url", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "--mock"],
+        ["--youtube-url", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "--mock", "-o", str(tmp_path)],
     )
     assert result.exit_code == 0
     assert "分析完成" in result.output

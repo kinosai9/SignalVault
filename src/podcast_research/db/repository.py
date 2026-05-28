@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from podcast_research.analysis.models import ExtractionResult, InvestmentView, TrackingSignal, Entity
@@ -112,3 +113,333 @@ def save_entities(session: Session, entities: list[Entity]) -> None:
             aliases=json.dumps(e.aliases, ensure_ascii=False) if e.aliases else "",
         )
         session.add(rec)
+
+
+# ---------------------------------------------------------------------------
+# 查询方法（P1-A）
+# ---------------------------------------------------------------------------
+
+
+def _infer_source_type(episode: Episode) -> str:
+    """从 Episode 字段推断数据来源类型。"""
+    if episode.video_id:
+        return "youtube"
+    if episode.source_url and ("youtube.com" in episode.source_url or "youtu.be" in episode.source_url):
+        return "youtube"
+    return "local"
+
+
+def _parse_focus_areas(raw: str) -> list[str]:
+    """安全解析 focus_areas JSON 字符串。"""
+    if not raw:
+        return []
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def _count_views(session: Session, report_id: int) -> int:
+    return session.query(func.count(InvestmentViewRecord.id)).filter_by(report_id=report_id).scalar() or 0
+
+
+def _count_entities_in_extraction(extraction_json: str) -> int:
+    """从 extraction_json 中统计实体数。"""
+    try:
+        data = json.loads(extraction_json)
+        return len(data.get("mentioned_entities", []))
+    except (json.JSONDecodeError, TypeError):
+        return 0
+
+
+def list_reports(
+    session: Session,
+    limit: int = 20,
+    source_type: str | None = None,
+) -> list[dict]:
+    """列出报告摘要，按创建时间倒序。"""
+    rows = (
+        session.query(Report, Episode)
+        .join(Episode, Report.episode_id == Episode.id)
+        .order_by(Report.analysis_timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    results = []
+    for report, episode in rows:
+        st = _infer_source_type(episode)
+        if source_type and st != source_type:
+            continue
+        title = episode.video_id or episode.title
+        results.append({
+            "id": report.id,
+            "episode_title": title,
+            "title": episode.title,
+            "source_type": st,
+            "video_id": episode.video_id,
+            "source_url": episode.source_url,
+            "language": episode.language,
+            "created_at": report.analysis_timestamp,
+            "focus_areas": _parse_focus_areas(report.focus_areas),
+            "analysis_depth": report.analysis_depth,
+            "view_count": _count_views(session, report.id),
+            "entity_count": _count_entities_in_extraction(report.extraction_json),
+        })
+    return results
+
+
+def get_report(session: Session, report_id: int) -> dict | None:
+    """获取单个报告基本信息。"""
+    row = (
+        session.query(Report, Episode)
+        .join(Episode, Report.episode_id == Episode.id)
+        .filter(Report.id == report_id)
+        .first()
+    )
+    if not row:
+        return None
+    report, episode = row
+    return {
+        "id": report.id,
+        "episode_title": episode.video_id or episode.title,
+        "source_type": _infer_source_type(episode),
+        "source_url": episode.source_url,
+        "video_id": episode.video_id,
+        "language": episode.language,
+        "focus_areas": _parse_focus_areas(report.focus_areas),
+        "analysis_depth": report.analysis_depth,
+        "llm_provider": report.llm_provider,
+        "llm_model": report.llm_model,
+        "created_at": report.analysis_timestamp,
+        "view_count": _count_views(session, report.id),
+        "entity_count": _count_entities_in_extraction(report.extraction_json),
+        "report_markdown": report.report_markdown,
+    }
+
+
+def get_report_detail(session: Session, report_id: int) -> dict | None:
+    """获取报告完整详情：报告 + Episode + 观点 + 信号。"""
+    row = (
+        session.query(Report, Episode)
+        .join(Episode, Report.episode_id == Episode.id)
+        .filter(Report.id == report_id)
+        .first()
+    )
+    if not row:
+        return None
+    report, episode = row
+
+    views = session.query(InvestmentViewRecord).filter_by(report_id=report_id).all()
+    signals = session.query(TrackingSignalRecord).filter_by(report_id=report_id).all()
+
+    return {
+        "id": report.id,
+        "episode_title": episode.video_id or episode.title,
+        "source_type": _infer_source_type(episode),
+        "source_url": episode.source_url,
+        "video_id": episode.video_id,
+        "language": episode.language,
+        "focus_areas": _parse_focus_areas(report.focus_areas),
+        "analysis_depth": report.analysis_depth,
+        "llm_provider": report.llm_provider,
+        "llm_model": report.llm_model,
+        "created_at": report.analysis_timestamp,
+        "report_markdown": report.report_markdown,
+        "views": [
+            {
+                "target_name": v.target_name,
+                "target_type": v.target_type,
+                "view_direction": v.view_direction,
+                "logic_chain": v.logic_chain,
+                "source_quote": v.source_quote,
+                "timestamp_start": v.timestamp_start,
+                "risk_warning": v.risk_warning,
+            }
+            for v in views
+        ],
+        "signals": [
+            {
+                "target_name": s.target_name,
+                "signal": s.signal,
+                "trigger_condition": s.trigger_condition,
+            }
+            for s in signals
+        ],
+    }
+
+
+def search_reports(
+    session: Session,
+    keyword: str,
+    limit: int = 20,
+) -> list[dict]:
+    """LIKE 搜索报告。搜索范围：report_markdown + investment_views.target_name/logic_chain。"""
+    pattern = f"%{keyword}%"
+    results: list[dict] = []
+    seen_ids: set[int] = set()
+
+    # 1. 搜索 report_markdown
+    md_rows = (
+        session.query(Report, Episode)
+        .join(Episode, Report.episode_id == Episode.id)
+        .filter(Report.report_markdown.like(pattern))
+        .order_by(Report.analysis_timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    for report, episode in md_rows:
+        if report.id in seen_ids:
+            continue
+        seen_ids.add(report.id)
+        excerpt = _extract_excerpt(report.report_markdown, keyword)
+        results.append({
+            "report_id": report.id,
+            "match_type": "报告内容",
+            "match_excerpt": excerpt,
+            "source_type": _infer_source_type(episode),
+            "created_at": report.analysis_timestamp,
+        })
+
+    # 2. 搜索 investment_views.target_name
+    view_rows = (
+        session.query(InvestmentViewRecord, Report, Episode)
+        .join(Report, InvestmentViewRecord.report_id == Report.id)
+        .join(Episode, Report.episode_id == Episode.id)
+        .filter(InvestmentViewRecord.target_name.like(pattern))
+        .order_by(Report.analysis_timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    for view, report, episode in view_rows:
+        if report.id in seen_ids:
+            continue
+        seen_ids.add(report.id)
+        results.append({
+            "report_id": report.id,
+            "match_type": "投资标的",
+            "match_excerpt": f"{view.target_name} ({view.view_direction})",
+            "source_type": _infer_source_type(episode),
+            "created_at": report.analysis_timestamp,
+        })
+
+    # 3. 搜索 investment_views.logic_chain
+    lc_rows = (
+        session.query(InvestmentViewRecord, Report, Episode)
+        .join(Report, InvestmentViewRecord.report_id == Report.id)
+        .join(Episode, Report.episode_id == Episode.id)
+        .filter(InvestmentViewRecord.logic_chain.like(pattern))
+        .order_by(Report.analysis_timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    for view, report, episode in lc_rows:
+        if report.id in seen_ids:
+            continue
+        seen_ids.add(report.id)
+        results.append({
+            "report_id": report.id,
+            "match_type": "逻辑链",
+            "match_excerpt": view.logic_chain[:80],
+            "source_type": _infer_source_type(episode),
+            "created_at": report.analysis_timestamp,
+        })
+
+    return results[:limit]
+
+
+def _extract_excerpt(text: str, keyword: str, context: int = 40) -> str:
+    """从文本中提取关键词前后的上下文片段，清理 markdown 格式。"""
+    if not text:
+        return ""
+    # 先清理 markdown 格式和 BMP 外字符，避免终端编码问题
+    import re
+    clean = re.sub(r"[|\-*#_`]{1,}", " ", text)  # 去除 markdown 格式符号
+    clean = "".join(c for c in clean if ord(c) <= 0xFFFF)  # 去除 emoji 等 BMP 外字符
+    clean = re.sub(r"\s+", " ", clean).strip()
+
+    idx = clean.lower().find(keyword.lower())
+    if idx < 0:
+        return clean[:80]
+    start = max(0, idx - context)
+    end = min(len(clean), idx + len(keyword) + context)
+    excerpt = clean[start:end].strip()
+    if start > 0:
+        excerpt = "..." + excerpt
+    if end < len(clean):
+        excerpt = excerpt + "..."
+    return excerpt
+
+
+def list_targets(session: Session, limit: int = 100) -> list[dict]:
+    """汇总投资标的：出现次数、最近出现时间、最近观点方向。"""
+    rows = (
+        session.query(
+            InvestmentViewRecord.target_name,
+            func.count(InvestmentViewRecord.id).label("cnt"),
+            func.max(InvestmentViewRecord.created_at).label("last_seen"),
+        )
+        .group_by(InvestmentViewRecord.target_name)
+        .order_by(func.count(InvestmentViewRecord.id).desc())
+        .limit(limit)
+        .all()
+    )
+    results = []
+    for target_name, cnt, last_seen in rows:
+        last_view = (
+            session.query(InvestmentViewRecord)
+            .filter_by(target_name=target_name)
+            .order_by(InvestmentViewRecord.created_at.desc())
+            .first()
+        )
+        results.append({
+            "target_name": target_name,
+            "count": cnt,
+            "last_seen": last_seen,
+            "last_direction": last_view.view_direction if last_view else "",
+        })
+    return results
+
+
+def list_entities(
+    session: Session,
+    entity_type: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """列出实体，可按类型过滤。"""
+    from podcast_research.db.models import EntityRecord
+
+    query = session.query(EntityRecord)
+    if entity_type:
+        query = query.filter_by(entity_type=entity_type)
+    rows = query.order_by(EntityRecord.id.desc()).limit(limit).all()
+    results = []
+    for e in rows:
+        aliases_raw = e.aliases or ""
+        try:
+            aliases = json.loads(aliases_raw) if aliases_raw else []
+        except (json.JSONDecodeError, TypeError):
+            aliases = []
+        results.append({
+            "name": e.name,
+            "normalized_name": e.normalized_name or e.name,
+            "entity_type": e.entity_type,
+            "aliases": aliases,
+        })
+    return results
+
+
+def list_sources(session: Session) -> list[dict]:
+    """统计各来源报告数量和最近报告时间。"""
+    rows = (
+        session.query(Report, Episode)
+        .join(Episode, Report.episode_id == Episode.id)
+        .order_by(Report.analysis_timestamp.desc())
+        .all()
+    )
+    source_map: dict[str, dict] = {}
+    for report, episode in rows:
+        st = _infer_source_type(episode)
+        if st not in source_map:
+            source_map[st] = {"source_type": st, "count": 0, "last_report_at": report.analysis_timestamp}
+        source_map[st]["count"] += 1
+    return list(source_map.values())

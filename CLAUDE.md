@@ -14,16 +14,21 @@
 
 ## 当前阶段
 
-P0-A 已完成（本地字幕分析闭环）。
-P0-B hardening 进行中（YouTube 字幕 Adapter 工程基线稳定化）。
+P0 全部完成（P0-A 本地字幕 + P0-B YouTube 字幕，82 tests passed）。
+P1-A 已完成（CLI 报告库查询）。
+P1-B 已完成（FastAPI 只读 API，129 tests passed）。
 
-**P0-A 已跑通：**
+**P0 已跑通：**
 
-本地字幕文件 → 字幕解析 → 字幕清洗 → mock LLM 结构化抽取 → Markdown 报告 → SQLite 入库 → CLI 输出。
+本地字幕文件 / YouTube URL → 解析 → 清洗 → mock/真实 LLM 抽取 → Markdown 报告 → SQLite 入库 → CLI 输出。
 
-**P0-B 已跑通：**
+**P1-A 已跑通：**
 
-YouTube URL → youtube-transcript-api 获取字幕 → 转换为统一 TranscriptSegment → 复用 P0-A 分析 pipeline → 报告含 YouTube 元数据来源。
+`reports list / show / search / targets / sources` 子命令查询已入库报告，Rich 表格输出。
+
+**P1-B 已跑通：**
+
+FastAPI 本地只读 API（`/api/reports`, `/api/reports/{id}`, `/api/search` 等 9 个端点），`serve` 命令启动 uvicorn。API 测试复用 `db_session` fixture 实现数据库隔离。
 
 ## 数据源优先级
 
@@ -119,10 +124,31 @@ YouTube URL → youtube-transcript-api 获取字幕 → 转换为统一 Transcri
 - 云端同步
 - 向量数据库
 
+## P1-A 范围规则
+
+- P1-A 仍然是 CLI-first，不做 FastAPI、HTML 页面、Web UI。
+- 搜索使用 LIKE，不上 FTS5。
+- 不做 RAG、向量数据库、AI 问答。
+- 不做跨报告对比、观点变化时间线。
+- source_type 通过运行时推断（video_id / source_url），不新增 DB 列。
+- reports 子命令通过 `ctx.invoked_subcommand` 守卫实现，不破坏现有分析命令。
+
+## P1-B 范围规则
+
+- P1-B 是只读 API 层，不做分析任务提交、报告编辑/删除、AI 问答、多报告对比。
+- API 层不写复杂 SQL，只复用 repository 查询函数。
+- FastAPI app 使用 `create_app()` 工厂模式，支持测试注入临时数据库。
+- API 测试复用 `db_session` fixture 实现数据库隔离，不访问真实 `data/podcast_analyst.db`。
+- `serve` 命令默认绑定 127.0.0.1:8000，不作为公共服务暴露。
+- 不做 Jinja2 HTML 页面（留给 P1-C）。
+- 不做鉴权、登录、CORS 配置（本地单用户场景）。
+
 ## 技术栈
 
 - Python 3.12+
 - Typer
+- FastAPI
+- uvicorn
 - Pydantic v2
 - SQLAlchemy 2.x
 - SQLite
