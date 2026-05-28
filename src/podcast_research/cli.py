@@ -20,7 +20,7 @@ app = typer.Typer(
 
 @app.callback()
 def main(
-    subtitle_file: Path = typer.Option(None, help="本地字幕文件路径 (.srt/.txt)"),
+    subtitle_file: Path = typer.Option(None, help="本地字幕文件路径 (.srt/.vtt/.txt)"),
     youtube_url: str = typer.Option(None, "--youtube-url", help="YouTube 视频链接"),
     youtube_lang: str = typer.Option(None, "--youtube-lang", help="YouTube 字幕语言优先级，逗号分隔，如 'zh-Hans,en'"),
     mock: bool = typer.Option(None, help="使用 mock 规则引擎（覆盖 .env 配置）"),

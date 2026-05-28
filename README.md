@@ -92,7 +92,7 @@ src/podcast_research/
     base.py              # TranscriptAdapter 基类 + TranscriptResult
     youtube_transcript.py # YouTube 字幕 Adapter（youtube-transcript-api）
   subtitles/
-    parser.py            # SRT/TXT 解析器
+    parser.py            # SRT/VTT/TXT 解析器
     cleaner.py           # 清洗：去空行、合并短段、去重、标记广告
   llm/
     base.py              # LLMProvider 抽象基类
@@ -127,7 +127,7 @@ logs/                     # 日志
 ## P0 不做的内容
 
 - 小宇宙链接解析、xyz-dl 字幕下载
-- 真实 LLM API 调用（仅 mock）
+- 真实 LLM API 调用（P0 仅支持手动集成验证，不进入自动化测试）
 - FastAPI 后端、前端 UI
 - Whisper 转写、多平台 RSS
 - 向量数据库、PDF/Word 导出
@@ -138,7 +138,7 @@ logs/                     # 日志
 | 阶段 | 目标 | 状态 |
 |------|------|------|
 | P0-A | CLI 本地字幕分析闭环（mock LLM） | **已完成** |
-| P0-B | CLI YouTube 字幕 Adapter（mock LLM） | **进行中** |
+| P0-B | CLI YouTube 字幕 Adapter（mock LLM） | **已完成** |
 | P1 | 本地报告查看页（FastAPI + HTML） | 待启动 |
 | P2 | 小宇宙链接导入 + 真实 LLM | 待启动 |
 | P3 | 历史报告全局查询（FTS5 + LLM 问答） | 待启动 |

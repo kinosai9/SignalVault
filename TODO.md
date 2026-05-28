@@ -33,7 +33,7 @@
 
 - [x] 实现 SRT parser（subtitles/parser.py）
 - [x] 实现 TXT parser
-- [ ] 实现 VTT parser（WebVTT 格式支持，P0-A hardening 待做）
+- [x] 实现 VTT parser（WebVTT 格式支持）
 - [x] 实现 subtitles/cleaner.py（去空行、合并短段、去重、标记疑似广告）
 - [x] 创建 sample.srt 示例文件
 - [x] 编写 test_parser.py
@@ -104,7 +104,7 @@
 - [x] .env 未被 git 跟踪（git ls-files .env 返回空）
 - [x] .env 未进入 git 历史（git log --all -- .env 返回空）
 - [x] .gitignore 正确排除 .env
-- [ ] README.md 只提供 .env.example 引用
+- [x] README.md 只提供 .env.example 引用
 
 ### 12. adapters/ 与 llm/ 边界说明
 
@@ -122,6 +122,7 @@
 - [x] CLI mock 模式完整跑通（含 --focus "新能源,港股,AI算力"）
 - [x] 报告包含关注点展示
 - [x] extraction JSON 包含 focus_areas
+- [x] VTT parser 14 个新测试（格式检测 + 解析 + 标签清理 + NOTE 跳过 + 短时间戳 + cue settings）
 
 ---
 
@@ -211,7 +212,7 @@
 - [x] YouTube metadata 字段存在测试
 - [x] Markdown 报告展示 YouTube source 信息测试
 - [x] mock provider 英文 0 观点时仍生成合法报告测试
-- [x] 原有 55 个测试全部通过
+- [x] 原有 67 个测试全部通过（VTT 新增后总计 82 个）
 
 ---
 
