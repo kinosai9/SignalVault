@@ -79,41 +79,118 @@ def _run_pipeline(
     analysis_depth: str,
     source_info: dict | None = None,
     episode_extra: dict | None = None,
+    chunking_config: dict | None = None,
 ) -> dict:
-    """共享 pipeline 逻辑：清洗 → LLM 抽取 → 渲染 → 入库 → 写出。"""
+    """共享 pipeline 逻辑：清洗 → LLM 抽取 → 渲染 → 入库 → 写出。
+
+    P2-B chunking_config: {"enabled": bool|None, "char_limit": int, "overlap_chars": int}
+      enabled=None: auto-detect long transcript
+      enabled=True: force chunk
+      enabled=False: force no chunk (long transcript WARNING)
+    """
+    from podcast_research.analysis.chunking import (
+        is_long_transcript,
+        chunk_transcript,
+        merge_extraction_results,
+    )
+
     ensure_dirs()
     if source_info is None:
         source_info = {}
     if episode_extra is None:
         episode_extra = {}
+    if chunking_config is None:
+        chunking_config = {}
 
     # 0. 字幕段数日志
     logger.info("输入字幕段数: %d", len(segments))
     total_chars = sum(len(s.text) for s in segments)
     logger.info("输入总字符数: %d（粗略 token 估计: ~%d）", total_chars, total_chars // 2)
-    if len(segments) > 1000:
-        logger.warning("长字幕警告: %d 段字幕，真实 LLM 可能触发 token 上限（当前未实现分块处理）", len(segments))
-    if total_chars > 50000:
-        logger.warning("长文本警告: %d 字符，建议后续实现 map-reduce 抽取", total_chars)
 
     # 1. 清洗字幕
     logger.info("清洗字幕，原始段数: %d", len(segments))
     cleaned = clean_segments(segments)
     logger.info("清洗完成，段数: %d", len(cleaned))
 
-    cleaned_text = "\n".join(s.text for s in cleaned)
-    segments_text = "\n".join(
-        f"[{s.start_time}-{s.end_time}] {s.text}" for s in cleaned
-    )
+    # --- P2-B: Chunking decision ---
+    do_chunk = chunking_config.get("enabled")
+    char_limit = chunking_config.get("char_limit", 30000)
+    overlap_chars = chunking_config.get("overlap_chars", 2000)
+
+    if do_chunk is None:
+        do_chunk = is_long_transcript(cleaned)
+
+    if do_chunk and len(cleaned) <= 5:
+        # Too few segments to chunk meaningfully
+        do_chunk = False
+
+    if not do_chunk and is_long_transcript(cleaned):
+        logger.warning(
+            "长 transcript 警告（%d segments, %d chars），建议启用 --chunked 避免 token 超限",
+            len(cleaned), total_chars,
+        )
 
     # 2. LLM 抽取
     provider = get_llm_provider(provider_name)
-    logger.info("LLM 事实抽取（provider: %s, prompt: tech_ai_v2）", provider_name)
-    extraction = provider.extract_facts(cleaned_text, segments_text, focus_areas=focus_areas)
-    extraction.focus_areas = focus_areas
-    extraction.source_info = source_info
-    if not extraction.prompt_version:
-        extraction.prompt_version = "tech_ai_v2"
+
+    if do_chunk:
+        # ── Chunked extraction ──────────────────────────────────────────
+        logger.info("Chunked extraction: %d segments, %d chars, char_limit=%d, overlap=%d",
+                    len(cleaned), total_chars, char_limit, overlap_chars)
+        chunks = chunk_transcript(cleaned, char_limit=char_limit, overlap_chars=overlap_chars)
+        logger.info("Transcript chunked: %d chunks", len(chunks))
+
+        chunk_results: list[ExtractionResult] = []
+        for ch in chunks:
+            logger.info("Extracting chunk %d/%d (segments %d-%d, %d chars)",
+                        ch.chunk_id, ch.chunk_count,
+                        ch.segment_start_index, ch.segment_end_index, ch.char_count)
+            try:
+                ch_extraction = provider.extract_facts(
+                    ch.text, ch.segments_text, focus_areas=focus_areas,
+                )
+                # Annotate chunk metadata
+                if ch_extraction.metadata is None:
+                    ch_extraction.metadata = {}
+                ch_extraction.metadata["chunk_id"] = ch.chunk_id
+                ch_extraction.metadata["chunk_count"] = ch.chunk_count
+                ch_extraction.metadata["segment_start_index"] = ch.segment_start_index
+                ch_extraction.metadata["segment_end_index"] = ch.segment_end_index
+                ch_extraction.metadata["timestamp_range"] = f"{ch.start_time}-{ch.end_time}"
+
+                chunk_results.append(ch_extraction)
+                logger.info("Chunk %d/%d done: %d views, %d insights",
+                            ch.chunk_id, ch.chunk_count,
+                            len(ch_extraction.investment_views),
+                            len(ch_extraction.tech_industry_insights))
+            except Exception as e:
+                logger.error("Chunk %d/%d failed: %s", ch.chunk_id, ch.chunk_count, e)
+                # P2-B initial: abort on any chunk failure
+                raise
+
+        # Merge with compaction
+        logger.info("Merging %d chunk results", len(chunk_results))
+        extraction = merge_extraction_results(chunk_results)
+        extraction.focus_areas = focus_areas
+        extraction.source_info = source_info
+        if not extraction.prompt_version:
+            extraction.prompt_version = "tech_ai_v2"
+        logger.info("Merge complete: %d views, %d insights, %d entities",
+                     len(extraction.investment_views),
+                     len(extraction.tech_industry_insights),
+                     len(extraction.mentioned_entities))
+    else:
+        # ── Single-pass extraction (existing path) ────────────────────
+        cleaned_text = "\n".join(s.text for s in cleaned)
+        segments_text = "\n".join(
+            f"[{s.start_time}-{s.end_time}] {s.text}" for s in cleaned
+        )
+        logger.info("LLM 事实抽取（provider: %s, prompt: tech_ai_v2）", provider_name)
+        extraction = provider.extract_facts(cleaned_text, segments_text, focus_areas=focus_areas)
+        extraction.focus_areas = focus_areas
+        extraction.source_info = source_info
+        if not extraction.prompt_version:
+            extraction.prompt_version = "tech_ai_v2"
 
     # 3. 生成报告
     logger.info("生成 Markdown 报告")
@@ -179,8 +256,12 @@ def analyze(
     output_dir: Path | None = None,
     focus_areas: list[str] | None = None,
     analysis_depth: str = "standard",
+    chunking_config: dict | None = None,
 ) -> dict:
-    """从本地字幕文件执行完整分析 pipeline。"""
+    """从本地字幕文件执行完整分析 pipeline。
+
+    P2-B chunking_config: {"enabled": bool|None, "char_limit": int, "overlap_chars": int}
+    """
     if focus_areas is None:
         focus_areas = ["通用投资研究"]
 
@@ -199,6 +280,7 @@ def analyze(
         analysis_depth=analysis_depth,
         source_info={"source_type": "local", "source_path": str(subtitle_path)},
         episode_extra={"source": "local"},
+        chunking_config=chunking_config,
     )
 
 
@@ -209,12 +291,12 @@ def analyze_from_transcript(
     focus_areas: list[str] | None = None,
     analysis_depth: str = "standard",
     source_info_override: dict | None = None,
+    chunking_config: dict | None = None,
 ) -> dict:
     """从 TranscriptResult（YouTube 等外部数据源）执行完整分析 pipeline。
 
     source_info_override: 可选字典，用于覆盖 / 补充 source_info 中的字段。
-    优先级：override dict 中的非空值 > adapter 值 > 空字符串 / 默认值。
-    仅 channels analyze-video 路径使用，不影响普通 --youtube-url 分析。
+    chunking_config: P2-B 分块配置 {"enabled": bool|None, "char_limit": int, "overlap_chars": int}
     """
     if focus_areas is None:
         focus_areas = ["通用投资研究"]
@@ -261,4 +343,5 @@ def analyze_from_transcript(
         analysis_depth=analysis_depth,
         source_info=source_info,
         episode_extra=episode_extra,
+        chunking_config=chunking_config,
     )

@@ -22,6 +22,10 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# P2-C: Obsidian Vault export
+OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH", "")
+OBSIDIAN_EXPORT_ENABLED = os.getenv("OBSIDIAN_EXPORT_ENABLED", "false").lower() == "true"
+
 
 def ensure_dirs() -> None:
     for d in [DATA_DIR, LOG_DIR, SUBTITLE_DIR, REPORT_DIR, TRANSCRIPT_CACHE_DIR]:

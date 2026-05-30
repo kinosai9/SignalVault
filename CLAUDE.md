@@ -14,7 +14,7 @@
 
 ## 当前阶段
 
-P2-A2.1（Channel/Video Metadata Propagation）+ P2-A2（跨频道 Prompt v2 质量评估）已完成。P0-A 到 P2-A2 全部交付。
+P2-C（Obsidian Export v1）已完成。P0-A 到 P2-C 全部交付。
 
 **P0 已跑通：**
 
@@ -236,10 +236,28 @@ YouTube 频道关注（`channels add/list/refresh/videos/analyze-video`），yt-
 
 ## P2-B 范围规则
 
-- P2-B 实现长视频分块分析（Long Transcript Chunking），解决 2000+ 段字幕 token 超限问题。
-- chunking 策略：按 segment 边界拆分，保留上下文重叠窗口，map-reduce 合并。
-- 不分块的短字幕行为完全不变。
-- 不引入 LangChain / LlamaIndex 等外部编排框架。
+- 长视频自动分块（>50K chars 或 >1000 segments），短视频路径不变。
+- --chunked 强制启用，--no-chunking 禁用（长视频时 WARNING）。
+- chunking 策略：按 segment 边界拆分，char_limit=30000，overlap_chars=2000。
+- map-reduce：逐块 extract_facts → merge（去重 + compaction）→ 单次 render_report。
+- compaction 上限：views≤12, insights≤12, entities≤40, risks≤10, signals≤10。
+- 不去重的 dedup：views 按 target+direction+ai_chain+business_impact key，entities 按 name。
+- 任一 chunk 失败停止整个分析（后续版本支持 partial mode）。
+- 不引入 LangChain / LlamaIndex。
+- 测试使用 mock provider，不调用真实 LLM。
+- CLI 参数：--chunked / --no-chunking / --chunk-size / --chunk-overlap。
+
+## P2-C 范围规则
+
+- Obsidian Export v1：将 SQLite 中 YouTube 报告导出为 Obsidian 笔记。
+- Vault 路径通过 OBSIDIAN_VAULT_PATH 配置或 CLI --vault 指定。
+- 导出内容：01_Reports/ 报告 + 05_Channels/ 频道卡片 + 99_System/ 索引和日志。
+- 报告文件名：YYYY-MM-DD_ChannelName_VideoId.md（Windows 非法字符清理）。
+- 已存在文件默认 skip（--overwrite 可覆盖）。
+- 频道卡片已存在时仅追加 Recent Reports，不覆盖用户手工内容。
+- --dry-run 预览不写入文件。
+- v1 不做：Topic/Company/Person/Claim/Signal 卡片、LLM 动态维护、双向同步。
+- 测试全部使用 tmp_path，不写真实 Vault。
 
 ## 技术栈
 

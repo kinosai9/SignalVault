@@ -387,21 +387,51 @@
 
 ## P2-B：长视频分块分析（Long Transcript Chunking）
 
-> Anthropic 视频 2364 段字幕触发 qwen3.7-max 400 Bad Request（token 超限）。
-> 当前 pipeline 超过 1000 段 / 50000 字符仅输出警告，不对长字幕做拆分。
-> P2-B 实现分块分析，解耦 token 上限对长视频分析的阻塞。
-
-- [ ] Token budget estimation（精确 token 计数，区分中/英/混排）
-- [ ] Subtitle chunking strategy（按 segment 边界拆分，保留上下文重叠窗口）
-- [ ] Map-reduce extraction（多块抽取 → 去重合并 → 统一渲染）
-- [ ] Long-video report merging（多块报告合并为单份最终报告）
-- [ ] Pipeline 集成（长字幕自动触发 chunking，短字幕不变）
-- [ ] 长视频集成验证（Anthropic 2364 段视频 + 1-2 条其他长视频）
+- [x] TranscriptChunk 模型（chunk_id, segment range, timestamps, text, segments_text）
+- [x] chunk_transcript（按 segment 边界 + char_limit + overlap 切分）
+- [x] is_long_transcript 自动检测（>50K chars or >1000 segments）
+- [x] Per-chunk extraction（逐块 extract_facts，带 chunk metadata）
+- [x] merge_extraction_results（去重 views/entities/insights/risks/signals）
+- [x] Compaction 限制（views≤12, insights≤12, entities≤40, risks≤10, signals≤10）
+- [x] Pipeline 集成（auto-detect / --chunked / --no-chunking）
+- [x] CLI 参数（--chunked / --no-chunking / --chunk-size / --chunk-overlap）
+- [x] 31 个测试（detection / chunk creation / overlap / dedup / compaction / merge / pipeline / CLI）
+- [x] 文档更新（README / TODO / CLAUDE.md）
+- [ ] 手动验证：Acquired Vanguard 真实 LLM chunking
+- [ ] Partial chunk failure recovery（单个 chunk 失败不中止其它）
+- [ ] Semantic deduplication（embedding 去重，替代当前的 key-based）
+- [ ] Chunk-level evaluation（eval 支持 per-chunk 统计）
 
 注意：
 - chunking 不改变 prompt 和 schema，只改变 pipeline 如何处理长字幕
 - 暂不引入 LangChain / LlamaIndex 等外部编排框架，保持轻量
 - 不分块的短字幕行为完全不变
+- 任一 chunk 失败当前中止分析（后续做 partial mode）
+
+---
+
+## P2-C：Obsidian Export v1
+
+> 将 SQLite 中的 YouTube 报告导出到 Obsidian Vault，形成可浏览、可双链的知识库。
+
+- [x] Vault 路径配置（OBSIDIAN_VAULT_PATH, OBSIDIAN_EXPORT_ENABLED）
+- [x] exporters/markdown_utils.py — sanitize_filename / build_frontmatter / wiki_link
+- [x] exporters/obsidian.py — export_report / export_channel_card / export_to_vault
+- [x] CLI obsidian export --vault --source --report-id --dry-run --overwrite --limit
+- [x] Report YAML frontmatter + 结构化 Markdown 正文
+- [x] Channel card 创建 + 追加 Recent Reports（不覆盖用户内容）
+- [x] System index (99_System/Report Index.md) + export log
+- [x] 28 个测试（filename / frontmatter / wiki links / report export / channel card / skip / overwrite / dry-run / CLI）
+- [x] 文档更新（README / TODO / CLAUDE.md）
+- [ ] 手动验证：真实 Vault 导出
+
+注意：
+- 默认不自动导出，需显式 CLI 命令
+- 不写真实 Vault 在测试中（全部用 tmp_path）
+- v1 只做 01_Reports + 05_Channels + System files
+- 不做 Topic/Company/Person/Claim/Signal 卡片
+- 不做 LLM-WIKI 动态维护
+- 不做双向同步
 
 ---
 

@@ -31,6 +31,10 @@ app.add_typer(reports_app, name="reports")
 eval_app = typer.Typer(help="跨频道 Prompt 质量评估")
 app.add_typer(eval_app, name="eval")
 
+# --- obsidian 子命令组 ---
+obsidian_app = typer.Typer(help="Obsidian Vault 导出")
+app.add_typer(obsidian_app, name="obsidian")
+
 
 def _fmt_dt(dt: datetime | None) -> str:
     if dt is None:
@@ -53,6 +57,11 @@ def main(
     depth: str = typer.Option("standard", "--depth", help="分析深度: standard / deep"),
     output: Path | None = typer.Option(None, "-o", help="报告输出目录"),
     verbose: bool = typer.Option(False, "-v", help="详细日志"),
+    # P2-B chunking options
+    chunked: bool = typer.Option(None, "--chunked", help="强制启用长视频分块分析"),
+    no_chunking: bool = typer.Option(None, "--no-chunking", help="禁用分块分析（长视频时 WARNING）"),
+    chunk_size: int = typer.Option(30000, "--chunk-size", help="每块字符上限"),
+    chunk_overlap: int = typer.Option(2000, "--chunk-overlap", help="块间重叠字符数"),
 ) -> None:
     """分析本地字幕文件或 YouTube 视频字幕，或使用 reports 子命令查询已有报告。"""
     level = "DEBUG" if verbose else "INFO"
@@ -80,6 +89,16 @@ def main(
     else:
         provider = LLM_PROVIDER
 
+    # P2-B: chunking config
+    chunking_config = {}
+    if chunked:
+        chunking_config["enabled"] = True
+    elif no_chunking:
+        chunking_config["enabled"] = False
+    # else: None → auto-detect
+    chunking_config["char_limit"] = chunk_size
+    chunking_config["overlap_chars"] = chunk_overlap
+
     if youtube_url:
         from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
 
@@ -102,13 +121,14 @@ def main(
                 output_dir=output,
                 focus_areas=focus_areas,
                 analysis_depth=depth,
+                chunking_config=chunking_config,
             )
         except Exception as e:
             err_msg = str(e)
             if "LLM" in err_msg or "API" in err_msg or "token" in err_msg.lower():
                 console.print(f"[red]LLM 分析失败: {e}[/red]")
                 console.print("  提示: 检查 .env 中的 LLM 配置，或尝试 --mock 模式确认链路正常")
-                console.print("  长视频可能超出 token 上限，可尝试更短的视频或减少 --depth")
+                console.print("  长视频可能超出 token 上限，可尝试 --chunked 或更短的视频")
             else:
                 console.print(f"[red]分析失败: {e}[/red]")
             raise typer.Exit(code=1)
@@ -127,6 +147,7 @@ def main(
                 output_dir=output,
                 focus_areas=focus_areas,
                 analysis_depth=depth,
+                chunking_config=chunking_config,
             )
         except Exception as e:
             console.print(f"[red]分析失败: {e}[/red]")
@@ -684,6 +705,11 @@ def channels_analyze_video(
     depth: str = typer.Option("standard", "--depth", help="分析深度: standard / deep"),
     no_mock: bool = typer.Option(None, "--no-mock", help="使用真实 LLM"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只检查不分析"),
+    # P2-B chunking options
+    chunked: bool = typer.Option(None, "--chunked", help="强制启用长视频分块分析"),
+    no_chunking: bool = typer.Option(None, "--no-chunking", help="禁用分块分析"),
+    chunk_size: int = typer.Option(30000, "--chunk-size", help="每块字符上限"),
+    chunk_overlap: int = typer.Option(2000, "--chunk-overlap", help="块间重叠字符数"),
 ) -> None:
     """分析频道中的指定视频。P2-A2.1: 自动从 channels 表补齐频道/视频元数据。"""
     from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
@@ -702,6 +728,15 @@ def channels_analyze_video(
         provider = "openai-compatible"
     else:
         provider = "mock"
+
+    # P2-B: chunking config
+    chunking_config = {}
+    if chunked:
+        chunking_config["enabled"] = True
+    elif no_chunking:
+        chunking_config["enabled"] = False
+    chunking_config["char_limit"] = chunk_size
+    chunking_config["overlap_chars"] = chunk_overlap
 
     # P2-A2.1: 查询频道元数据（channel + channel_video 联表）
     init_db()
@@ -765,6 +800,7 @@ def channels_analyze_video(
             focus_areas=focus_areas,
             analysis_depth=depth,
             source_info_override=source_info_override,
+            chunking_config=chunking_config,
         )
     except Exception as e:
         err_msg = str(e)
@@ -878,6 +914,73 @@ def eval_summary(
     output.write_text(md, encoding="utf-8")
     console.print(f"[green]总结已导出: {output}[/green]")
     console.print(f"  共 {len(results)} 条报告")
+
+
+# ---------------------------------------------------------------------------
+# obsidian 子命令 (P2-C)
+# ---------------------------------------------------------------------------
+
+
+@obsidian_app.command("export")
+def obsidian_export(
+    vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
+    source: str = typer.Option(None, "--source", help="按来源过滤: youtube (v1 仅支持 youtube)"),
+    prompt_version: str = typer.Option(None, "--prompt-version", help="按 prompt 版本过滤"),
+    report_id: int = typer.Option(None, "--report-id", help="仅导出指定报告 ID"),
+    limit: int = typer.Option(None, "--limit", help="最多导出报告数"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只预览不写入"),
+    overwrite: bool = typer.Option(False, "--overwrite", help="覆盖已存在文件"),
+) -> None:
+    """导出报告到 Obsidian Vault。P2-C v1: 仅导出 YouTube 报告和频道卡片。"""
+    from pathlib import Path
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
+    from podcast_research.exporters.obsidian import export_to_vault
+
+    vault_path_str = vault or OBSIDIAN_VAULT_PATH
+    if not vault_path_str:
+        console.print("[red]请指定 --vault 路径或在 .env 中配置 OBSIDIAN_VAULT_PATH[/red]")
+        raise typer.Exit(code=1)
+
+    vault_path = Path(vault_path_str)
+    if not vault_path.exists():
+        console.print(f"[red]Vault 路径不存在: {vault_path}[/red]")
+        raise typer.Exit(code=1)
+
+    if dry_run:
+        console.print(f"[dim][DRY-RUN] Vault: {vault_path}[/dim]")
+
+    result = export_to_vault(
+        vault_path=vault_path,
+        source_type=source or "youtube",
+        prompt_version=prompt_version,
+        report_id=report_id,
+        limit=limit,
+        overwrite=overwrite,
+        dry_run=dry_run,
+    )
+
+    if dry_run:
+        console.print(f"\n[dim][DRY-RUN] 将导出 {len(result['exported'])} 份报告（不写入）[/dim]")
+        table = Table(title="Preview: 待导出报告")
+        table.add_column("ID", style="cyan", justify="right")
+        table.add_column("Date")
+        table.add_column("Channel")
+        table.add_column("Title/Video ID")
+        for r in result["exported"][:30]:
+            table.add_row(
+                str(r["report_id"]),
+                r["date"][:10] if r.get("date") else "-",
+                r.get("channel", "-")[:15],
+                r.get("title", "-")[:40],
+            )
+        console.print(table)
+        return
+
+    console.print(f"[green]Obsidian Export 完成[/green]")
+    console.print(f"  Vault: {vault_path}")
+    console.print(f"  Reports exported: {result['created']}")
+    console.print(f"  Reports skipped: {result['skipped']}")
+    console.print(f"  Channel cards: {result['channel_cards']}")
 
 
 # ---------------------------------------------------------------------------

@@ -87,6 +87,20 @@ class Entity(BaseModel):
     aliases: list[str] = Field(default_factory=list)
 
 
+class TranscriptChunk(BaseModel):
+    """P2-B: 长视频 transcript 分块数据结构。"""
+    chunk_id: int
+    segment_start_index: int
+    segment_end_index: int  # exclusive
+    start_time: str = ""
+    end_time: str = ""
+    text: str = ""  # cleaned_text for this chunk (with overlap)
+    segments_text: str = ""  # formatted [start-end] text
+    char_count: int = 0
+    segment_count: int = 0
+    chunk_count: int = 1  # total chunks in parent transcript
+
+
 class ExtractionResult(BaseModel):
     metadata: dict = Field(default_factory=dict)
     source_info: dict = Field(default_factory=dict, description="数据来源信息")

@@ -4,9 +4,9 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P2-A2.1 Channel Metadata + P2-A2 Cross-channel Evaluation
+## 当前阶段：P2-C Obsidian Export v1
 
-P0 分析 + P1-A/B/C/D/E/F 已完成 + P2-A1 Hardening 已完成。P2-A2.1 实现频道/视频元数据传递，channels analyze-video 自动补齐频道名和视频标题到报告。P2-A2 实现跨频道 Prompt v2 质量评估工具。
+P0 + P1 + P2-A + P2-B 已完成。P2-C 实现 SQLite 已有 YouTube 报告导出到 Obsidian Vault，生成结构化笔记和频道卡片。
 
 ## 快速开始
 
@@ -168,6 +168,97 @@ python -m podcast_research eval summary --output data/eval/prompt_v2_summary.md
 - 报告状态（ok / empty / generic_targets）
 
 泛化标的检测列表：Broad Market、Economy、Investors、Consumers、Society、AI Industry、Technology Sector、Market、Companies、Startups。
+
+## 长视频分块分析（P2-B）
+
+长视频（>50K 字符或 >1000 段字幕）自动启用分块分析，解决 token 超限问题：
+
+```bash
+# 长视频自动 chunking（默认行为）
+python -m podcast_research --youtube-url "VIDEO_URL" --focus "AI投资,科技公司" --no-mock
+
+# 强制启用 chunking
+python -m podcast_research --youtube-url "VIDEO_URL" --focus "AI投资" --no-mock --chunked
+
+# 自定义 chunk 参数
+python -m podcast_research --youtube-url "VIDEO_URL" --no-mock --chunked \
+  --chunk-size 30000 --chunk-overlap 2000
+
+# 禁用 chunking（长视频时 WARNING）
+python -m podcast_research --youtube-url "VIDEO_URL" --no-mock --no-chunking
+
+# 频道视频 chunking
+python -m podcast_research channels analyze-video VIDEO_ID \
+  --focus "科技公司,商业模式" --no-mock --chunked
+```
+
+### Chunking 策略
+
+- **触发条件**：chars > 50000 或 segments > 1000（自动）或 `--chunked`（手动）
+- **分块**：按 segment 边界切分，每块 30000 字符，块间 2000 字符重叠
+- **提取**：每块独立调用 LLM extract_facts
+- **合并**：去重 + compaction（investment_views ≤ 12，entities ≤ 40 等）
+- **渲染**：合并后只生成一份最终报告
+
+### 注意事项
+
+- 短视频行为完全不变，不强制 chunking
+- Chunking 会增加 API 调用次数（N 块 = N 次 LLM 调用），需注意成本
+- 任一 chunk 失败会中止整个分析（后续版本将支持 partial mode）
+- 默认 pytest 使用 mock provider，不调用真实 LLM
+
+## Obsidian Vault 导出（P2-C）
+
+将 SQLite 中的 YouTube 报告导出到 Obsidian Vault，形成可浏览、可双链的知识库：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian export \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --source youtube \
+  --prompt-version tech_ai_v2 \
+  --dry-run
+
+# 正式导出
+python -m podcast_research obsidian export \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --source youtube \
+  --prompt-version tech_ai_v2
+
+# 导出指定报告
+python -m podcast_research obsidian export --report-id 150
+
+# 覆盖已存在文件
+python -m podcast_research obsidian export --overwrite --limit 5
+```
+
+### 导出内容
+
+| 目录 | 内容 |
+|------|------|
+| `01_Reports/` | 单视频报告（YAML frontmatter + Markdown） |
+| `05_Channels/` | 频道卡片（Recent Reports 自动追加） |
+| `99_System/Report Index.md` | 报告索引表 |
+| `99_System/Export Log.md` | 导出日志 |
+
+### 文件命名
+
+`01_Reports/YYYY-MM-DD_ChannelName_VideoId.md`
+
+### Vault 配置
+
+在 `.env` 中配置默认 Vault 路径：
+
+```env
+OBSIDIAN_VAULT_PATH=D:\KinocNote\ai-investing-vault\科技AI投资知识库
+```
+
+注意：
+- 默认不自动导出，需显式执行 CLI 命令
+- 已存在文件默认 skip，不覆盖用户手工编辑
+- `--overwrite` 可强制覆盖
+- Vault 路径必须已存在，工具不创建根目录
+- v1 仅导出 YouTube 报告，不做 Topic/Company/Claim 卡片
 
 ## 全文搜索索引（P1-D）
 
@@ -349,7 +440,8 @@ logs/                     # 日志
 | P2-A1 | Tech/AI Investing Prompt v2 + Schema 增强 | **已完成** |
 | P2-A2.1 | Channel/Video Metadata Propagation | **已完成** |
 | P2-A2 | 跨频道 Prompt v2 质量评估 | **已完成** |
-| P2-B | 长视频分块分析（Long Transcript Chunking） | 待启动 |
+| P2-B | 长视频分块分析（Long Transcript Chunking） | **已完成** |
+| P2-C | Obsidian Vault 导出 v1 | **已完成** |
 | P2 | 小宇宙链接导入 + 其他增强 | 待启动 |
 | P3 | 历史报告全局查询（FTS5 + LLM 问答） | 待启动 |
 | P4 | 多期观点对比 | 待启动 |
