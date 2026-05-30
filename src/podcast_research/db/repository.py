@@ -86,6 +86,12 @@ def save_investment_views(session: Session, report_id: int, views: list[Investme
             source_quote=v.source_quote,
             timestamp_start=v.timestamp_start,
             timestamp_end=v.timestamp_end,
+            ai_value_chain_layer=v.ai_value_chain_layer,
+            technology_driver=v.technology_driver,
+            business_impact=v.business_impact,
+            investment_relevance=v.investment_relevance,
+            topic_tags=json.dumps(v.topic_tags, ensure_ascii=False),
+            quote_support_strength=v.quote_support_strength,
         )
         session.add(rec)
 
@@ -248,12 +254,23 @@ def get_report_detail(session: Session, report_id: int) -> dict | None:
         "views": [
             {
                 "target_name": v.target_name,
+                "normalized_target_name": v.normalized_target_name,
                 "target_type": v.target_type,
                 "view_direction": v.view_direction,
                 "logic_chain": v.logic_chain,
                 "source_quote": v.source_quote,
                 "timestamp_start": v.timestamp_start,
                 "risk_warning": v.risk_warning,
+                "evidence_strength": v.evidence_strength,
+                "evidence_type": v.evidence_type,
+                "evidence_detail": v.evidence_detail,
+                "confidence": v.confidence,
+                "speaker_label": v.speaker_label,
+                "time_horizon": v.time_horizon,
+                "ai_value_chain_layer": v.ai_value_chain_layer,
+                "business_impact": v.business_impact,
+                "investment_relevance": v.investment_relevance,
+                "quote_support_strength": v.quote_support_strength,
             }
             for v in views
         ],
@@ -262,6 +279,8 @@ def get_report_detail(session: Session, report_id: int) -> dict | None:
                 "target_name": s.target_name,
                 "signal": s.signal,
                 "trigger_condition": s.trigger_condition,
+                "source_quote": s.source_quote or "",
+                "timestamp": s.timestamp or "",
             }
             for s in signals
         ],
@@ -273,7 +292,30 @@ def search_reports(
     keyword: str,
     limit: int = 20,
 ) -> list[dict]:
-    """LIKE 搜索报告。搜索范围：report_markdown + investment_views.target_name/logic_chain。"""
+    """全文搜索报告。优先 FTS5，不可用时 fallback 到 LIKE。"""
+    from podcast_research.db.fts import search_fts
+
+    fts_results = search_fts(session, keyword, limit=limit)
+    if fts_results is not None:
+        # 用 Report 数据补充 created_at
+        report_ids = [r["report_id"] for r in fts_results]
+        reports_map = {
+            r.id: r for r in session.query(Report).filter(Report.id.in_(report_ids)).all()
+        }
+        for item in fts_results:
+            rep = reports_map.get(item["report_id"])
+            item["created_at"] = rep.analysis_timestamp if rep else None
+        return fts_results
+
+    return _search_reports_like(session, keyword, limit=limit)
+
+
+def _search_reports_like(
+    session: Session,
+    keyword: str,
+    limit: int = 20,
+) -> list[dict]:
+    """LIKE 搜索报告（FTS5 不可用时的 fallback）。"""
     pattern = f"%{keyword}%"
     results: list[dict] = []
     seen_ids: set[int] = set()
@@ -294,7 +336,7 @@ def search_reports(
         excerpt = _extract_excerpt(report.report_markdown, keyword)
         results.append({
             "report_id": report.id,
-            "match_type": "报告内容",
+            "match_type": "like-fallback",
             "match_excerpt": excerpt,
             "source_type": _infer_source_type(episode),
             "created_at": report.analysis_timestamp,
@@ -316,7 +358,7 @@ def search_reports(
         seen_ids.add(report.id)
         results.append({
             "report_id": report.id,
-            "match_type": "投资标的",
+            "match_type": "like-fallback",
             "match_excerpt": f"{view.target_name} ({view.view_direction})",
             "source_type": _infer_source_type(episode),
             "created_at": report.analysis_timestamp,
@@ -338,7 +380,7 @@ def search_reports(
         seen_ids.add(report.id)
         results.append({
             "report_id": report.id,
-            "match_type": "逻辑链",
+            "match_type": "like-fallback",
             "match_excerpt": view.logic_chain[:80],
             "source_type": _infer_source_type(episode),
             "created_at": report.analysis_timestamp,

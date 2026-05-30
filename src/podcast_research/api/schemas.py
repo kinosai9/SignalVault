@@ -37,12 +37,18 @@ class InvestmentViewOut(BaseModel):
     source_quote: str
     timestamp_start: str
     risk_warning: str
+    evidence_strength: str = ""
+    evidence_type: str = ""
+    confidence: str = ""
+    speaker_label: str = ""
 
 
 class TrackingSignalOut(BaseModel):
     target_name: str
     signal: str
     trigger_condition: str
+    source_quote: str = ""
+    timestamp: str = ""
 
 
 class ReportDetailResponse(BaseModel):

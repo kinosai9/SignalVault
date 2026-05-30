@@ -57,7 +57,7 @@ def test_report_includes_view_matrix() -> None:
 
 
 def test_report_shows_youtube_source_info() -> None:
-    """报告应展示 YouTube 数据来源信息。"""
+    """报告应展示 YouTube 数据来源信息（P2-A2.1: 字段化展示）。"""
     provider = MockLLMProvider()
     extraction = ExtractionResult(
         source_info={
@@ -74,11 +74,11 @@ def test_report_shows_youtube_source_info() -> None:
     )
     report = provider.render_report(extraction)
     assert "数据来源" in report
-    assert "YouTube" in report
+    assert "视频 ID" in report
     assert "test123" in report
     assert "zh-Hans" in report
     assert "100" in report
-    assert "原始链接" in report
+    assert "视频链接" in report
 
 
 def test_report_shows_local_source_info() -> None:
@@ -125,4 +125,4 @@ def test_mock_english_zero_views_valid_report() -> None:
     assert "执行摘要" in report
     assert "0" in report  # 0 条观点
     assert "数据来源" in report
-    assert "YouTube" in report
+    assert "视频 ID" in report

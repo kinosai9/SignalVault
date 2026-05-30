@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}报告库 — 投资音视频研究助手{% endblock %}
+
+{% block content %}
+<h2>报告库</h2>
+
+{% if reports %}
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>日期</th>
+            <th>来源</th>
+            <th>标题/视频ID</th>
+            <th>关注点</th>
+            <th>观点</th>
+            <th>实体</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in reports %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "-" }}</td>
+            <td>
+                <span class="tag-source {{ r.source_type }}">{{ r.source_type }}</span>
+            </td>
+            <td>{{ r.episode_title or r.title }}</td>
+            <td>
+                {% for fa in r.focus_areas[:3] %}
+                <span class="tag">{{ fa }}</span>
+                {% endfor %}
+                {% if r.focus_areas|length > 3 %}
+                <span class="tag">+{{ r.focus_areas|length - 3 }}</span>
+                {% endif %}
+            </td>
+            <td>{{ r.view_count }}</td>
+            <td>{{ r.entity_count }}</td>
+            <td><a href="/reports/{{ r.id }}">查看</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>暂无报告</p>
+    <p>使用 <code>python -m podcast_research --subtitle-file &lt;file&gt;</code> 生成分析报告。</p>
+</div>
+{% endif %}
+{% endblock %}

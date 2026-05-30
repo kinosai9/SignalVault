@@ -27,11 +27,53 @@ def _migrate_episodes_table(engine) -> None:
                 conn.execute(text(f"ALTER TABLE episodes ADD COLUMN {col_name} {col_type} DEFAULT ''"))
 
 
+def _migrate_channels_table(engine) -> None:
+    """为 channels 表补齐 P1-F 新增列（tags/priority/default_focus/limits/notes）。"""
+    insp = inspect(engine)
+    if "channels" not in insp.get_table_names():
+        return
+    existing = {col["name"] for col in insp.get_columns("channels")}
+    migrations = [
+        ("tags", "TEXT DEFAULT '[]'"),
+        ("priority", "VARCHAR(20) DEFAULT 'secondary'"),
+        ("default_focus", "TEXT DEFAULT ''"),
+        ("default_limit", "INTEGER DEFAULT 10"),
+        ("default_max_analyze", "INTEGER DEFAULT 3"),
+        ("notes", "TEXT DEFAULT ''"),
+    ]
+    with engine.begin() as conn:
+        for col_name, col_type in migrations:
+            if col_name not in existing:
+                conn.execute(text(f"ALTER TABLE channels ADD COLUMN {col_name} {col_type}"))
+
+
+def _migrate_investment_views_table(engine) -> None:
+    """为 investment_views 表补齐 P2-A1 新增列。"""
+    insp = inspect(engine)
+    if "investment_views" not in insp.get_table_names():
+        return
+    existing = {col["name"] for col in insp.get_columns("investment_views")}
+    migrations = [
+        ("ai_value_chain_layer", "VARCHAR(50) DEFAULT 'other'"),
+        ("technology_driver", "TEXT DEFAULT ''"),
+        ("business_impact", "VARCHAR(50) DEFAULT 'unknown'"),
+        ("investment_relevance", "VARCHAR(10) DEFAULT 'medium'"),
+        ("topic_tags", "TEXT DEFAULT '[]'"),
+        ("quote_support_strength", "VARCHAR(10) DEFAULT 'medium'"),
+    ]
+    with engine.begin() as conn:
+        for col_name, col_type in migrations:
+            if col_name not in existing:
+                conn.execute(text(f"ALTER TABLE investment_views ADD COLUMN {col_name} {col_type}"))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
     Base.metadata.create_all(_engine)
     _migrate_episodes_table(_engine)
+    _migrate_channels_table(_engine)
+    _migrate_investment_views_table(_engine)
 
 
 def get_session() -> Session:

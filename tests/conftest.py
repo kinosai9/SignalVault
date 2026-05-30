@@ -1,8 +1,22 @@
-"""共享测试 fixtures。"""
+"""共享测试 fixtures。
+
+⚠️ 环境隔离：conftest 在 import podcast_research 模块之前强制设置 LLM env vars，
+确保所有 mock 测试不受用户本地 .env 影响，永远使用 mock provider。
+"""
 
 import os
 import tempfile
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# P2-A1.1 测试环境 hardening：在任何 podcast_research 模块导入前，强制覆盖
+# LLM 相关的环境变量。load_dotenv() 默认不覆盖已存在的 env var，所以这里先行
+# 设置就能阻止 .env 中的真实 LLM 配置进入测试。
+# ---------------------------------------------------------------------------
+os.environ["LLM_PROVIDER"] = "mock"
+os.environ["LLM_API_KEY"] = ""
+os.environ["LLM_BASE_URL"] = ""
+os.environ["LLM_MODEL"] = "mock-investment-analyst"
 
 import pytest
 

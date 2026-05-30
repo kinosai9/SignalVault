@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}报告 #{{ report.id }} — 投资音视频研究助手{% endblock %}
+
+{% block content %}
+<a href="/reports" class="back-link">&larr; 返回报告库</a>
+
+<h2>报告 #{{ report.id }}</h2>
+
+<dl class="detail-grid">
+    <dt>来源类型</dt>
+    <dd><span class="tag-source {{ report.source_type }}">{{ report.source_type }}</span></dd>
+
+    {% if report.video_id %}
+    <dt>视频 ID</dt>
+    <dd>{{ report.video_id }}</dd>
+    {% endif %}
+
+    {% if report.source_url %}
+    <dt>来源链接</dt>
+    <dd><a href="{{ report.source_url }}" target="_blank" rel="noopener">{{ report.source_url[:60] }}{% if report.source_url|length > 60 %}...{% endif %}</a></dd>
+    {% endif %}
+
+    {% if report.language %}
+    <dt>字幕语言</dt>
+    <dd>{{ report.language }}</dd>
+    {% endif %}
+
+    <dt>关注点</dt>
+    <dd>
+        {% for fa in report.focus_areas %}
+        <span class="tag">{{ fa }}</span>
+        {% else %}
+        <span class="tag">未指定</span>
+        {% endfor %}
+    </dd>
+
+    <dt>分析深度</dt>
+    <dd>{{ report.analysis_depth }}</dd>
+
+    <dt>分析时间</dt>
+    <dd>{{ report.created_at.strftime("%Y-%m-%d %H:%M:%S") if report.created_at else "-" }}</dd>
+
+    <dt>LLM 提供商</dt>
+    <dd>{{ report.llm_provider }} / {{ report.llm_model }}</dd>
+</dl>
+
+{% if report.views %}
+<h3 class="section-title">核心观点矩阵</h3>
+<table class="views-table">
+    <thead>
+        <tr>
+            <th>标的</th>
+            <th>方向</th>
+            <th>逻辑链</th>
+            <th>证据强度</th>
+            <th>风险提示</th>
+            <th>原文引用</th>
+            <th>时间戳</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in report.views %}
+        <tr>
+            <td><strong>{{ v.target_name }}</strong>{% if v.target_type %} <br><small>{{ v.target_type }}</small>{% endif %}</td>
+            <td><span class="tag-direction {{ v.view_direction }}">{{ v.view_direction }}</span></td>
+            <td>{{ v.logic_chain }}</td>
+            <td>{{ v.evidence_strength or "-" }}</td>
+            <td>{{ v.risk_warning if v.risk_warning else "-" }}</td>
+            <td>{% if v.source_quote %}"{{ v.source_quote[:80] }}{% if v.source_quote|length > 80 %}...{% endif %}"{% else %}-{% endif %}</td>
+            <td>{{ v.timestamp_start if v.timestamp_start else "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if report.signals %}
+<h3 class="section-title">待验证信号</h3>
+<ul class="signal-list">
+    {% for s in report.signals %}
+    <li>
+        <strong>{{ s.target_name }}</strong>：
+        {{ s.signal }}
+        {% if s.trigger_condition %}<br><small>触发条件：{{ s.trigger_condition }}</small>{% endif %}
+        {% if s.source_quote %}<br><small>引用："{{ s.source_quote[:80] }}{% if s.source_quote|length > 80 %}...{% endif %}"</small>{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if report.report_markdown %}
+<h3 class="section-title">完整报告正文</h3>
+<div class="markdown-body">{{ report.report_markdown }}</div>
+{% endif %}
+
+{% endblock %}

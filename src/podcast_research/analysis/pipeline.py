@@ -24,6 +24,33 @@ from podcast_research.utils.hash import file_hash
 logger = logging.getLogger(__name__)
 
 
+# P2-A2.1: source_info override 合并优先级映射
+# override key → source_info key（便于扩展）
+_SOURCE_INFO_OVERRIDE_MAP = {
+    "channel_name": "channel_name",
+    "channel_url": "channel_url",
+    "video_title": "title",
+    "video_url": "video_url",
+    "published_at": "published_at",
+    "channel_tags": "channel_tags",
+    "channel_default_focus": "channel_default_focus",
+}
+
+
+def _merge_source_info_override(source_info: dict, override: dict) -> None:
+    """将 override 中的非空值合并到 source_info，覆盖空字段。
+
+    优先级：override 非空值 > source_info 已有值。
+    不影响 source_type / video_id / language 等 adapter 提供的基础字段。
+    """
+    for override_key, source_key in _SOURCE_INFO_OVERRIDE_MAP.items():
+        val = override.get(override_key)
+        if val:
+            existing = source_info.get(source_key)
+            if not existing:
+                source_info[source_key] = val
+
+
 def get_llm_provider(provider_name: str) -> LLMProvider:
     if provider_name == "mock":
         return MockLLMProvider()
@@ -81,10 +108,12 @@ def _run_pipeline(
 
     # 2. LLM 抽取
     provider = get_llm_provider(provider_name)
-    logger.info("LLM 事实抽取（provider: %s）", provider_name)
-    extraction = provider.extract_facts(cleaned_text, segments_text)
+    logger.info("LLM 事实抽取（provider: %s, prompt: tech_ai_v2）", provider_name)
+    extraction = provider.extract_facts(cleaned_text, segments_text, focus_areas=focus_areas)
     extraction.focus_areas = focus_areas
     extraction.source_info = source_info
+    if not extraction.prompt_version:
+        extraction.prompt_version = "tech_ai_v2"
 
     # 3. 生成报告
     logger.info("生成 Markdown 报告")
@@ -102,7 +131,9 @@ def _run_pipeline(
             language=episode_extra.get("language", ""),
         )
         rep_id = save_report(
-            session, ep_id, extraction, report_md, provider_name, "mock-v1", analysis_depth
+            session, ep_id, extraction, report_md, provider_name,
+            llm_model=extraction.metadata.get("model", "mock-v1") if extraction.metadata else "mock-v1",
+            analysis_depth=analysis_depth,
         )
         save_investment_views(session, rep_id, extraction.investment_views)
         save_tracking_signals(session, rep_id, extraction.tracking_signals)
@@ -115,10 +146,14 @@ def _run_pipeline(
     finally:
         session.close()
 
-    # 5. 写出文件
+    # 5. 写出文件（v2+ 带版本后缀，避免覆盖旧版报告）
     output_dir.mkdir(parents=True, exist_ok=True)
-    json_path = output_dir / f"{episode_title}_extraction.json"
-    md_path = output_dir / f"{episode_title}_report.md"
+    version_suffix = ""
+    pv = extraction.prompt_version
+    if pv and pv not in ("v0.1", "v1"):
+        version_suffix = f"_{pv}"
+    json_path = output_dir / f"{episode_title}{version_suffix}_extraction.json"
+    md_path = output_dir / f"{episode_title}{version_suffix}_report.md"
 
     json_path.write_text(
         json.dumps(extraction.model_dump(), ensure_ascii=False, indent=2),
@@ -173,8 +208,14 @@ def analyze_from_transcript(
     output_dir: Path | None = None,
     focus_areas: list[str] | None = None,
     analysis_depth: str = "standard",
+    source_info_override: dict | None = None,
 ) -> dict:
-    """从 TranscriptResult（YouTube 等外部数据源）执行完整分析 pipeline。"""
+    """从 TranscriptResult（YouTube 等外部数据源）执行完整分析 pipeline。
+
+    source_info_override: 可选字典，用于覆盖 / 补充 source_info 中的字段。
+    优先级：override dict 中的非空值 > adapter 值 > 空字符串 / 默认值。
+    仅 channels analyze-video 路径使用，不影响普通 --youtube-url 分析。
+    """
     if focus_areas is None:
         focus_areas = ["通用投资研究"]
 
@@ -192,6 +233,14 @@ def analyze_from_transcript(
         "fetched_at": transcript.fetched_at,
         "transcript_segment_count": transcript.transcript_segment_count,
     }
+
+    # P2-A2.1: 合并 channel metadata override（覆盖空字段）
+    if source_info_override:
+        _merge_source_info_override(source_info, source_info_override)
+
+        # 如果 override 提供了比 adapter 更好的 title，更新页面标题
+        if source_info_override.get("video_title"):
+            episode_title = source_info_override["video_title"]
 
     episode_extra = {
         "source": transcript.source_type,

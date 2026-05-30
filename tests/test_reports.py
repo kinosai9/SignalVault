@@ -86,14 +86,14 @@ def test_search_reports_matches_markdown(seeded_db) -> None:
     """搜索 report_markdown 中的关键词。"""
     results = search_reports(seeded_db, "宁德时代")
     assert len(results) > 0
-    assert any(r["match_type"] == "报告内容" for r in results)
+    assert any(r["match_type"] in ("fts", "like-fallback", "报告内容") for r in results)
 
 
 def test_search_reports_matches_target(seeded_db) -> None:
     """搜索 investment_views.target_name。"""
     results = search_reports(seeded_db, "NVIDIA")
     assert len(results) > 0
-    assert any(r["match_type"] in ("投资标的", "报告内容") for r in results)
+    assert any(r["match_type"] in ("fts", "like-fallback", "投资标的", "报告内容") for r in results)
 
 
 def test_search_reports_no_match(seeded_db) -> None:

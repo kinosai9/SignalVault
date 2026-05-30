@@ -12,7 +12,8 @@ runner = CliRunner()
 
 
 def test_cli_mock_analyze(db_session, tmp_path) -> None:
-    result = runner.invoke(app, ["--subtitle-file", str(SAMPLE_SRT), "-o", str(tmp_path)])
+    """--mock 模式完整分析（P2-A1.1: 显式 --mock 防止 .env 污染）。"""
+    result = runner.invoke(app, ["--subtitle-file", str(SAMPLE_SRT), "--mock", "-o", str(tmp_path)])
     assert result.exit_code == 0
     assert "分析完成" in result.output
 
@@ -84,3 +85,31 @@ def test_cli_youtube_url_mock(mock_api_class: MagicMock, db_session, tmp_path) -
     )
     assert result.exit_code == 0
     assert "分析完成" in result.output
+
+
+# ---------------------------------------------------------------------------
+# P2-A1.1 回归测试：--mock 必须覆盖 .env 中的真实 LLM 配置
+# ---------------------------------------------------------------------------
+
+def test_cli_mock_overrides_env_openai_compatible(monkeypatch, db_session, tmp_path) -> None:
+    """即使 os.environ 中 LLM_PROVIDER=openai-compatible，--mock 仍使用 mock。
+
+    验证 --mock 优先级高于 .env / os.environ 配置，不会触发真实 LLM API。
+    """
+    # 模拟用户在 .env 中配置了真实 LLM
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_API_KEY", "sk-fake-but-would-trigger-api-call")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.example.com/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-4")
+
+    result = runner.invoke(
+        app,
+        ["--subtitle-file", str(SAMPLE_SRT), "--mock", "-o", str(tmp_path)],
+    )
+    # 即使 env 配置了 openai-compatible，--mock 也应该强制使用 mock
+    assert result.exit_code == 0
+    assert "分析完成" in result.output
+    # 不应该出现真实 LLM 的错误信息
+    assert "API" not in result.output
+    assert "timeout" not in result.output.lower()
+    assert "connection" not in result.output.lower()

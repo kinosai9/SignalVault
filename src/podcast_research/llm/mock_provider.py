@@ -48,23 +48,27 @@ _direction_label = {"bullish": "看多", "bearish": "看空", "neutral": "中性
 
 class MockLLMProvider(LLMProvider):
 
-    def extract_facts(self, cleaned_text: str, segments_text: str) -> ExtractionResult:
+    def extract_facts(self, cleaned_text: str, segments_text: str, focus_areas: list[str] | None = None) -> ExtractionResult:
         segments = self._parse_segments_text(segments_text)
         entities = self._extract_entities(cleaned_text)
         views = self._extract_views(segments, entities, cleaned_text)
+        insights = self._extract_insights(segments, entities, cleaned_text)
         risks = self._extract_risks(segments, cleaned_text)
         signals = self._extract_signals(segments, entities, cleaned_text)
         quotes = self._extract_quotes(segments)
         uncertain = self._extract_uncertain(segments, views)
 
         return ExtractionResult(
-            metadata={"source": "mock-rule-engine", "model": "mock-v1"},
+            metadata={"source": "mock-rule-engine", "model": "mock-v2"},
             mentioned_entities=entities,
             investment_views=views,
+            tech_industry_insights=insights,
             risks=risks,
             tracking_signals=signals,
             key_quotes=quotes,
             uncertain_items=uncertain,
+            non_focus_items=[],
+            prompt_version="tech_ai_v2",
         )
 
     def render_report(self, extraction: ExtractionResult) -> str:
@@ -76,17 +80,38 @@ class MockLLMProvider(LLMProvider):
             "",
         ]
 
-        # 数据来源展示
+        # 数据来源展示 (P2-A2.1: 频道/视频元数据增强)
         source_info = extraction.source_info
         if source_info:
             lines.append("## 数据来源")
             lines.append("")
             source_type = source_info.get("source_type", "")
             if source_type == "youtube":
-                lines.append(f"- **来源**：YouTube")
+                # 频道（优先展示）
+                channel = source_info.get("channel_name", "")
+                if channel:
+                    lines.append(f"- **来源频道**：{channel}")
+                channel_url = source_info.get("channel_url", "")
+                if channel_url:
+                    lines.append(f"- **频道链接**：{channel_url}")
+                # 视频标题
+                title = source_info.get("title", "")
+                if title:
+                    lines.append(f"- **视频标题**：{title}")
+                # 视频 ID + 链接
                 vid = source_info.get("video_id", "")
                 if vid:
                     lines.append(f"- **视频 ID**：{vid}")
+                video_url = source_info.get("video_url", "")
+                if video_url:
+                    lines.append(f"- **视频链接**：{video_url}")
+                elif vid:
+                    lines.append(f"- **视频链接**：https://www.youtube.com/watch?v={vid}")
+                # 发布日期
+                published = source_info.get("published_at", "")
+                if published:
+                    lines.append(f"- **发布日期**：{published}")
+                # 字幕信息
                 lang = source_info.get("language", "")
                 if lang:
                     lines.append(f"- **字幕语言**：{lang}")
@@ -95,15 +120,11 @@ class MockLLMProvider(LLMProvider):
                     lines.append(f"- **字幕段数**：{seg_count}")
                 is_gen = source_info.get("is_generated", False)
                 lines.append(f"- **字幕类型**：{'自动生成' if is_gen else '人工上传'}")
-                channel = source_info.get("channel_name", "")
-                if channel:
-                    lines.append(f"- **频道**：{channel}")
-                title = source_info.get("title", "")
-                if title:
-                    lines.append(f"- **标题**：{title}")
-                url = source_info.get("source_url", "")
-                if url:
-                    lines.append(f"- **原始链接**：{url}")
+                # 频道标签
+                tags = source_info.get("channel_tags", [])
+                if tags:
+                    tags_str = ", ".join(f"#{t}" for t in tags)
+                    lines.append(f"- **频道标签**：{tags_str}")
             else:
                 path = source_info.get("source_path", "")
                 lines.append(f"- **来源**：本地字幕文件")
@@ -126,20 +147,39 @@ class MockLLMProvider(LLMProvider):
         entity_names = ", ".join(e.name for e in extraction.mentioned_entities) or "未识别标的"
         lines.append(f"本期讨论涉及 **{entity_names}**，共提取 **{view_count}** 条投资观点。")
 
-        # View matrix
+        # View matrix (v2: expanded columns)
         lines.append("")
         lines.append("## 核心观点矩阵")
         lines.append("")
-        lines.append("| 标的 | 方向 | 逻辑 | 证据类型 | 发言人 | 时间戳 |")
-        lines.append("|------|------|------|----------|--------|--------|")
+        lines.append("| 标的 | 方向 | AI价值链 | 商业影响 | 逻辑 | 证据类型 | 证据强度 | 时间范围 | 发言人 | 时间戳 |")
+        lines.append("|------|------|----------|----------|------|----------|----------|----------|--------|--------|")
         for v in extraction.investment_views:
             direction = v.view_direction_label or _direction_label.get(v.view_direction, v.view_direction)
-            logic_display = v.logic_chain[:60] if len(v.logic_chain) > 60 else v.logic_chain
+            logic_display = v.logic_chain[:50] if len(v.logic_chain) > 50 else v.logic_chain
+            horizon = v.time_horizon or "unknown"
             lines.append(
                 f"| {v.target_name} | {direction} "
+                f"| {v.ai_value_chain_layer or '-'} "
+                f"| {v.business_impact or '-'} "
                 f"| {logic_display} | {v.evidence.evidence_type} "
-                f"| {v.speaker_label or '未识别'} | {v.timestamp_start} |"
+                f"| {v.evidence.evidence_strength} "
+                f"| {horizon} "
+                f"| {v.speaker_label or 'unknown_speaker'} | {v.timestamp_start} |"
             )
+
+        # Tech/Industry Insights (v2 new section)
+        lines.append("")
+        lines.append("## Tech/Industry Insights")
+        lines.append("")
+        if extraction.tech_industry_insights:
+            for ins in extraction.tech_industry_insights:
+                implication = f" [投资含义: {ins.investment_implication}]" if ins.investment_implication != "none" else ""
+                tags = f" `{' '.join('#' + t for t in ins.topic_tags)}`" if ins.topic_tags else ""
+                lines.append(f"- **{ins.insight}**{implication}{tags}")
+                if ins.source_quote:
+                    lines.append(f"  > {ins.source_quote}")
+        else:
+            lines.append("本期未识别到技术/产业洞察。")
 
         # Risks
         lines.append("")
@@ -147,7 +187,7 @@ class MockLLMProvider(LLMProvider):
         lines.append("")
         if extraction.risks:
             for r in extraction.risks:
-                label = f"（{r.target_name}，{r.speaker_label} @ {r.timestamp}）" if r.target_name else ""
+                label = f"（{r.target_name}，{r.speaker_label or 'unknown_speaker'} @ {r.timestamp}）" if r.target_name else ""
                 lines.append(f"- **{r.description}**{label}")
         else:
             lines.append("本期未识别到明确风险提示。")
@@ -162,6 +202,16 @@ class MockLLMProvider(LLMProvider):
                 lines.append(f"- {s.signal}{extra}")
         else:
             lines.append("本期未识别到待验证信号。")
+
+        # Non-focus Items (v2 new section)
+        lines.append("")
+        lines.append("## Non-focus Items")
+        lines.append("")
+        if extraction.non_focus_items:
+            for nf in extraction.non_focus_items:
+                lines.append(f"- {nf}")
+        else:
+            lines.append("本期未识别到非关注项。")
 
         # Key quotes
         lines.append("")
@@ -181,7 +231,7 @@ class MockLLMProvider(LLMProvider):
         lines.append("")
         lines.append("---")
         lines.append("")
-        lines.append("*分析方式：规则引擎 mock-v1（非真实 LLM） | 不构成投资建议*")
+        lines.append("*分析方式：规则引擎 mock-v2（非真实 LLM） | 不构成投资建议*")
 
         return "\n".join(lines)
 
@@ -274,34 +324,81 @@ class MockLLMProvider(LLMProvider):
 
                 views.append(InvestmentView(
                     target_name=target,
+                    normalized_target_name=target,
                     target_type=entity.entity_type,
                     view_direction=direction,
                     view_direction_label=_direction_label.get(direction, direction),
                     logic_chain=logic_chain,
+                    time_horizon="unknown",
+                    confidence="cautious",
                     evidence=Evidence(evidence_type=evidence_type, evidence_strength="weak"),
                     risk_warning="",
-                    speaker_label=speaker,
-                    speaker_role=role,
+                    speaker_label=speaker if speaker != "未识别发言人" else "unknown_speaker",
+                    speaker_role="podcast_participant" if conf == "low" else role,
                     speaker_confidence=conf,
                     source_quote=source_seg["text"][:100],
                     timestamp_start=source_seg["start"],
                     timestamp_end=source_seg["end"],
                     uncertainty="[规则引擎推断，未经 LLM 验证]" if conf == "low" else "",
+                    ai_value_chain_layer="other",
+                    technology_driver="",
+                    business_impact="unknown",
+                    investment_relevance="medium",
+                    topic_tags=[],
+                    quote_support_strength="medium",
                 ))
                 used_segments.add(source_idx)
 
         return views
 
     def _infer_evidence_type(self, text: str, direction: str) -> str:
-        if any(kw in text for kw in ["数据", "财报", "业绩", "报告", "统计", "出货", "增速", "营收", "利润"]):
-            return "财报/数据"
-        if any(kw in text for kw in ["政策", "规定", "监管", "改革", "海外政策"]):
-            return "政策"
+        if any(kw in text for kw in ["数据", "财报", "业绩", "报告", "统计", "出货", "增速", "营收", "利润", "ARR", "收入"]):
+            return "financial_metric"
         if any(kw in text for kw in ["估值", "PE", "PB", "市值", "溢价", "偏低", "偏高"]):
-            return "估值"
+            return "valuation_metric"
+        if any(kw in text for kw in ["增长", "增长率", "增速", "同比", "环比"]):
+            return "growth_metric"
+        if any(kw in text for kw in ["资本开支", "CapEx", "capex", "数据中心", "基础设施"]):
+            return "capex_or_infrastructure"
+        if any(kw in text for kw in ["政策", "规定", "监管", "改革", "海外政策", "法规"]):
+            return "policy_or_regulation"
+        if any(kw in text for kw in ["市场份额", "竞争", "格局", "龙头", "垄断"]):
+            return "market_structure"
+        if any(kw in text for kw in ["技术", "模型", "算法", "架构", "芯片"]):
+            return "technical_claim"
         if direction != "neutral":
-            return "个人判断"
-        return "未给依据"
+            return "expert_judgment"
+        return "unsupported_claim"
+
+    def _extract_insights(self, segments: list[dict], entities: list[Entity], full_text: str) -> list:
+        """P2-A1: 提取技术/产业洞察（mock 简单版）。"""
+        from podcast_research.analysis.models import TechIndustryInsight
+        insights = []
+        tech_keywords = ["模型", "训练", "推理", "芯片", "云", "数据中心", "agent", "开源", "GPU", "AI", "部署", "工程"]
+        tag_keywords = {
+            "model": ["模型", "推理", "训练", "大模型"],
+            "compute": ["算力", "GPU", "芯片", "H100", "B200"],
+            "semiconductor": ["芯片", "半导体", "制程", "晶圆"],
+            "cloud": ["云", "多云", "混合云"],
+            "agent": ["agent", "Agent", "智能体"],
+            "opensource": ["开源", "open source"],
+            "enterprise": ["企业", "部署", "落地"],
+        }
+        for seg in segments:
+            hits = sum(1 for kw in tech_keywords if kw in seg["text"])
+            if hits >= 2:
+                has_view = any(w in seg["text"] for w in BULLISH_WORDS + BEARISH_WORDS + NEUTRAL_WORDS)
+                if not has_view:  # 纯技术叙述，不构成投资观点
+                    tags = [tag for tag, kws in tag_keywords.items() if any(kw in seg["text"] for kw in kws)]
+                    insights.append(TechIndustryInsight(
+                        insight=seg["text"][:80],
+                        ai_value_chain_layer="other",
+                        investment_implication="low",
+                        topic_tags=tags[:3],
+                        source_quote=seg["text"][:100],
+                        timestamp=seg["start"],
+                    ))
+        return insights[:5]
 
     def _extract_risks(self, segments: list[dict], full_text: str) -> list[Risk]:
         risks = []

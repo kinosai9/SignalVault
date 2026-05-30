@@ -23,16 +23,13 @@ from podcast_research.llm.prompts import (
 logger = logging.getLogger(__name__)
 
 _JSON_SCHEMA_HINT = """
-输出必须是严格 JSON，schema 如下：
-{
-  "metadata": {"source": "..."},
-  "mentioned_entities": [{"name": "...", "entity_type": "..."}],
-  "investment_views": [{"target_name": "...", "target_type": "...", "view_direction": "bullish|bearish|neutral", "logic_chain": "...", "source_quote": "...", "timestamp_start": "...", ...}],
-  "risks": [{"description": "...", "target_name": "...", "source_quote": "...", "timestamp": "..."}],
-  "tracking_signals": [{"target_name": "...", "signal": "...", "source_quote": "...", "timestamp": "..."}],
-  "key_quotes": ["..."],
-  "uncertain_items": ["..."]
-}
+输出必须是严格 JSON，所有字段都必须出现（空值写 [] 或 ""）。核心新增字段：
+- prompt_version: "tech_ai_v2"
+- investment_views 每条必须包含: ai_value_chain_layer, technology_driver, business_impact, investment_relevance, topic_tags, quote_support_strength, normalized_target_name, time_horizon (不允许空字符串)
+- tech_industry_insights: 技术/产业洞察列表，每项含 insight, ai_value_chain_layer, affected_entities, investment_implication, source_quote, timestamp
+- non_focus_items: 与 Tech/AI 无关的内容列表
+- investment_views[*].evidence.evidence_type 必须从 financial_metric/valuation_metric/growth_metric/capex_or_infrastructure/market_structure/policy_or_regulation/technical_claim/expert_judgment/anecdotal_claim/unsupported_claim 选择
+- speaker_label 未知时统一用 "unknown_speaker"
 """
 
 
@@ -84,9 +81,10 @@ class OpenAICompatibleProvider(LLMProvider):
 
         raise RuntimeError("LLM 调用失败，已达最大重试次数")
 
-    def extract_facts(self, cleaned_text: str, segments_text: str) -> ExtractionResult:
+    def extract_facts(self, cleaned_text: str, segments_text: str, focus_areas: list[str] | None = None) -> ExtractionResult:
         system = EXTRACT_FACTS_SYSTEM + _JSON_SCHEMA_HINT
-        user = EXTRACT_FACTS_USER.format(cleaned_text=segments_text)
+        focus_str = ", ".join(focus_areas) if focus_areas else "通用投资研究"
+        user = EXTRACT_FACTS_USER.format(cleaned_text=segments_text, focus_areas=focus_str)
         raw = self._chat(system, user)
 
         # 解析 JSON — LLM 可能在 JSON 前后加 markdown 包装

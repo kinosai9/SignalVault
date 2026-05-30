@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}搜索 — 投资音视频研究助手{% endblock %}
+
+{% block content %}
+<h2>搜索报告</h2>
+
+<form class="search-form" method="get" action="/search">
+    <input type="text" name="q" value="{{ q or '' }}" placeholder="输入关键词搜索标的、逻辑链、报告内容...">
+    <button type="submit">搜索</button>
+</form>
+
+{% if q %}
+    {% if results %}
+    <p style="margin-bottom: 16px; color: #888; font-size: 0.875rem;">找到 {{ count }} 条结果</p>
+    {% for r in results %}
+    <div class="search-result">
+        <div class="match-type">{{ r.match_type }}</div>
+        <p>{{ r.match_excerpt }}</p>
+        <p style="margin-top: 4px; font-size: 0.75rem; color: #888;">
+            报告 <a href="/reports/{{ r.report_id }}">#{{ r.report_id }}</a>
+            &middot; <span class="tag-source {{ r.source_type }}">{{ r.source_type }}</span>
+            {% if r.created_at %}
+            &middot; {{ r.created_at.strftime("%Y-%m-%d %H:%M") }}
+            {% endif %}
+        </p>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <p>未找到与 "<strong>{{ q }}</strong>" 相关的结果</p>
+    </div>
+    {% endif %}
+{% else %}
+<div class="empty-state">
+    <p>输入关键词搜索已入库的报告</p>
+</div>
+{% endif %}
+{% endblock %}

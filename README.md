@@ -4,9 +4,9 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P1 报告库查询 + 本地 API
+## 当前阶段：P2-A2.1 Channel Metadata + P2-A2 Cross-channel Evaluation
 
-在 P0 分析闭环基础上，支持 CLI 查看和检索已入库报告，并提供本地只读 FastAPI API。
+P0 分析 + P1-A/B/C/D/E/F 已完成 + P2-A1 Hardening 已完成。P2-A2.1 实现频道/视频元数据传递，channels analyze-video 自动补齐频道名和视频标题到报告。P2-A2 实现跨频道 Prompt v2 质量评估工具。
 
 ## 快速开始
 
@@ -95,6 +95,116 @@ python -m podcast_research serve --reload
 
 > 注意：API 为本地只读服务，不支持分析任务提交、报告编辑或删除。默认绑定 127.0.0.1:8000。
 
+## YouTube 频道关注（P1-E + P1-F）
+
+```bash
+# 播种默认 Tech/AI 频道包（4 个核心频道，幂等+自愈）
+python -m podcast_research channels seed-tech-ai
+
+# 按标签过滤频道
+python -m podcast_research channels list --tag ai
+python -m podcast_research channels list --priority core
+
+# 管理频道标签
+python -m podcast_research channels tag 1 --add "ai,tech"
+python -m podcast_research channels tag 1 --remove "macro"
+python -m podcast_research channels tag 1 --set "ai,tech,vc"
+
+# 关注频道
+python -m podcast_research channels add "https://www.youtube.com/@allin" --name "All-In Podcast"
+
+# 刷新频道视频列表（获取最新 20 个视频）
+python -m podcast_research channels refresh 1 --limit 20
+
+# 查看频道视频
+python -m podcast_research channels videos 1
+
+# 分析指定视频（真实 LLM）
+python -m podcast_research channels analyze-video --video-id "HGbA6ze0_3M" --focus "AI投资,美股" --no-mock
+
+# dry-run 检查
+python -m podcast_research channels analyze-video --video-id "HGbA6ze0_3M" --dry-run
+```
+
+注意：
+- 默认使用 mock provider，真实 LLM 需显式 `--no-mock`
+- 已分析过的视频默认跳过，避免重复
+- `--dry-run` 模式只检查不分析
+- `seed-tech-ai` 幂等+自愈，重复执行不会重复插入，已存在但配置缺失的频道自动补齐
+
+### 频道视频分析自动补全元数据（P2-A2.1）
+
+通过 `channels analyze-video` 生成的报告会自动携带频道和视频元数据：
+
+- **来源频道**：从 channels 表获取频道名称和链接
+- **视频信息**：视频标题、URL、发布日期
+- **频道标签**：自动展示在报告数据来源部分
+- **默认关注点**：如果未指定 `--focus`，自动使用频道的 `default_focus`
+
+这些元数据会传递到报告 Markdown、API 响应和 HTML 页面中，提升报告可读性和来源可追溯性。
+
+## 跨频道质量评估（P2-A2）
+
+```bash
+# 终端展示所有报告评估统计
+python -m podcast_research eval reports
+
+# 按频道过滤
+python -m podcast_research eval reports --channel "BG2Pod"
+
+# 导出 CSV（供后续分析）
+python -m podcast_research eval export --output data/eval/prompt_v2_eval.csv
+
+# 导出 Markdown 总结
+python -m podcast_research eval summary --output data/eval/prompt_v2_summary.md
+```
+
+评估统计字段：
+- 报告 ID、频道名、视频 ID、prompt 版本、模型
+- 观点数、技术洞察数、非关注项数、实体数、风险数、待验证信号数
+- 证据类型分布、相关性分布、AI 价值链分布
+- 泛化标的计数（Broad Market / Economy 等过泛对象）
+- 未知发言人计数、时间范围分布
+- 报告状态（ok / empty / generic_targets）
+
+泛化标的检测列表：Broad Market、Economy、Investors、Consumers、Society、AI Industry、Technology Sector、Market、Companies、Startups。
+
+## 全文搜索索引（P1-D）
+
+```bash
+# 重建搜索索引（新增报告后执行）
+python -m podcast_research reports rebuild-index
+
+# 搜索
+python -m podcast_research reports search "NVIDIA"
+```
+
+搜索策略：优先 FTS5 全文检索，不可用时自动 fallback 到 LIKE 搜索。搜索结果标记 `match_type`：`fts` 或 `like-fallback`。
+
+## 启动本地报告查看页面（P1-C）
+
+启动服务后可在浏览器中查看 HTML 报告页面：
+
+```bash
+# 启动服务（同时提供 API 和 HTML 页面）
+python -m podcast_research serve
+
+# 打开以下页面
+```
+
+浏览器访问：
+- 首页: http://127.0.0.1:8000/
+- 报告库: http://127.0.0.1:8000/reports
+- 报告详情: http://127.0.0.1:8000/reports/1
+- 搜索: http://127.0.0.1:8000/search
+- API 文档: http://127.0.0.1:8000/docs
+
+页面功能：
+- 报告列表（支持 ?source=youtube&limit=50 过滤）
+- 报告详情（核心观点矩阵、待验证信号、完整 Markdown 正文）
+- 全文搜索（标的、逻辑链、报告内容）
+- 极简 CSS，无前端框架依赖
+
 ## 真实 LLM 使用（后续阶段）
 
 ```bash
@@ -107,6 +217,21 @@ python -m podcast_research --subtitle-file your_subtitle.srt --no-mock
 ```
 
 > P0 阶段仅使用规则引擎 mock provider，不调用真实 LLM API。
+
+### Prompt v2（P2-A1）
+
+Tech/AI Investing Prompt v2 相比 v1 的核心改进：
+
+- **内容分类**：investment_views / tech_industry_insights / non_focus_items / uncertain_items 四级分层
+- **evidence 强约束**：10 个 evidence_type 枚举，有具体数字不得标记为 unsupported_claim
+- **speaker fallback**：unknown_speaker / podcast_participant / low 统一规则
+- **time_horizon 必填**：immediate / short_term / medium_term / long_term / unknown
+- **AI 价值链标注**：ai_value_chain_layer / technology_driver / business_impact 新字段
+- **实体标准化**：NVIDIA / Alphabet / TSMC 等自动归一化
+- **报告结构固定**：11 个标准章节，核心观点矩阵扩展为 11 列
+- **P2-A1 Hardening**：泛 target 黑名单（Broad Market / Economy / AI Industry 等）、investment_relevance 严格分级（high ≤ 40%，无证据不得高于 medium）、TechIndustryInsight 增加 topic_tags
+
+> mock 模式不反映 prompt v2 的真实语义质量。真实 LLM 验证见下方。
 
 ### Mock Provider 定位说明
 
@@ -165,6 +290,8 @@ src/podcast_research/
     models.py            # SQLAlchemy ORM（5 张核心表）
     session.py           # SQLite session 管理
     repository.py        # 数据写入 + 查询方法
+    channel_repository.py # 频道/视频 Repository + metadata lookup
+    fts.py               # FTS5 全文搜索索引
   api/
     app.py               # FastAPI app 工厂
     schemas.py           # Pydantic 响应 schema
@@ -172,6 +299,10 @@ src/podcast_research/
       health.py          # GET /api/health
       reports.py         # GET /api/reports/*, /api/entities, /api/targets, /api/sources
       search.py          # GET /api/search
+  web/
+    routes.py            # HTML 页面路由（/reports, /reports/{id}, /search）
+    templates/           # Jinja2 模板（base, reports_list, report_detail, search, error）
+    static/style.css     # 极简 CSS
   utils/
     hash.py              # 文件哈希（字幕重复检测）
     timestamp.py         # 时间戳格式化
@@ -193,14 +324,15 @@ logs/                     # 日志
 4. 不确定信息必须显式标注
 5. 所有外部依赖通过 adapter 隔离
 
-## P0 不做的内容
+## 当前不做
 
 - 小宇宙链接解析、xyz-dl 字幕下载
 - 真实 LLM API 调用（P0 仅支持手动集成验证，不进入自动化测试）
-- FastAPI 后端、前端 UI
+- React / Next.js / Vue 等前端框架
 - Whisper 转写、多平台 RSS
 - 向量数据库、PDF/Word 导出
 - 团队协作、云端同步
+- 登录鉴权、报告编辑/删除
 
 ## 路线图
 
@@ -210,8 +342,15 @@ logs/                     # 日志
 | P0-B | CLI YouTube 字幕 Adapter（mock LLM） | **已完成** |
 | P1-A | CLI 报告库查询（list/show/search/targets/sources） | **已完成** |
 | P1-B | FastAPI 只读 API（/api/reports/*, /api/search 等） | **已完成** |
-| P1-C | Jinja2 极简 HTML 报告页面 | 待启动 |
-| P2 | 小宇宙链接导入 + 真实 LLM | 待启动 |
+| P1-C | Jinja2 极简 HTML 报告页面 | **已完成** |
+| P1-D | SQLite FTS5 搜索增强 | **已完成** |
+| P1-E | YouTube 频道关注库与视频列表获取 | **已完成** |
+| P1-F | Tech/AI 默认频道包 + Channel Tags | **已完成** |
+| P2-A1 | Tech/AI Investing Prompt v2 + Schema 增强 | **已完成** |
+| P2-A2.1 | Channel/Video Metadata Propagation | **已完成** |
+| P2-A2 | 跨频道 Prompt v2 质量评估 | **已完成** |
+| P2-B | 长视频分块分析（Long Transcript Chunking） | 待启动 |
+| P2 | 小宇宙链接导入 + 其他增强 | 待启动 |
 | P3 | 历史报告全局查询（FTS5 + LLM 问答） | 待启动 |
 | P4 | 多期观点对比 | 待启动 |
 

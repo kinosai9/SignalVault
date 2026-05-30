@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ status_code }} — 投资音视频研究助手{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h2>{{ status_code }}</h2>
+    <p>{{ detail }}</p>
+    <p style="margin-top: 16px;">
+        <a href="/reports">返回报告库</a>
+    </p>
+</div>
+{% endblock %}

@@ -276,11 +276,138 @@
 
 ---
 
+## P1-C：Jinja2 极简 HTML 报告页面
+
+- [x] 创建 web/ 目录（routes.py + templates/ + static/）
+- [x] 实现 HTML routes（GET / → /reports, /reports, /reports/{id}, /search）
+- [x] Jinja2 模板（base.html, reports_list.html, report_detail.html, search.html, error.html）
+- [x] 极简 CSS（白底、系统字体、表格可读、无前端框架）
+- [x] create_app() 挂载 web routes + StaticFiles
+- [x] repository.get_report_detail 扩展字段（evidence_strength, speaker_label, signals source_quote/timestamp）
+- [x] API schemas 同步扩展（向后兼容，新增字段有默认值）
+- [x] HTML 404 页面
+- [x] 8 个 web 页面测试（test_web_pages.py）
+- [x] 总计 137 tests passed
+- [x] README / TODO / CLAUDE.md 更新
+
+---
+
+## P1-D：SQLite FTS5 搜索增强
+
+- [x] FTS5 虚拟表 report_search_fts（11 个字段，report_id UNINDEXED）
+- [x] fts.py：ensure_fts_table / rebuild_search_index / search_fts / _has_fts5
+- [x] CJK 预处理：_tokenize_for_fts 在字符间插入空格
+- [x] repository.search_reports 优先 FTS5，失败 fallback LIKE
+- [x] LIKE fallback 保留 _search_reports_like
+- [x] CLI reports rebuild-index 命令
+- [x] 12 个 FTS 测试（创建/索引/搜索/auto-create/fallback/CLI/API/HTML）
+- [x] 总计 149 tests passed
+- [x] 文档更新（README / TODO / CLAUDE.md）
+
+---
+
+## P1-E：YouTube 频道关注库与视频列表获取
+
+- [x] ORM: Channel + ChannelVideo 表
+- [x] yt-dlp ChannelVideoAdapter（fetch_channel_videos）
+- [x] Repository: add_channel / list_channels / upsert_videos / list_channel_videos / mark_video_status
+- [x] CLI channels add / list / refresh / videos / analyze-video（--dry-run / --no-mock）
+- [x] 视频去重（video_id + channel_id）
+- [x] 分析状态记录（new / analyzed / skipped）
+- [x] 168 tests passed（+19 channels tests）
+- [x] 文档更新
+
+---
+
+## P1-F：Tech/AI 默认频道包 + Channel Tags
+
+- [x] channels 表新增 tags / priority / default_focus / default_limit / default_max_analyze / notes 字段
+- [x] 旧库自动迁移 ALTER TABLE（_migrate_channels_table）
+- [x] add_channel 扩展支持 tags / priority / default_focus / limits
+- [x] update_channel_tags（支持 --add / --remove / --set）
+- [x] list_channels 支持 --tag / --priority 过滤
+- [x] seed_default_channels（5 个默认 Tech/AI 频道，幂等）
+- [x] CLI channels seed-tech-ai / list --tag / list --priority / tag
+- [x] README / TODO / CLAUDE.md 更新
+- [x] 测试：migration / seed / filter / tag CRUD / CLI（21 个新增测试）
+
+注意：
+- channels list 输出增加 Priority / Tags 列，移除新视频/Channel ID 列
+- tags 存 JSON 数组字符串，不做复杂多对多 tags 表
+- seed-tech-ai 幂等，重复执行 skip 已存在频道
+- 不做自动批量真实 LLM、Obsidian 导出、RAG
+
+---
+
+## P2-A1：Tech/AI Investing Prompt v2 + Schema 增强
+
+- [x] prompts.py 重写：投资边界规则、evidence 枚举、speaker fallback、time_horizon 必填、AI 价值链标注、实体标准化
+- [x] analysis/models.py 扩展：TechIndustryInsight, InvestmentView 新增 7 个 Tech/AI 字段, ExtractionResult 新增 prompt_version/tech_industry_insights/non_focus_items
+- [x] DB ORM 扩展：investment_views 表新增 6 列，自动迁移
+- [x] DB repository：save_investment_views / get_report_detail 适配新字段
+- [x] Mock provider v2：输出新字段，报告含 Tech/Industry Insights + Non-focus Items
+- [x] Pipeline 传递 focus_areas 到 provider，输出 prompt_version
+- [x] 20 个 P2-A1 测试（模型向后兼容、prompt 规则、mock v2、DB 入库）
+- [x] 210 tests passed（190 原有 + 20 P2-A1）
+- [x] 文档更新：README / TODO / CLAUDE.md
+
+## P2-A2.1：Channel / Video Metadata Propagation
+
+> channels analyze-video 生成的报告自动补齐频道名/视频标题/URL/发布时间等元数据。
+> 元数据通过 source_info_override 传递到 pipeline → source_info → Markdown 报告。
+
+- [x] channel_repository.get_channel_video_by_video_id() — 联表查询 channel + channel_video
+- [x] pipeline.analyze_from_transcript(source_info_override=) — 覆盖空字段合并
+- [x] cli channels_analyze_video — 查询元数据 → 构造 override → 传递到 pipeline
+- [x] mock_provider render_report — 数据来源部分展示 channel/video 元数据（频道名/标题/链接/发布日期/标签）
+- [x] 测试：7 个新测试（joined metadata / override merge / Markdown / normal path unaffected）
+- [x] 文档更新：README / TODO / CLAUDE.md
+
+注意：
+- 不影响普通 --youtube-url 路径
+- override 优先级：channel_videos.title > YouTube adapter title > video_id
+- 无频道元数据时正常降级，不报错
+
+---
+
+## P2-A2：跨频道 Prompt v2 质量评估
+
+- [x] evaluation.py：compute_report_stats / eval_all_reports / export_csv / generate_summary_md
+- [x] Generic target 检测（Broad Market, Economy 等 10 个过泛对象）
+- [x] CLI eval reports / export / summary 子命令
+- [x] 14 个 eval 测试（generic detection / stats / CLI / CSV export / summary MD）
+- [x] 跨频道样本验证：BG2Pod(3), Latent Space(3), Acquired(1+1), All-In(3)
+- [ ] Prompt v3 微调（基于累积样本观察）
+
+注意：
+- eval 测试复用 seeded_db fixture，不污染真实 data/
+- CSV/Markdown 输出到 tmp_path 在测试中隔离
+
+---
+
+## P2-B：长视频分块分析（Long Transcript Chunking）
+
+> Anthropic 视频 2364 段字幕触发 qwen3.7-max 400 Bad Request（token 超限）。
+> 当前 pipeline 超过 1000 段 / 50000 字符仅输出警告，不对长字幕做拆分。
+> P2-B 实现分块分析，解耦 token 上限对长视频分析的阻塞。
+
+- [ ] Token budget estimation（精确 token 计数，区分中/英/混排）
+- [ ] Subtitle chunking strategy（按 segment 边界拆分，保留上下文重叠窗口）
+- [ ] Map-reduce extraction（多块抽取 → 去重合并 → 统一渲染）
+- [ ] Long-video report merging（多块报告合并为单份最终报告）
+- [ ] Pipeline 集成（长字幕自动触发 chunking，短字幕不变）
+- [ ] 长视频集成验证（Anthropic 2364 段视频 + 1-2 条其他长视频）
+
+注意：
+- chunking 不改变 prompt 和 schema，只改变 pipeline 如何处理长字幕
+- 暂不引入 LangChain / LlamaIndex 等外部编排框架，保持轻量
+- 不分块的短字幕行为完全不变
+
+---
+
 ## P2：真实 LLM + 小宇宙可选 Adapter
 
 - [ ] 真实 LLM provider（OpenAI-compatible）完整接入与 prompt 调优
-- [ ] 长视频分块分析（chunking + map-reduce）
-- [ ] Token budget 管理
 - [ ] 小宇宙单集链接解析（可选 Adapter）
 - [ ] xyz-dl 字幕下载 Adapter（可选）
 - [ ] 说话人推断逻辑
