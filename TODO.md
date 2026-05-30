@@ -425,6 +425,16 @@
 - [x] 文档更新（README / TODO / CLAUDE.md）
 - [ ] 手动验证：真实 Vault 导出
 
+### P2-C Hardening
+
+- [x] Metadata backfill：export 时通过 channel_videos + channels 补齐缺失的 channel_name / video_title / published_at
+- [x] 导出筛选：--channel（大小写不敏感部分匹配）、--only-with-channel（跳过 UnknownChannel）
+- [x] Dry-run 增强：Rich 表格含 Action/Reason/Prompt Version 列
+- [x] UnknownChannel 策略：默认仍可导出（兼容），--only-with-channel 跳过
+- [x] 17 个新测试（backfill / filter / dry-run / CLI）
+- [ ] 手动验证：--only-with-channel dry-run
+- [ ] 手动验证：--channel "Acquired" dry-run + real export
+
 注意：
 - 默认不自动导出，需显式 CLI 命令
 - 不写真实 Vault 在测试中（全部用 tmp_path）
@@ -432,6 +442,164 @@
 - 不做 Topic/Company/Person/Claim/Signal 卡片
 - 不做 LLM-WIKI 动态维护
 - 不做双向同步
+
+### P2-C.1 收口修复
+
+- [x] 测试 env 隔离：conftest.py + monkeypatch 隔离 OBSIDIAN_VAULT_PATH
+- [x] UnknownChannel cleanup CLI：obsidian cleanup-unknown --dry-run / --apply
+- [x] frontmatter 解析：_parse_yaml_frontmatter 从 Markdown 提取 video_id
+- [x] DB backfill 查找：video_id → channel_videos + channels 联表
+- [x] apply 安全迁移：重新导出正确 channel + 旧文件移到 99_System/UnknownChannel_Backup/
+- [x] 不删除用户文件，只移动到 backup
+- [x] 15 个新测试（frontmatter / find / analyze / dry-run / apply / CLI）
+- [ ] 手动验证：cleanup-unknown --dry-run
+- [ ] 手动验证：cleanup-unknown --apply
+
+### P2-C.2 Channel Card Reconciliation
+
+- [x] 扫描 01_Reports/ frontmatter → 按 channel 分组
+- [x] 缺失 channel card → 自动创建
+- [x] 已有 card → 只追加 Recent Reports（不覆盖用户内容）
+- [x] 已存在的 report link 不重复追加
+- [x] --channel 过滤（大小写不敏感部分匹配）
+- [x] --overwrite 强制重写
+- [x] UnknownChannel / 空 channel 自动跳过
+- [x] 17 个新测试（scan / group / create / update / dry-run / filter / CLI）
+- [ ] 手动验证：sync-channel-cards --dry-run
+- [ ] 手动验证：sync-channel-cards 真实 Vault
+
+### P2-D Topic / Company Card Generation v1
+
+- [x] 扫描 01_Reports/ 提取 topic（hashtag + AI价值链列）
+- [x] 扫描 01_Reports/ 提取 company（Entities 区 + 表格目标列）
+- [x] Topic / Company 名称规范化（别名映射 + title case fallback）
+- [x] 缺失卡片自动创建，已有卡片只追加 Source Reports
+- [x] 已存在的 report link 不重复追加
+- [x] --topics-only / --companies-only 分类型生成
+- [x] --channel 过滤（大小写不敏感部分匹配）
+- [x] --overwrite 强制重写
+- [x] Topic Index / Company Index / Card Generation Log 生成
+- [x] 22 个新测试（extract / normalize / create / append / dry-run / filter / index / CLI）
+- [ ] 手动验证：generate-cards --dry-run
+- [ ] 手动验证：generate-cards 真实 Vault
+
+### P2-D.1 Topic / Company Card Cleanup & Classification
+
+- [x] Company 分类规则：whitelist 保留 + topic_pattern 迁移 + manual_review
+- [x] Topic alias merge：同义 topic 合并到 canonical name
+- [x] Company → Topic 迁移：Source Reports 合并 + 旧文件移到 backup
+- [x] 不直接删除文件
+- [x] --topics-only / --companies-only 分类型清理
+- [x] Index 更新（Topic Index / Company Index / Card Cleanup Log）
+- [x] 21 个新测试（classify / alias / migrate / merge / backup / index / CLI）
+- [ ] 手动验证：cleanup-cards --dry-run
+- [ ] 手动验证：cleanup-cards --apply
+
+### P2-D.2 Topic Taxonomy Consolidation
+
+- [x] Core Topic taxonomy：25 个核心主题白名单
+- [x] Extended alias map：50+ 同义别名映射到 canonical name
+- [x] Topic status 标记：core / emerging / long_tail / manual_review
+- [x] Alias merge：同义 topic 合并到 canonical，旧文件移到 backup
+- [x] Topic Taxonomy.md：分层展示 Core / Emerging / Long-tail / Manual Review
+- [x] Topic Index 更新
+- [x] Topic Consolidation Log 生成
+- [x] 18 个新测试（classify / alias / merge / status / taxonomy / CLI）
+- [ ] 手动验证：consolidate-topics --dry-run
+- [ ] 手动验证：consolidate-topics --apply
+
+### P2-D.2.1 Topic Taxonomy Final Hardening
+
+- [x] Generic topic guard：Application / Model / Enterprise / 企业级 / Capital Market 强制合并
+- [x] Canonical casing：Ai For Science → AI for Science（Windows case-insensitive 兼容）
+- [x] 扩展 alias map：50+ 同义别名映射
+- [x] 10 个新测试（casing / generic guard / merge / backup / taxonomy）
+- [ ] 手动验证：consolidate-topics --dry-run
+- [ ] 手动验证：consolidate-topics --apply
+
+### P2-E LLM-WIKI Dynamic Maintenance with Patch Review
+
+- [x] LLM-WIKI 模块结构：`src/podcast_research/llm_wiki/`（context_builder / prompts / patch_generator）
+- [x] Core topic discovery：扫描 `02_Topics/` 中 `status: core` 的 topic cards
+- [x] Context building：读取 Source Reports，提取 Core Investment Views / Tech Insights / Risks / Tracking Signals / Entities / Source Quotes
+- [x] LLM patch prompt：约束 LLM 不输出投资建议、不制造事实、每个 key claim 绑定 source report
+- [x] Patch proposal 生成：写入 `00_Inbox/LLM_Patches/topic_{Name}_{YYYYMMDD_HHMMSS}.md`
+- [x] Mock mode：生成占位 patch 用于测试，不调用真实 LLM
+- [x] Real LLM mode：调用 OpenAI-compatible API 生成真实 patch
+- [x] CLI 命令：`llm-wiki generate-patches --dry-run / --mock / --no-mock / --topic / --core-only / --max-reports`
+- [x] Safety：不直接修改 `02_Topics/` 或 `03_Companies/`，patch 仅供人工审阅
+- [x] 22 个新测试（find_core / build_context / generate_patch / write_file / CLI / error handling）
+- [x] 手动验证：generate-patches --dry-run（9 core topics, 4 source reports each）
+- [x] 手动验证：generate-patches --mock（"AI Agents" topic，patch 写入 00_Inbox/LLM_Patches/）
+- [x] 手动验证：generate-patches --no-mock（DashScope API arrears，error handled gracefully）
+
+### P2-E.1 Real Patch Validation & Quality Guard
+
+- [x] Patch YAML frontmatter（type, target_type, target, target_card, provider, model, prompt_version, generated_at, source_reports, status: pending_review, auto_apply: false）
+- [x] Review Checklist section（9 项人工审阅 checklist）
+- [x] validate-patches CLI 命令（frontmatter 检查 / target_card 存在性 / source_reports 存在性 / 必要章节检查 / Review Checklist 检查）
+- [x] validate-patches Rich 表格输出（Patch / Target / Reports / Status / Valid / Issues）
+- [x] --patch 参数支持单个 patch 验证
+- [x] 11 个新测试（frontmatter / checklist / validation / CLI / dry-run）
+- [x] 手动验证：mock patch frontmatter + checklist 正确
+- [x] 手动验证：validate-patches（4 patches: 2 valid, 2 old w/o frontmatter）
+- [x] 手动验证：真实 LLM patch（DeepSeek deepseek-v4-pro）+ 质量验证通过
+- [x] 452 tests passed（441 + 11 P2-E.1）
+
+### P2-E.2 Patch Apply with Explicit Review
+
+- [x] apply_patch() 函数：validation gate + section 解析 + marker-based append + status update + apply log
+- [x] CLI apply-patch 命令：--dry-run / --apply / --confirm-reviewed / --force
+- [x] 前置校验：type/target_type/status/auto_apply/target_card/source_reports/sections/checklist
+- [x] Status 要求：pending_review + confirm_reviewed 可 apply，approved 可 apply，applied/rejected 拒绝
+- [x] Section mapping：Proposed Current Understanding → Current Understanding 等 6 个映射
+- [x] LLM-WIKI:BEGIN/END marker 包裹，防止重复 apply
+- [x] 不覆盖已有内容，只追加
+- [x] 不存在的 section 自动创建（如 Key Claims）
+- [x] Apply 后更新 patch status → applied + applied_at + applied_to
+- [x] 99_System/Patch_Apply_Log.md 记录 apply 历史
+- [x] 18 个新测试（dry-run / validation gate / status / section mapping / marker / duplicate / log / safety）
+- [x] 手动验证：dry-run（6 sections will apply）
+- [x] 手动验证：真实 apply（DeepSeek patch → AI Agents.md）
+- [x] 手动验证：target card 6 sections 更新 + 原有内容保留
+- [x] 手动验证：patch status → applied
+- [x] 手动验证：apply log 正确生成
+- [x] 470 tests passed（452 + 18 P2-E.2）
+
+后续任务：
+- P2-E.3: Company Card patch generation
+- P2-E.4: Claim / Signal Card generation
+- P2-E.5: Patch rollback with markers
+
+### P2-E.2.1 Apply Formatting Hardening
+
+- [x] Section 插入顺序：新 section 按 SECTION_ORDER 插入正确位置，不追加到末尾
+- [x] Related Topics 应用 taxonomy canonical mapping（如 "enterprise saas" → "Enterprise AI"）
+- [x] Related Companies entity type guard（已知产品/框架/工具标注类型，如 [[Claude Code]] *(tool)*）
+- [x] Source Reports 显示优先用 channel 名（如 "Latent Space — CSYWbbP_OkY"）
+- [x] llm_wiki/taxonomy.py：共享 taxonomy 数据（SECTION_ORDER / TOPIC_CANONICAL_MAP / KNOWN_NON_COMPANY）
+- [x] 6 个新测试（section order / topic normalization / entity annotation / taxonomy functions / source report context）
+- [x] 476 tests passed（470 + 6 P2-E.2.1）
+
+### P2-E.3 Company Card Patch Generation
+
+- [x] Company discovery / CompanyContext / build_company_context()
+- [x] Company patch prompts（禁止投资建议/财务预测）
+- [x] generate_company_patch() mock + real LLM, target_type=company
+- [x] validate-patches + apply-patch 兼容 company 类型
+- [x] CLI --company 与 --topic 互斥
+- [x] 10 个新测试 + manual verification（NVIDIA, 2 reports, validates clean）
+- [x] 486 tests passed（476 + 10 P2-E.3）
+
+### P2-E.3.1 Real Company Patch Validation
+
+- [x] OpenAI: 3 source reports → real LLM patch quality 优秀
+- [x] Alphabet: 3 source reports → real LLM patch 生成完成
+- [x] validate-patches: 3 company patches all valid
+- [x] apply-patch: OpenAI patch 成功应用（7 sections, 7 markers）
+- [x] 质量要点: 无投资建议, 5 claims 绑定 source, 4 risks 来自 source, 4 evidence notes 含原文引用, 3 timeline 事件
+
+后续任务：
 
 ---
 

@@ -4,9 +4,9 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P2-C Obsidian Export v1
+## 当前阶段：P2-E.2 LLM-WIKI Patch Apply
 
-P0 + P1 + P2-A + P2-B 已完成。P2-C 实现 SQLite 已有 YouTube 报告导出到 Obsidian Vault，生成结构化笔记和频道卡片。
+P0 + P1 + P2-A + P2-B + P2-C + P2-D + P2-E + P2-E.1 已完成。P2-E.2 实现了安全的、显式的单文件 patch apply 流程，LLM 生成的 patch 通过 marker 机制追加到目标 Topic Card，支持 dry-run 和人工审阅确认。
 
 ## 快速开始
 
@@ -225,6 +225,18 @@ python -m podcast_research obsidian export \
   --source youtube \
   --prompt-version tech_ai_v2
 
+# 按频道导出（大小写不敏感，部分匹配）
+python -m podcast_research obsidian export \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --channel "Acquired" \
+  --dry-run
+
+# 只导出有频道信息的报告（跳过 UnknownChannel）
+python -m podcast_research obsidian export \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --only-with-channel \
+  --dry-run
+
 # 导出指定报告
 python -m podcast_research obsidian export --report-id 150
 
@@ -245,6 +257,25 @@ python -m podcast_research obsidian export --overwrite --limit 5
 
 `01_Reports/YYYY-MM-DD_ChannelName_VideoId.md`
 
+### Metadata Backfill
+
+导出时自动补齐缺失的频道元数据（channel_name / video_title / published_at 等）：
+
+1. `extraction_json.source_info` 中已有值（最高优先）
+2. `channel_videos` + `channels` 联表查询（按 video_id 匹配）
+3. fallback: `UnknownChannel` / video_id
+
+Backfill 仅在 export runtime 生效，不修改数据库。
+
+### 导出筛选
+
+| 参数 | 行为 |
+|------|------|
+| `--channel "Name"` | 只导出频道名匹配的报告（大小写不敏感，部分匹配） |
+| `--only-with-channel` | 跳过无法解析出频道信息的报告 |
+| `--source youtube` | 只导出 YouTube 来源（v1 默认） |
+| `--prompt-version` | 按 prompt 版本过滤 |
+
 ### Vault 配置
 
 在 `.env` 中配置默认 Vault 路径：
@@ -259,6 +290,283 @@ OBSIDIAN_VAULT_PATH=D:\KinocNote\ai-investing-vault\科技AI投资知识库
 - `--overwrite` 可强制覆盖
 - Vault 路径必须已存在，工具不创建根目录
 - v1 仅导出 YouTube 报告，不做 Topic/Company/Claim 卡片
+
+### UnknownChannel 清理（P2-C.1）
+
+旧的导出可能在频道元数据缺失时生成 `UnknownChannel` 文件。清理工具通过 video_id 查询 `channel_videos + channels` 表尝试补齐：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian cleanup-unknown \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+# 执行迁移（旧文件移到 99_System/UnknownChannel_Backup/）
+python -m podcast_research obsidian cleanup-unknown \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --apply
+```
+
+行为：
+- **dry-run**：只检测分析，不修改文件。输出 Rich 表格展示每个文件的 video_id、backfilled channel、建议新文件名、action
+- **apply**：对可识别的文件重新导出为正确 channel 文件，旧文件**移到** `99_System/UnknownChannel_Backup/`（不删除）
+- 无法识别的文件标记为 `manual_review`，保持原样
+- `--overwrite` 覆盖已存在的目标文件
+- 建议在 P2-D Topic / Company Card 前清理 UnknownChannel
+
+### Channel Card 同步（P2-C.2）
+
+根据 `01_Reports/` 中报告的 frontmatter，补齐和同步 `05_Channels/` 下的频道卡片：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian sync-channel-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+# 正式同步（创建缺失卡片 + 追加 Recent Reports）
+python -m podcast_research obsidian sync-channel-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库"
+
+# 只同步指定频道
+python -m podcast_research obsidian sync-channel-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --channel "Latent Space"
+```
+
+行为：
+- 扫描 `01_Reports/*.md` 的 YAML frontmatter，按 channel 分组
+- 如果 `05_Channels/{Channel}.md` 不存在 → 创建新卡片
+- 如果卡片已存在 → 只追加新的 `## Recent Reports` 链接（不覆盖用户手工内容）
+- 已存在的 report link 不重复追加
+- UnknownChannel / 空 channel 的 report 自动跳过
+- `--channel` 大小写不敏感部分匹配
+- `--overwrite` 可强制重写整个卡片
+- 不修改 `01_Reports/` 中的文件
+
+### Topic / Company Card 生成（P2-D）
+
+从 `01_Reports/` 中提取主题和公司实体，生成 `02_Topics/` 和 `03_Companies/` 卡片：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian generate-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+# 正式生成
+python -m podcast_research obsidian generate-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库"
+
+# 只生成 Topic Cards
+python -m podcast_research obsidian generate-cards --topics-only --dry-run
+
+# 只生成 Company Cards
+python -m podcast_research obsidian generate-cards --companies-only --dry-run
+
+# 只处理指定频道的报告
+python -m podcast_research obsidian generate-cards \
+  --channel "Latent Space" --dry-run
+```
+
+行为：
+- 扫描 `01_Reports/*.md`，从 hashtag（`#tag`）和 Core Investment Views 表格提取 topic
+- 从 Entities 区和表格目标列提取 company 实体
+- 缺失卡片自动创建，已有卡片只追加 Source Reports
+- 已存在的 report link 不重复追加
+- 生成 `99_System/Topic Index.md`、`Company Index.md`、`Card Generation Log.md`
+- 不调用 LLM，纯 deterministic 生成
+- 默认不覆盖用户手工内容
+- `--overwrite` 可强制重写
+
+### Card Cleanup & Classification（P2-D.1）
+
+清理 deterministic card generation 产生的分类噪音：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian cleanup-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+# 正式清理
+python -m podcast_research obsidian cleanup-cards \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --apply
+
+# 只清理 Company Cards
+python -m podcast_research obsidian cleanup-cards --companies-only --dry-run
+
+# 只清理 Topic Cards
+python -m podcast_research obsidian cleanup-cards --topics-only --dry-run
+```
+
+行为：
+- 检测 Company Cards 中明显非公司的卡片（如 CPU Supply、Enterprise SaaS、Kubernetes）
+- 将非公司卡片迁移到 `02_Topics/`，旧文件移到 `99_System/Card_Cleanup_Backup/`
+- 合并同义 Topic 别名（如 Ai Agent → AI Agents）
+- 更新 Topic Index / Company Index / Card Cleanup Log
+- 不直接删除文件，不调用 LLM
+- 不确定项标记 manual_review，apply 时不处理
+
+### Topic Taxonomy Consolidation（P2-D.2）
+
+将 Topic Cards 分层为 Core / Emerging / Long-tail / Manual Review，合并同义别名：
+
+```bash
+# Dry-run 预览（推荐先执行）
+python -m podcast_research obsidian consolidate-topics \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+# 正式执行（合并别名 + 标记 status + 生成 taxonomy index）
+python -m podcast_research obsidian consolidate-topics \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --apply
+
+# 只处理 core topics
+python -m podcast_research obsidian consolidate-topics --core-only --dry-run
+
+# 禁用别名合并
+python -m podcast_research obsidian consolidate-topics --no-merge-aliases --apply
+```
+
+行为：
+- 25 个 Core Topics（AI Infrastructure / AI Agents / Semiconductor 等）标记为 `status: core`
+- 同义别名自动合并到 canonical name（如 ai-infra → AI Infrastructure）
+- 多报告非核心 topic → emerging，单报告 → long_tail
+- 被合并的旧 Topic Card 移到 `99_System/Topic_Consolidation_Backup/`
+- 生成 `99_System/Topic Taxonomy.md`（分层展示 Core / Emerging / Long-tail / Manual Review）
+- 更新 Topic Index 和 Topic Consolidation Log
+- 不删除文件，不调用 LLM
+
+### Topic Taxonomy Final Hardening（P2-D.2.1）
+
+在进入 LLM-WIKI 动态维护前，修正 generic emerging topics 和 canonical casing：
+
+```bash
+# 复用 consolidate-topics 命令
+python -m podcast_research obsidian consolidate-topics \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --dry-run
+
+python -m podcast_research obsidian consolidate-topics \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --apply
+```
+
+行为：
+- **Generic topic guard**：Application / Model / Enterprise / 企业级 / Capital Market 等 generic 名称被强制合并到对应 canonical core topic
+- **Canonical casing**：Ai For Science → AI for Science（保留正确大小写）
+- **扩展 alias map**：50+ 同义别名映射到 canonical name
+- 被合并的旧 Topic Card 移到 `99_System/Topic_Consolidation_Backup/`
+- 更新 Topic Taxonomy.md / Topic Index / Consolidation Log
+- 不删除文件，不调用 LLM
+
+### LLM-WIKI Dynamic Maintenance（P2-E）
+
+基于 Source Reports 为 Topic/Company Cards 生成 LLM patch proposals，采用 patch review 模式，不直接修改卡片：
+
+```bash
+# Dry-run 预览（不调用 LLM，只显示将处理哪些 topics）
+python -m podcast_research llm-wiki generate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --core-only \
+  --dry-run
+
+# Mock 模式（生成占位 patch，用于测试）
+python -m podcast_research llm-wiki generate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --topic "AI Agents" \
+  --mock
+
+# 真实 LLM 模式（调用 OpenAI-compatible API）
+python -m podcast_research llm-wiki generate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --topic "AI Agents" \
+  --no-mock
+
+# 处理所有 core topics
+python -m podcast_research llm-wiki generate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --core-only \
+  --no-mock
+```
+
+行为：
+- **Patch review 模式**：LLM 生成 patch proposal 写入 `00_Inbox/LLM_Patches/`，不直接修改 `02_Topics/` 或 `03_Companies/`
+- **Context building**：读取 topic card 的 Source Reports，提取相关 sections（Core Investment Views / Tech Insights / Risks / Tracking Signals / Entities / Source Quotes）
+- **LLM constraints**：不输出投资建议，不制造事实，每个 key claim 必须绑定 source report，证据不足写入 Open Questions
+- **Patch structure**：包含 Proposed Current Understanding / Key Claims / Related Companies / Related Topics / Open Questions / Timeline / Evidence Notes
+- **Mock mode**：生成占位 patch 用于测试，不调用真实 LLM
+- **Safety**：不修改 source cards，patch 文件仅供人工审阅
+- 支持 `--topic` 指定单个 topic，`--core-only` 处理所有 core topics
+- 支持 `--max-reports` 限制每个 topic 使用的 source reports 数量（默认 5）
+
+### Real Patch Validation（P2-E.1）
+
+生成的 patch 需要在应用前进行人工审阅和质量校验：
+
+```bash
+# 验证所有 patches
+python -m podcast_research llm-wiki validate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库"
+
+# 验证单个 patch
+python -m podcast_research llm-wiki validate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --patch "00_Inbox/LLM_Patches/topic_AI_Agents_20260530_155112.md"
+```
+
+**真实 LLM 验证流程：**
+
+```bash
+# 1. 先只跑 1 个 topic（不要批量生成）
+python -m podcast_research llm-wiki generate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --topic "AI Agents" \
+  --no-mock
+
+# 2. 验证 patch 结构完整性
+python -m podcast_research llm-wiki validate-patches \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库"
+
+# 3. 人工打开 patch 文件，逐项核对 Review Checklist
+# 4. 确认无误后，在 P2-E.2 中执行 apply
+```
+
+**Patch 质量保障：**
+- 每个 patch 包含 YAML frontmatter（含 provider/model/prompt_version/generated_at/status）
+- 每个 patch 末尾包含 9 项 Review Checklist
+- `validate-patches` 自动检查 frontmatter、target card、source reports、必要章节
+- `auto_apply` 永远为 `false`，patch apply 必须人工确认
+
+### Patch Apply（P2-E.2）
+
+通过审阅的 patch 可安全应用到目标 Topic Card：
+
+```bash
+# Dry-run 预览（不写文件，展示将应用的 sections）
+python -m podcast_research llm-wiki apply-patch \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --patch "00_Inbox/LLM_Patches/topic_AI_Agents_20260530_155112.md" \
+  --dry-run
+
+# 真实 apply（必须显式 --apply + --confirm-reviewed）
+python -m podcast_research llm-wiki apply-patch \
+  --vault "D:\KinocNote\ai-investing-vault\科技AI投资知识库" \
+  --patch "00_Inbox/LLM_Patches/topic_AI_Agents_20260530_155112.md" \
+  --apply \
+  --confirm-reviewed
+```
+
+**Apply 行为：**
+- 使用 `<!-- LLM-WIKI:BEGIN/END patch_id -->` marker 包裹追加内容（可追踪、可回滚）
+- 不覆盖已有 section 内容，只追加
+- 不存在的 section 自动创建
+- 同一 patch 重复 apply 被拒绝（通过 marker 检测）
+- 不修改 Source Reports、Company Cards、frontmatter 用户自定义字段
+- 写 `99_System/Patch_Apply_Log.md` 记录 apply 历史
 
 ## 全文搜索索引（P1-D）
 

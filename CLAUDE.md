@@ -14,7 +14,7 @@
 
 ## 当前阶段
 
-P2-C（Obsidian Export v1）已完成。P0-A 到 P2-C 全部交付。
+P2-F.3（Signal Tracking Schema & Manual Update Workflow）已完成。P0-A 到 P2-F.3 全部交付，572 tests。
 
 **P0 已跑通：**
 
@@ -259,8 +259,134 @@ YouTube 频道关注（`channels add/list/refresh/videos/analyze-video`），yt-
 - v1 不做：Topic/Company/Person/Claim/Signal 卡片、LLM 动态维护、双向同步。
 - 测试全部使用 tmp_path，不写真实 Vault。
 
-## 技术栈
+## P2-C Hardening 范围规则
 
+- Metadata backfill：export runtime 通过 channel_videos + channels 联表补齐缺失的 channel_name / channel_url / channel_tags / video_title / video_url / published_at。
+- backfill 优先级：extraction_json.source_info > channel_videos + channels > fallback UnknownChannel。
+- backfill 不覆盖已有非空字段，不修改数据库。
+- --channel 过滤：大小写不敏感，部分匹配，支持 backfill 后的 channel_name。
+- --only-with-channel：跳过无法解析 channel_name 的报告，dry-run 标记 missing_channel。
+- 默认行为：UnknownChannel 仍可导出（向后兼容）。
+- dry-run 表格增加 Action / Reason / Prompt Version 列。
+- 不做 Topic Card、Company Card、LLM-WIKI 动态维护。
+
+## P2-C.1 收口修复范围规则
+
+- 测试 env 隔离：conftest.py 在模块导入前清空 OBSIDIAN_VAULT_PATH / OBSIDIAN_EXPORT_ENABLED。
+- CLI cleanup-unknown：扫描 UnknownChannel 文件 → frontmatter 提取 video_id → DB backfill → 重新导出或 manual_review。
+- apply 模式不删除文件，只将旧文件移到 99_System/UnknownChannel_Backup/。
+- cleanup 不得直接删除用户文件。
+- 无法识别 video_id 或无 DB 元数据时标记 manual_review，保持原样。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-C.2 Channel Card Reconciliation 范围规则
+
+- 扫描 01_Reports/ 的 YAML frontmatter，按 channel 分组，同步 05_Channels/ 卡片。
+- 缺失卡片自动创建，已有卡片只追加 Recent Reports（不覆盖用户手工内容）。
+- 已存在的 report link 不重复追加。
+- UnknownChannel / 空 channel 自动跳过，不生成卡片。
+- --channel 过滤：大小写不敏感部分匹配。
+- --overwrite 可强制重写整个卡片（默认不启用）。
+- 不修改 01_Reports/ 文件。
+- 不做 Topic Card / Company Card / People Card。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-D Topic / Company Card Generation v1 范围规则
+
+- 从 01_Reports/ 的 Markdown 正文提取 topic（hashtag + Core Investment Views AI价值链列）和 company（Entities 区 + 表格目标列）。
+- Topic / Company 名称通过别名映射规范化（如 nvidia → NVIDIA, google → Alphabet）。
+- 缺失卡片自动创建（含 frontmatter + Source Reports + 占位 section），已有卡片只追加 Source Reports。
+- 已存在的 report link 不重复追加。
+- --topics-only / --companies-only 分类型生成。
+- --channel 过滤：大小写不敏感部分匹配。
+- --overwrite 可强制重写（默认不启用）。
+- 生成 99_System/Topic Index.md、Company Index.md、Card Generation Log.md。
+- 不调用 LLM，纯 deterministic 生成。
+- 不修改 01_Reports/ 文件。
+- 不做 LLM-WIKI 动态维护、Claim Card、Signal Card、People Card。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-D.1 Topic / Company Card Cleanup & Classification 范围规则
+
+- 从 03_Companies/ 检测非公司实体（通过 whitelist + topic_pattern 规则），迁移到 02_Topics/。
+- Company whitelist：明确的公司名（NVIDIA / OpenAI / Alphabet / Meta / TSMC 等）保留为 Company。
+- Topic pattern：包含 AI Agent / Enterprise SaaS / Kubernetes / ETF 等模式的名称迁移到 Topic。
+- 不确定名称标记 manual_review，apply 时不处理。
+- Topic alias merge：同义 topic 合并到 canonical name（如 Ai Agent → AI Agents）。
+- 迁移时合并 Source Reports，旧文件移到 99_System/Card_Cleanup_Backup/，不直接删除。
+- 更新 Topic Index / Company Index / Card Cleanup Log。
+- 不调用 LLM，纯 deterministic cleanup。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-D.2 Topic Taxonomy Consolidation 范围规则
+
+- 25 个 Core Topics 白名单：AI Infrastructure / AI Agents / Semiconductor / Enterprise AI 等。
+- Extended alias map：50+ 同义别名映射到 canonical name（如 ai-infra → AI Infrastructure, enterprise saas → Enterprise AI）。
+- Topic status 标记：core（核心白名单或 alias）/ emerging（≥2 reports）/ long_tail（1 report）/ manual_review（不确定）。
+- Alias merge：同义 topic 合并到 canonical，Source Reports 合并去重，旧文件移到 99_System/Topic_Consolidation_Backup/。
+- 生成 99_System/Topic Taxonomy.md（分层展示 Core / Emerging / Long-tail / Manual Review）。
+- 更新 Topic Index 和 Topic Consolidation Log。
+- 不调用 LLM，纯 deterministic taxonomy。
+- 不删除文件，不修改 01_Reports。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-D.2.1 Topic Taxonomy Final Hardening 范围规则
+
+- Generic topic guard：Application / Model / Enterprise / 企业级 / Capital Market 等 generic 名称不得作为独立 topic 存活，强制合并到对应 canonical core topic。
+- Canonical casing：修正 topic 名称大小写（如 Ai For Science → AI for Science），Windows case-insensitive filesystem 兼容处理。
+- 扩展 alias map：50+ 同义别名映射到 canonical name。
+- 被合并的旧 Topic Card 移到 99_System/Topic_Consolidation_Backup/，不删除。
+- 更新 Topic Taxonomy.md / Topic Index / Consolidation Log。
+- 不调用 LLM，纯 deterministic hardening。
+- 这是进入 P2-E LLM-WIKI 动态维护前的最后 deterministic cleanup。
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+
+## P2-E LLM-WIKI Dynamic Maintenance v1 范围规则
+
+- 本轮只做 patch proposal 生成，不做自动 apply。
+- LLM 基于 Source Reports 生成可审阅的 patch proposal，写入 00_Inbox/LLM_Patches/。
+- 不直接修改 02_Topics/ 或 03_Companies/ 卡片。
+- mock 模式生成占位 patch（测试用），--no-mock 调用真实 LLM。
+- patch 文件命名：topic_{SafeName}_{YYYYMMDD_HHMMSS}.md。
+- dry-run 不调用 LLM、不写文件，只显示将处理的 topics 和 source reports。
+- --topic 指定单个 topic，--core-only 只处理 status: core 的 topics。
+- --max-reports 控制每个 topic 最多读取几个 source reports。
+- LLM 输出约束：不输出投资建议、不制造事实、每个 key claim 绑定 source report、证据不足入 Open Questions。
+- 不做：自动 apply patch、RAG、向量数据库、Claim/Signal/People Card、long-tail topics、双向同步。
+
+## P2-E 模块结构
+
+- `src/podcast_research/llm_wiki/`：context_builder.py（topic 发现 + context 构建）、prompts.py（LLM prompt）、patch_generator.py（mock/real patch 生成 + 文件写入）。
+- CLI：`llm-wiki generate-patches` 命令，支持 --dry-run / --mock / --no-mock / --topic / --core-only / --max-reports / --output-dir。
+
+## P2-E 测试规则
+
+- 测试全部使用 tmp_path vault，不写真实 Vault。
+- mock 模式测试不调用真实 LLM。
+- real LLM 测试需要 .env 配置，不进默认 pytest。
+
+## P2-E.1 Real Patch Validation & Quality Guard 范围规则
+
+- Patch 文件顶部必须包含 YAML frontmatter：type, target_type, target, target_card, provider, model, prompt_version, generated_at, source_reports, status（默认 pending_review）, auto_apply（永远 false）。
+- Patch 文件末尾必须包含 ## Review Checklist（9 项人工审阅 checklist）。
+- validate-patches 命令扫描 00_Inbox/LLM_Patches/，校验 frontmatter、target_card、source_reports、必要章节、Review Checklist。
+- 真实 LLM 验证先只跑 1 个 topic，不要批量生成。
+- 不做：自动修改卡片、Company Card、Claim/Signal Card。
+
+## P2-E.2 Patch Apply with Explicit Review 范围规则
+
+- 只允许单文件 explicit apply：`llm-wiki apply-patch --patch <file> --apply --confirm-reviewed`。
+- 不允许批量 auto apply、不允许 auto_apply=true、不允许直接覆盖整张 Topic Card。
+- Apply 前置校验：type=llm_wiki_patch、target_type=topic、status=pending_review/approved、auto_apply=false、target_card 存在、source_reports 存在、必要章节 + Review Checklist 存在。
+- status=pending_review 必须 --confirm-reviewed；status=approved 可直接 apply；status=applied 拒绝重复 apply。
+- Section 映射：Proposed Current Understanding → Current Understanding、Proposed Key Claims → Key Claims、Proposed Related Companies → Related Companies、Proposed Related Topics → Related Topics、Proposed Open Questions → Open Questions、Proposed Timeline → Timeline。
+- 使用 LLM-WIKI:BEGIN/END marker 包裹追加内容，防止重复 apply。
+- Apply 成功后更新 patch frontmatter：status=applied + applied_at + applied_to。
+- 写入 99_System/Patch_Apply_Log.md 记录 apply 历史。
+- 不修改 Source Reports、Company Cards、未知 section、frontmatter 用户自定义字段。
+- 不做：批量 apply、patch rollback、reject 命令、Company Card apply。
+
+## 技术栈
 - Python 3.12+
 - Typer
 - FastAPI

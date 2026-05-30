@@ -18,6 +18,11 @@ os.environ["LLM_API_KEY"] = ""
 os.environ["LLM_BASE_URL"] = ""
 os.environ["LLM_MODEL"] = "mock-investment-analyst"
 
+# P2-C.1: 隔离 Obsidian Vault 路径，防止本地 .env 中的 OBSIDIAN_VAULT_PATH
+# 污染测试环境（load_dotenv 不覆盖已有 env var）
+os.environ["OBSIDIAN_VAULT_PATH"] = ""
+os.environ["OBSIDIAN_EXPORT_ENABLED"] = "false"
+
 import pytest
 
 from podcast_research.analysis.models import (
