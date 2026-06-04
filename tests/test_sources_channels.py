@@ -716,7 +716,7 @@ class TestJobStatusWriteback:
         finally:
             session.close()
 
-    def test_full_flow_failure_writes_failed(self, monkeypatch):
+    def test_full_flow_failure_writes_failed(self, seeded_db, monkeypatch):
         """After full_flow failure, channel_videos status should be failed."""
         from podcast_research.services.job_service import (
             _writeback_channel_video_status, AnalysisJob,
@@ -756,3 +756,564 @@ class TestJobStatusWriteback:
             assert cv["failure_reason"] == "Network timeout"
         finally:
             session.close()
+
+
+# ── P2-M.1.2: Sync Retry Writeback ─────────────────────────────────────
+
+class TestSyncRetryWriteback:
+    """Sync retry should write back channel_video status via report_id."""
+
+    def test_retry_sync_success_writes_synced(self, seeded_db):
+        """Retry sync on a previously-failed video updates status to synced."""
+        from podcast_research.services.job_service import _writeback_sync_result
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.models import ChannelVideo
+
+        # Create a ChannelVideo with failed status
+        session = get_session()
+        try:
+            cv = ChannelVideo(
+                channel_id=1,
+                video_id="abc123",  # matches seeded_db report 3
+                title="AI Investment Talk",
+                url="https://www.youtube.com/watch?v=abc123",
+                status="failed",
+                failure_reason="previous sync error",
+            )
+            session.add(cv)
+            session.commit()
+        finally:
+            session.close()
+
+        # Simulate retry sync success via report_id
+        _writeback_sync_result(report_id=3, status="synced")
+
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "abc123")
+            assert cv["status"] == "synced"
+            assert cv["report_id"] == 3
+            assert cv["failure_reason"] == ""
+        finally:
+            session.close()
+
+    def test_retry_sync_success_clears_failure_reason(self, seeded_db):
+        """On sync retry success, failure_reason should be cleared."""
+        from podcast_research.services.job_service import _writeback_sync_result
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.models import ChannelVideo
+
+        session = get_session()
+        try:
+            cv = ChannelVideo(
+                channel_id=1,
+                video_id="abc123",
+                title="Clear Reason Test",
+                url="https://www.youtube.com/watch?v=abc123",
+                status="failed",
+                failure_reason="old utf-8 decode error",
+            )
+            session.add(cv)
+            session.commit()
+        finally:
+            session.close()
+
+        _writeback_sync_result(report_id=3, status="synced")
+
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "abc123")
+            assert cv["failure_reason"] == "", \
+                f"failure_reason should be empty, got: {cv['failure_reason']}"
+        finally:
+            session.close()
+
+    def test_synced_not_downgraded_by_sync_failure(self, seeded_db):
+        """Already synced video stays synced even if sync fails later."""
+        from podcast_research.services.job_service import _writeback_sync_result
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.models import ChannelVideo
+
+        session = get_session()
+        try:
+            cv = ChannelVideo(
+                channel_id=1,
+                video_id="abc123",
+                title="No Downgrade Test",
+                url="https://www.youtube.com/watch?v=abc123",
+                status="synced",
+                report_id=3,
+                failure_reason="",
+            )
+            session.add(cv)
+            session.commit()
+        finally:
+            session.close()
+
+        # Simulate a failed sync attempt after a previous success
+        _writeback_sync_result(report_id=3, status="failed",
+                               error="transient network error")
+
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "abc123")
+            assert cv["status"] == "synced", \
+                f"synced video should not be downgraded, got: {cv['status']}"
+        finally:
+            session.close()
+
+    def test_report_without_video_id_handled_gracefully(self, seeded_db):
+        """Reports without video_id should not crash _writeback_sync_result."""
+        from podcast_research.services.job_service import _writeback_sync_result
+
+        # Report 1 in seeded_db is local (no video_id).
+        # _writeback_sync_result should return silently without error.
+        try:
+            _writeback_sync_result(report_id=1, status="synced")
+        except Exception as e:
+            pytest.fail(f"_writeback_sync_result should not raise: {e}")
+
+        # Report 1 doesn't have video_id — function should just no-op
+        assert True  # reached without exception
+
+
+# ── P2-M.2: Import Guard & Status Actions ──────────────────────────────
+
+class _SeedChannelWithVideosMixin:
+    """Mixin to seed a channel with mock videos for import guard tests."""
+
+    @staticmethod
+    def _seed_channel_with_video(api_client, monkeypatch, status="new",
+                                 video_id="guardVid001", report_id=None,
+                                 failure_reason="", active_job_id=None):
+        """Seed channel + video with specific state, return (channel_id, video_id)."""
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {
+                "video_id": video_id, "title": "Guard Test Video",
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "published_at": "20260601", "duration_seconds": 1200,
+            },
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        if status != "new":
+            from podcast_research.db.session import get_session
+            from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+            session = get_session()
+            try:
+                cv = get_channel_video_by_video_id(session, video_id)
+                if cv:
+                    update_channel_video_status(
+                        session, cv["id"], status,
+                        report_id=report_id,
+                        failure_reason=failure_reason,
+                        active_job_id=active_job_id,
+                    )
+                    session.commit()
+            finally:
+                session.close()
+
+        return ch_id, video_id
+
+
+class TestImportGuard(_SeedChannelWithVideosMixin):
+    """Backend import route duplicate guard."""
+
+    def test_import_guard_processing_rejected(self, api_client, monkeypatch):
+        """Processing video should NOT create a new job."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="processing", video_id="guardProc1",
+            active_job_id="existing123",
+        )
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/{video_id}/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        # Should redirect to videos page with warning, NOT to /tasks/
+        assert "/tasks/" not in resp.headers["location"]
+        assert "videos" in resp.headers["location"]
+
+    def test_import_guard_synced_rejected(self, api_client, monkeypatch):
+        """Synced video should NOT create a new job."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="synced", video_id="guardSync1",
+            report_id=42,
+        )
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/{video_id}/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "/tasks/" not in resp.headers["location"]
+
+    def test_import_guard_analyzed_rejected(self, api_client, monkeypatch):
+        """Analyzed video should NOT create a new job."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="analyzed", video_id="guardAnal1",
+            report_id=5,
+        )
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/{video_id}/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "/tasks/" not in resp.headers["location"]
+
+    def test_import_failed_with_report_creates_sync(self, api_client, monkeypatch):
+        """Failed + report_id should create a sync retry job."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="failed", video_id="guardFailR1",
+            report_id=3,  # seeded_db report 3
+            failure_reason="previous error",
+        )
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/{video_id}/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        location = resp.headers["location"]
+        assert "/tasks/" in location
+        # Should create a sync job (job_type=sync), not a full_flow
+        import time; time.sleep(0.3)
+        # Verify the job exists and is a sync type
+        task_id = location.split("/tasks/")[1]
+        from podcast_research.services.job_service import get_job_status
+        status_data = get_job_status(task_id)
+        if status_data:
+            assert status_data["job_type"] == "sync", \
+                f"Expected sync job, got {status_data['job_type']}"
+
+    def test_import_failed_without_report_creates_full_flow(self, api_client, monkeypatch):
+        """Failed + no report_id should create a full_flow retry job."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="failed", video_id="guardFailNF1",
+            failure_reason="analysis crashed",
+        )
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/{video_id}/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "/tasks/" in resp.headers["location"]
+
+
+class TestStatusActionsDisplay(_SeedChannelWithVideosMixin):
+    """Template renders correct actions per video status."""
+
+    def test_processing_shows_view_progress(self, api_client, monkeypatch):
+        """Processing video should show '查看进度' link."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="processing", video_id="uiProc1",
+            active_job_id="job_ui_001",
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "查看进度" in html
+        assert "/tasks/job_ui_001" in html
+
+    def test_analyzed_shows_view_report_and_sync(self, api_client, monkeypatch):
+        """Analyzed video should show '查看报告' and '同步到知识库'."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="analyzed", video_id="uiAnal1",
+            report_id=5,
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "查看报告" in html
+        assert "同步到知识库" in html
+        assert "/reports/5" in html
+
+    def test_synced_shows_view_report_and_brief(self, api_client, monkeypatch):
+        """Synced video should show '查看报告' and '查看研究摘要'."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="synced", video_id="uiSync1",
+            report_id=5,
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "查看报告" in html
+        assert "查看研究摘要" in html
+        assert "/reports/5" in html
+        assert "/briefs/latest" in html
+
+    def test_failed_with_report_shows_retry_sync(self, api_client, monkeypatch):
+        """Failed + report_id should show '重试同步' and '查看报告'."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="failed", video_id="uiFailR1",
+            report_id=5, failure_reason="sync timeout",
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "重试同步" in html
+        assert "查看报告" in html
+        assert "报告已生成，同步失败" in html
+
+    def test_failed_without_report_shows_retry(self, api_client, monkeypatch):
+        """Failed + no report_id should show '重试整理'."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="failed", video_id="uiFailNF1",
+            failure_reason="analysis error",
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "重试整理" in html
+        assert "整理失败" in html
+
+    def test_new_shows_import_button(self, api_client, monkeypatch):
+        """New video should show '整理进知识库'."""
+        ch_id, video_id = self._seed_channel_with_video(
+            api_client, monkeypatch, status="new", video_id="uiNew1",
+        )
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        html = resp.text
+        assert "整理进知识库" in html
+
+
+class TestActiveJobIdLifecycle:
+    """active_job_id is written on import, cleared on completion."""
+
+    def test_active_job_id_written_on_import(self, api_client, monkeypatch):
+        """Importing a video should set active_job_id on channel_video."""
+        # Mock start_job/start_sync_job to prevent job thread from clearing active_job_id
+        import podcast_research.services.job_service as js
+        monkeypatch.setattr(js, "start_job", lambda job: None)
+        monkeypatch.setattr(js, "start_sync_job", lambda job: None)
+
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {
+                "video_id": "ajTest1", "title": "Active Job Test",
+                "url": "https://www.youtube.com/watch?v=ajTest1",
+                "published_at": "20260601", "duration_seconds": 1200,
+            },
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        # Import the video
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/ajTest1/import",
+            data={"focus": "AI", "depth": "standard", "flow_mode": "full"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+
+        # Check active_job_id was set
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "ajTest1")
+            assert cv["active_job_id"] is not None, \
+                "active_job_id should be set on import"
+        finally:
+            session.close()
+
+    def test_active_job_id_cleared_on_writeback(self, seeded_db):
+        """writeback should clear active_job_id."""
+        from podcast_research.services.job_service import (
+            _writeback_channel_video_status, AnalysisJob,
+        )
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.models import ChannelVideo
+
+        # Create channel_video with active_job_id
+        session = get_session()
+        try:
+            cv = ChannelVideo(
+                channel_id=1, video_id="ajWriteback1",
+                title="Writeback Clear Test",
+                url="https://www.youtube.com/watch?v=ajWriteback1",
+                status="processing", active_job_id="some_job_id_123",
+            )
+            session.add(cv)
+            session.commit()
+        finally:
+            session.close()
+
+        # Simulate job completion
+        job = AnalysisJob(
+            job_id="some_job_id_123", job_type="full_flow",
+            source_type="channel_video", source_channel_id=1,
+            video_id="ajWriteback1",
+        )
+        _writeback_channel_video_status(job, status="synced", report_id=1)
+
+        # Verify cleared
+        session = get_session()
+        try:
+            cv2 = get_channel_video_by_video_id(session, "ajWriteback1")
+            assert cv2["active_job_id"] is None, \
+                f"active_job_id should be cleared, got: {cv2['active_job_id']}"
+        finally:
+            session.close()
+
+
+# ── P2-M.3: Re-run With Replacement ────────────────────────────────────
+
+class TestRerunButton:
+    """Rerun button appears in correct statuses."""
+
+    def test_rerun_button_visible_for_synced(self, api_client, monkeypatch):
+        """Synced video should show '重新整理' button."""
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {"video_id": "rerunBtnS", "title": "Rerun Test Synced",
+             "url": "https://www.youtube.com/watch?v=rerunBtnS",
+             "published_at": "20260601", "duration_seconds": 1200},
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        # Set to synced
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "rerunBtnS")
+            if cv:
+                update_channel_video_status(session, cv["id"], "synced", report_id=1)
+                session.commit()
+        finally:
+            session.close()
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        assert "重新整理" in resp.text
+
+    def test_rerun_button_visible_for_analyzed(self, api_client, monkeypatch):
+        """Analyzed video should show '重新整理' button."""
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {"video_id": "rerunBtnA", "title": "Rerun Test Analyzed",
+             "url": "https://www.youtube.com/watch?v=rerunBtnA",
+             "published_at": "20260601", "duration_seconds": 1200},
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "rerunBtnA")
+            if cv:
+                update_channel_video_status(session, cv["id"], "analyzed", report_id=1)
+                session.commit()
+        finally:
+            session.close()
+
+        resp = api_client.get(f"/sources/channels/{ch_id}/videos")
+        assert "重新整理" in resp.text
+
+
+class TestRerunRoutes:
+    """GET and POST rerun routes."""
+
+    def test_rerun_get_page_loads(self, api_client, monkeypatch):
+        """GET /rerun returns confirmation page."""
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {"video_id": "rerunGet1", "title": "GET Rerun",
+             "url": "https://www.youtube.com/watch?v=rerunGet1",
+             "published_at": "20260601", "duration_seconds": 1200},
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "rerunGet1")
+            if cv:
+                update_channel_video_status(session, cv["id"], "synced", report_id=1)
+                session.commit()
+        finally:
+            session.close()
+
+        resp = api_client.get(
+            f"/sources/channels/{ch_id}/videos/rerunGet1/rerun"
+        )
+        assert resp.status_code == 200
+        assert "重新整理" in resp.text
+        assert "确认重新整理" in resp.text
+
+    def test_rerun_post_creates_job(self, api_client, monkeypatch):
+        """POST /rerun creates job and redirects to /tasks/."""
+        # Mock start_job to prevent background thread
+        import podcast_research.services.job_service as js
+        monkeypatch.setattr(js, "start_job", lambda job: None)
+
+        ch_id = _seed_channel(api_client)
+        mock_adapter = MockChannelAdapter([
+            {"video_id": "rerunPost1", "title": "POST Rerun",
+             "url": "https://www.youtube.com/watch?v=rerunPost1",
+             "published_at": "20260601", "duration_seconds": 1200},
+        ])
+        monkeypatch.setattr(
+            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            lambda: mock_adapter,
+        )
+        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
+        import time; time.sleep(0.3)
+
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+        session = get_session()
+        try:
+            cv = get_channel_video_by_video_id(session, "rerunPost1")
+            if cv:
+                update_channel_video_status(session, cv["id"], "synced", report_id=1)
+                session.commit()
+        finally:
+            session.close()
+
+        resp = api_client.post(
+            f"/sources/channels/{ch_id}/videos/rerunPost1/rerun",
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "/tasks/" in resp.headers["location"]

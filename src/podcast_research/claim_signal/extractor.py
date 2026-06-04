@@ -10,6 +10,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
+
 # Keywords that indicate investment advice — skip these
 _INVESTMENT_ADVICE_KEYWORDS = [
     "买入", "卖出", "推荐", "目标价", "配置", "增持", "减持",
@@ -241,7 +243,7 @@ def extract_claims(
         reports_dir = vault_path / "01_Reports"
         if reports_dir.exists():
             for report_path in sorted(reports_dir.glob("*.md")):
-                content = report_path.read_text(encoding="utf-8")
+                content = read_text_safe(report_path)
                 for section in _CLAIM_SECTIONS:
                     items = _extract_bullet_items(content, section)
                     for item in items:
@@ -271,7 +273,7 @@ def extract_claims(
         patches_dir = vault_path / "00_Inbox" / "LLM_Patches"
         if patches_dir.exists():
             for patch_path in sorted(patches_dir.glob("*.md")):
-                content = patch_path.read_text(encoding="utf-8")
+                content = read_text_safe(patch_path)
                 # Only process applied patches
                 if "status: applied" not in content[:500]:
                     continue
@@ -327,7 +329,7 @@ def extract_signals(
         reports_dir = vault_path / "01_Reports"
         if reports_dir.exists():
             for report_path in sorted(reports_dir.glob("*.md")):
-                content = report_path.read_text(encoding="utf-8")
+                content = read_text_safe(report_path)
                 # Also extract related entities from the report for context
                 entities_text = ""
                 for es in _EVIDENCE_SECTIONS:
@@ -366,7 +368,7 @@ def extract_signals(
         patches_dir = vault_path / "00_Inbox" / "LLM_Patches"
         if patches_dir.exists():
             for patch_path in sorted(patches_dir.glob("*.md")):
-                content = patch_path.read_text(encoding="utf-8")
+                content = read_text_safe(patch_path)
                 if "status: applied" not in content[:500]:
                     continue
 

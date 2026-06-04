@@ -52,9 +52,14 @@
                 {% endif %}
             </td>
             <td>
+                {% if v.import_status == 'failed' and v.report_id %}
+                <span class="badge badge-failed">{{ stage_labels.get('failed_sync', '报告已生成，同步失败') }}</span>
+                {% else %}
                 <span class="badge badge-{{ v.import_status }}">{{ stage_labels.get(v.import_status, v.import_status) }}</span>
+                {% endif %}
             </td>
             <td class="actions">
+                {# ── new: 整理进知识库 + 跳过 ── #}
                 {% if v.import_status == 'new' %}
                 <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/import" style="display:inline">
                     <input type="hidden" name="focus" value="{{ channel.default_focus }}">
@@ -62,26 +67,73 @@
                     <input type="hidden" name="flow_mode" value="full">
                     <button type="submit" class="btn-action btn-sm">整理进知识库</button>
                 </form>
+
+                {# ── processing: 查看进度 ── #}
                 {% elif v.import_status == 'processing' %}
+                {% if v.active_job_id %}
+                <a href="/tasks/{{ v.active_job_id }}" class="btn-action btn-sm">查看进度</a>
+                {% else %}
                 <span class="text-muted">整理中</span>
+                {% endif %}
+
+                {# ── analyzed: 查看报告 + 同步到知识库 + 重新整理 ── #}
                 {% elif v.import_status == 'analyzed' %}
-                <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/import" style="display:inline">
+                {% if v.report_id %}
+                <a href="/reports/{{ v.report_id }}" class="btn-action btn-sm">查看报告</a>
+                {% endif %}
+                <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/import" style="display:inline;margin-left:4px">
                     <input type="hidden" name="focus" value="{{ channel.default_focus }}">
                     <input type="hidden" name="depth" value="{{ channel.default_depth }}">
                     <input type="hidden" name="flow_mode" value="sync">
                     <button type="submit" class="btn-action btn-sm btn-secondary">同步到知识库</button>
                 </form>
+                <a href="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/rerun" class="btn-action btn-sm btn-secondary" style="margin-left:4px">重新整理</a>
+
+                {# ── synced: 查看报告 + 查看研究摘要 + 重新整理 ── #}
                 {% elif v.import_status == 'synced' %}
-                <a href="/reports" class="btn-action btn-sm btn-secondary">查看报告</a>
+                {% if v.report_id %}
+                <a href="/reports/{{ v.report_id }}" class="btn-action btn-sm">查看报告</a>
+                {% else %}
+                <a href="/reports" class="btn-action btn-sm">查看报告</a>
+                {% endif %}
+                <a href="/briefs/latest" class="btn-action btn-sm btn-secondary" style="margin-left:4px">查看研究摘要</a>
+                <a href="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/rerun" class="btn-action btn-sm btn-secondary" style="margin-left:4px">重新整理</a>
+
+                {# ── failed + report_id: 查看报告 + 重试同步 ── #}
+                {% elif v.import_status == 'failed' and v.report_id %}
+                <a href="/reports/{{ v.report_id }}" class="btn-action btn-sm">查看报告</a>
+                <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/import" style="display:inline;margin-left:4px">
+                    <input type="hidden" name="focus" value="{{ channel.default_focus }}">
+                    <input type="hidden" name="depth" value="{{ channel.default_depth }}">
+                    <input type="hidden" name="flow_mode" value="sync">
+                    <button type="submit" class="btn-action btn-sm btn-secondary">重试同步</button>
+                </form>
+                {% if v.failure_reason %}
+                <br><small style="color:var(--text-soft);font-size:0.75rem">{{ v.failure_reason[:80] }}</small>
+                {% endif %}
+
+                {# ── failed + no report_id: 重试 ── #}
+                {% elif v.import_status == 'failed' %}
+                <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/import" style="display:inline">
+                    <input type="hidden" name="focus" value="{{ channel.default_focus }}">
+                    <input type="hidden" name="depth" value="{{ channel.default_depth }}">
+                    <input type="hidden" name="flow_mode" value="full">
+                    <button type="submit" class="btn-action btn-sm">重试整理</button>
+                </form>
+                {% if v.failure_reason %}
+                <br><small style="color:var(--text-soft);font-size:0.75rem">{{ v.failure_reason[:80] }}</small>
+                {% endif %}
+
+                {# ── skipped: 仅状态 ── #}
                 {% elif v.import_status == 'skipped' %}
                 <span class="text-muted">已跳过</span>
-                {% elif v.import_status == 'failed' %}
-                <span class="text-error">失败</span>
+
                 {% else %}
                 <span class="text-muted">{{ stage_labels.get(v.import_status, v.import_status) }}</span>
                 {% endif %}
 
-                {% if v.import_status != 'skipped' and v.import_status != 'processing' %}
+                {# ── 跳过按钮：仅在 new/analyzed/failed 时显示 ── #}
+                {% if v.import_status in ('new', 'analyzed', 'failed') %}
                 <form method="post" action="/sources/channels/{{ channel.id }}/videos/{{ v.video_id }}/skip" style="display:inline;margin-left:4px">
                     <button type="submit" class="btn-action btn-sm btn-secondary" style="font-size:0.7rem">跳过</button>
                 </form>

@@ -137,4 +137,5 @@ class ChannelVideo(Base):
     report_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # P2-M.1
     failure_reason: Mapped[str] = mapped_column(Text, default="")  # P2-M.1
+    active_job_id: Mapped[str | None] = mapped_column(String(20), nullable=True)  # P2-M.2
     added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

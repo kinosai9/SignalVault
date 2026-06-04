@@ -802,6 +802,18 @@ def action_reports_sync(request: Request, report_id: int):
     # Create sync job
     from podcast_research.services.job_service import create_sync_job, start_sync_job
     job = create_sync_job(report_id=report_id)
+
+    # P2-M.1.2: Belt-and-suspenders — set source context if report has a video_id.
+    # This allows the direct video_id writeback path to work for sync retry jobs,
+    # in addition to the report_id-based fallback in start_sync_job.
+    try:
+        video_id = report.get("video_id")
+        if video_id:
+            job.video_id = video_id
+            job.source_type = "channel_video"
+    except Exception:
+        pass
+
     start_sync_job(job)
 
     return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)
@@ -1165,10 +1177,11 @@ def _build_sources_videos_context(channel_id: int, vp_str: str) -> dict:
 
 _STAGE_LABELS = {
     "new": "新发现",
-    "analyzed": "已分析",
+    "analyzed": "已生成报告",
     "synced": "已同步",
     "skipped": "已跳过",
-    "failed": "失败",
+    "failed": "整理失败",
+    "failed_sync": "报告已生成，同步失败",
     "processing": "整理中",
 }
 
@@ -1372,11 +1385,16 @@ def action_import_video(
     depth: str = Form("standard"),
     flow_mode: str = Form("full"),
 ):
-    """Import a video from channel list — creates a full_flow job."""
+    """Import a video from channel list — with duplicate guard."""
     from podcast_research.db.repository import (
         get_channel, get_channel_video_by_video_id, update_channel_video_status,
+        detect_video_import_status,
     )
-    from podcast_research.services.job_service import create_job, start_job
+    from podcast_research.services.job_service import (
+        create_job, start_job, create_sync_job, start_sync_job,
+    )
+
+    vp_str = _get_vault_path()
 
     session = _get_session()
     try:
@@ -1387,8 +1405,24 @@ def action_import_video(
                 status_code=303,
             )
 
+        # P2-M.2: Import guard — check current status before creating job
+        import_status = detect_video_import_status(session, video_id, vp_str)
+
+        if import_status == "processing":
+            return RedirectResponse(
+                url=f"/sources/channels/{channel_id}/videos?msg=warning:该视频正在整理中，请稍后查看",
+                status_code=303,
+            )
+
+        if import_status in ("analyzed", "synced"):
+            return RedirectResponse(
+                url=f"/sources/channels/{channel_id}/videos?msg=info:该视频已经整理过，可直接查看报告",
+                status_code=303,
+            )
+
         video_url = cv["url"] or f"https://www.youtube.com/watch?v={video_id}"
         video_title = cv.get("title", video_id)
+        existing_report_id = cv.get("report_id")
 
         # Get channel defaults
         channel = get_channel(session, channel_id)
@@ -1397,13 +1431,41 @@ def action_import_video(
                 focus = channel.get("default_focus", "")
             if depth == "standard":
                 depth = channel.get("default_depth", "standard")
-        session.commit()  # ensure any pending writes are flushed
+
+        # P2-M.2: For failed + existing report, retry sync only
+        is_sync_retry = (import_status == "failed" and existing_report_id is not None)
+
+        session.commit()
     finally:
         session.close()
 
+    # P2-M.2: Failed + report_id → retry sync only (not full_flow)
+    if is_sync_retry:
+        job = create_sync_job(report_id=existing_report_id)
+        if video_id:
+            job.video_id = video_id
+            job.source_type = "channel_video"
+            job.source_channel_id = channel_id
+
+        # Mark as processing
+        session2 = _get_session()
+        try:
+            cv2 = get_channel_video_by_video_id(session2, video_id)
+            if cv2:
+                update_channel_video_status(
+                    session2, cv2["id"], "processing",
+                    active_job_id=job.job_id,
+                )
+            session2.commit()
+        finally:
+            session2.close()
+
+        start_sync_job(job)
+        return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)
+
+    # Normal flow: create full_flow (or analysis-only) job
     focus_areas = [f.strip() for f in focus.split(",") if f.strip()] if focus else ["通用投资研究"]
 
-    # Create job first — if this fails, no state is affected
     job = create_job(
         youtube_url=video_url,
         focus_areas=focus_areas,
@@ -1423,11 +1485,128 @@ def action_import_video(
     try:
         cv2 = get_channel_video_by_video_id(session2, video_id)
         if cv2:
-            update_channel_video_status(session2, cv2["id"], "processing")
+            update_channel_video_status(
+                session2, cv2["id"], "processing",
+                active_job_id=job.job_id,
+            )
         session2.commit()
     finally:
         session2.close()
 
     start_job(job)
 
+    return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P2-M.3: Rerun (Re-run With Replacement)
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+@router.get("/sources/channels/{channel_id}/videos/{video_id}/rerun")
+def page_rerun_video(request: Request, channel_id: int, video_id: str):
+    """Show rerun confirmation page."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    from podcast_research.db.repository import get_channel, get_channel_video_by_video_id, detect_video_import_status
+    from podcast_research.db.session import get_session
+
+    session = get_session()
+    try:
+        channel = get_channel(session, channel_id)
+        cv = get_channel_video_by_video_id(session, video_id)
+        status = detect_video_import_status(session, video_id, vp_str)
+    finally:
+        session.close()
+
+    if not channel:
+        return RedirectResponse(url="/sources/channels?msg=error:频道不存在", status_code=303)
+
+    video_title = cv["title"] if cv else video_id
+    html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>重新整理 — {video_title}</title>
+<link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<main class="container" style="max-width:600px;margin:40px auto">
+    <h2>重新整理: {video_title}</h2>
+    <p style="color:var(--text-soft)">该视频已经整理过（当前状态: {status}）。</p>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin:16px 0">
+        <h3>重新整理会：</h3>
+        <ul>
+            <li>使用当前最新规则重新生成报告</li>
+            <li>替换当前知识库中的旧整理结果</li>
+            <li>备份旧报告到 99_System/Archive/Reports/</li>
+            <li>刷新相关主题、公司、重要判断和观察点</li>
+        </ul>
+        <p style="color:var(--text-soft);font-size:0.85rem">旧版本会保存在归档中，不会直接删除。</p>
+    </div>
+    <div style="display:flex;gap:8px">
+        <form method="post" action="/sources/channels/{channel_id}/videos/{video_id}/rerun">
+            <button type="submit" class="btn-action">确认重新整理</button>
+        </form>
+        <a href="/sources/channels/{channel_id}/videos" class="btn-action btn-secondary">取消</a>
+    </div>
+</main>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/sources/channels/{channel_id}/videos/{video_id}/rerun")
+def action_rerun_video(request: Request, channel_id: int, video_id: str):
+    """Execute rerun — archive old, create new full_flow job."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+    from podcast_research.services.job_service import create_job, start_job
+    from podcast_research.exporters.obsidian import archive_current_video_outputs
+
+    vp = Path(vp_str)
+
+    # Step 1: Archive old outputs
+    try:
+        archive_current_video_outputs(video_id, vp)
+    except Exception:
+        pass  # Non-fatal: proceed with rerun even if archive fails
+
+    # Step 2: Get video info
+    session = _get_session()
+    try:
+        cv = get_channel_video_by_video_id(session, video_id)
+        video_url = cv["url"] if cv else f"https://www.youtube.com/watch?v={video_id}"
+        video_title = cv.get("title", video_id) if cv else video_id
+    finally:
+        session.close()
+
+    # Step 3: Create rerun job
+    job = create_job(
+        youtube_url=video_url,
+        focus_areas=["通用投资研究"],
+        depth="standard",
+        mock=False,
+        auto_sync=True,
+        title=f"[重新整理] {video_title}",
+    )
+    job.source_type = "channel_video"
+    job.source_channel_id = channel_id
+    job.video_id = video_id
+
+    # Step 4: Mark processing
+    session2 = _get_session()
+    try:
+        cv2 = get_channel_video_by_video_id(session2, video_id)
+        if cv2:
+            update_channel_video_status(
+                session2, cv2["id"], "processing",
+                active_job_id=job.job_id,
+            )
+        session2.commit()
+    finally:
+        session2.close()
+
+    start_job(job)
     return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)

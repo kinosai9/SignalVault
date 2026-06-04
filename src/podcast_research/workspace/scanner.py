@@ -12,6 +12,7 @@ from pathlib import Path
 
 from podcast_research.claim_signal.review import _parse_frontmatter
 from podcast_research.llm_wiki.context_builder import HIGH_VALUE_COMPANIES
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -276,8 +277,7 @@ class WorkspaceSnapshot:
         entries: list[tuple[str, str]] = []  # (datetime_str, text)
         for log_path in sorted(log_dir.glob("*Log*.md")):
             try:
-                from podcast_research.claim_signal.review import _safe_read_text
-                content = _safe_read_text(log_path)
+                content = read_text_safe(log_path)
             except Exception:
                 continue
             # Extract lines like "## 2026-05-30 20:07" or "## 2026-05-30T20:07:34"
@@ -342,7 +342,7 @@ class VaultScanner:
             return results
         for p in sorted(reports_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read report: {p}")
                 continue
@@ -371,7 +371,7 @@ class VaultScanner:
             return results
         for p in sorted(topics_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read topic: {p}")
                 continue
@@ -398,7 +398,7 @@ class VaultScanner:
             return results
         for p in sorted(companies_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read company: {p}")
                 continue
@@ -424,7 +424,7 @@ class VaultScanner:
             return results
         for p in sorted(claims_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read claim: {p}")
                 continue
@@ -438,6 +438,9 @@ class VaultScanner:
             related_companies = fm.get("related_companies", [])
             if not isinstance(related_companies, list):
                 related_companies = []
+            # P2-M.3: skip archived claims
+            if fm.get("status", "") == "archived":
+                continue
             results.append(ClaimInfo(
                 card_id=p.stem,
                 path=p,
@@ -457,7 +460,7 @@ class VaultScanner:
             return results
         for p in sorted(signals_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read signal: {p}")
                 continue
@@ -471,6 +474,9 @@ class VaultScanner:
             related_companies = fm.get("related_companies", [])
             if not isinstance(related_companies, list):
                 related_companies = []
+            # P2-M.3: skip archived signals
+            if fm.get("status", "") == "archived":
+                continue
             results.append(SignalInfo(
                 card_id=p.stem,
                 path=p,
@@ -492,7 +498,7 @@ class VaultScanner:
             return results
         for p in sorted(channels_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read channel: {p}")
                 continue
@@ -515,7 +521,7 @@ class VaultScanner:
             return results
         for p in sorted(patches_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read patch: {p}")
                 continue

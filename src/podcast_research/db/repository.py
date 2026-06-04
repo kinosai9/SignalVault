@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -660,6 +661,7 @@ def list_channel_videos(
             "status": cv.status,
             "report_id": cv.report_id,
             "failure_reason": cv.failure_reason,
+            "active_job_id": cv.active_job_id,
             "last_checked_at": cv.last_checked_at,
         }
         for cv in q.all()
@@ -672,8 +674,9 @@ def update_channel_video_status(
     status: str,
     report_id: int | None = None,
     failure_reason: str = "",
+    active_job_id: str | None = None,
 ) -> None:
-    """Update status and optionally report_id for a channel_video."""
+    """Update status and optionally report_id/active_job_id for a channel_video."""
     cv = session.query(ChannelVideo).filter_by(id=channel_video_id).first()
     if cv:
         cv.status = status
@@ -682,6 +685,9 @@ def update_channel_video_status(
             cv.report_id = report_id
         if failure_reason:
             cv.failure_reason = failure_reason
+        # P2-M.2: active_job_id — None means "clear", empty string means "don't change"
+        if active_job_id is not None:
+            cv.active_job_id = active_job_id if active_job_id else None
         session.flush()
 
 
@@ -699,6 +705,7 @@ def get_channel_video_by_video_id(session: Session, video_id: str) -> dict | Non
         "status": cv.status,
         "report_id": cv.report_id,
         "failure_reason": cv.failure_reason,
+        "active_job_id": cv.active_job_id,
     }
 
 
@@ -713,6 +720,27 @@ def refresh_channel_timestamp(session: Session, channel_id: int) -> None:
 # ═════════════════════════════════════════════════════════════════════════════
 # P2-M.1: Video import status detection
 # ═════════════════════════════════════════════════════════════════════════════
+
+
+def get_report_by_video_id(session: Session, video_id: str) -> dict | None:
+    """Get a report dict by video_id via Report JOIN Episode."""
+    ep = session.query(Episode).filter_by(video_id=video_id).first()
+    if not ep:
+        return None
+    report = session.query(Report).filter_by(episode_id=ep.id).order_by(
+        Report.analysis_timestamp.desc()
+    ).first()
+    if not report:
+        return None
+    return {
+        "id": report.id,
+        "episode_id": ep.id,
+        "video_id": ep.video_id,
+        "source_url": ep.source_url,
+        "title": ep.title,
+        "report_markdown": report.report_markdown,
+        "analysis_timestamp": report.analysis_timestamp,
+    }
 
 def detect_video_import_status(
     session: Session,
@@ -752,7 +780,7 @@ def detect_video_import_status(
                 if reports_dir.exists():
                     for rf in reports_dir.glob("*.md"):
                         try:
-                            content = rf.read_text(encoding="utf-8")
+                            content = read_text_safe(rf)
                             if f"video_id: {video_id}" in content:
                                 return "synced"
                         except Exception:
@@ -765,7 +793,7 @@ def detect_video_import_status(
         if reports_dir.exists():
             for rf in reports_dir.glob("*.md"):
                 try:
-                    content = rf.read_text(encoding="utf-8")
+                    content = read_text_safe(rf)
                     if f"video_id: {video_id}" in content:
                         return "synced"
                 except Exception:

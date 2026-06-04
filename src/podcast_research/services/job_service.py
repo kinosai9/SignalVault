@@ -559,16 +559,88 @@ def start_sync_job(job: AnalysisJob) -> None:
             if result.error:
                 update_job(job.job_id, status="failed", stage="failed",
                            error=result.error, message=f"同步失败: {result.error}")
+                # P2-M.1.2: Writeback sync failure to channel_videos
+                if job.report_id:
+                    _writeback_sync_result(job.report_id, status="failed",
+                                           error=result.error)
             else:
                 update_job(job.job_id, status="success", stage="success",
                            message="知识库已更新")
                 _set_result_links(job.job_id, "sync", job.report_id)
+                # P2-M.1.2: Writeback sync success to channel_videos
+                if job.report_id:
+                    _writeback_sync_result(job.report_id, status="synced")
         except Exception as e:
             update_job(job.job_id, status="failed", stage="failed",
                        error=str(e), message="同步失败，请稍后重试或查看日志。")
+            # P2-M.1.2: Writeback exception failure to channel_videos
+            if job.report_id:
+                _writeback_sync_result(job.report_id, status="failed", error=str(e))
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
+
+
+def _writeback_sync_result(
+    report_id: int,
+    *,
+    status: str,
+    error: str = "",
+) -> None:
+    """Write sync result back to channel_videos using report_id-based lookup.
+
+    Works for both full_flow jobs (which have source context) and sync retry
+    jobs (which lack it). Finds video_id from the report, then looks up
+    ChannelVideo by video_id.
+
+    On success (status="synced"): sets status="synced", links report_id,
+        clears failure_reason.
+    On failure: only updates if current status is NOT already "synced"
+        (to avoid downgrading a previously successful sync).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        from podcast_research.db.session import get_session
+        from podcast_research.db.repository import get_report
+        from podcast_research.db.models import ChannelVideo
+        from datetime import datetime
+
+        session = get_session()
+        try:
+            report = get_report(session, report_id)
+            if not report or not report.get("video_id"):
+                return
+
+            video_id = report["video_id"]
+            cv = session.query(ChannelVideo).filter_by(video_id=video_id).first()
+            if not cv:
+                return
+
+            if status == "synced":
+                cv.status = "synced"
+                cv.report_id = report_id
+                cv.failure_reason = ""
+                cv.active_job_id = None  # P2-M.2: job completed
+                cv.last_checked_at = datetime.now()
+            else:
+                # Don't downgrade an already-synced video
+                if cv.status == "synced":
+                    return
+                cv.status = status
+                cv.active_job_id = None  # P2-M.2: job completed
+                cv.last_checked_at = datetime.now()
+                if error:
+                    cv.failure_reason = error
+
+            session.commit()
+        finally:
+            session.close()
+    except Exception as e:
+        _log.warning(
+            "Channel video sync writeback failed for report_id=%s: %s",
+            report_id, e,
+        )
 
 
 def _writeback_channel_video_status(
@@ -580,38 +652,46 @@ def _writeback_channel_video_status(
 ) -> None:
     """Write job result back to channel_videos table if job originated from a channel.
 
-    Called from the job execution thread after analysis/sync succeeds or fails.
+    For jobs WITH source context (full_flow from channel videos), uses direct
+    video_id lookup.
+    For jobs WITHOUT source context (sync retry), delegates to
+    _writeback_sync_result which does report_id-based reverse lookup.
     """
-    if job.source_type != "channel_video" or not job.video_id:
-        return
-    try:
-        from podcast_research.db.session import get_session
-        from podcast_research.db.models import ChannelVideo
-        from datetime import datetime
-        session = get_session()
+    # Path 1: Direct video_id lookup (full_flow from channel_videos page)
+    if job.source_type == "channel_video" and job.video_id:
         try:
-            cv = session.query(ChannelVideo).filter_by(
-                video_id=job.video_id
-            ).first()
-            if cv:
-                cv.status = status
-                cv.last_checked_at = datetime.now()
-                if report_id is not None:
-                    cv.report_id = report_id
-                if failure_reason:
-                    cv.failure_reason = failure_reason
-                else:
-                    cv.failure_reason = ""
-                session.commit()
-        finally:
-            session.close()
-    except Exception as e:
-        # Don't crash the job thread if DB writeback fails
-        import logging
-        logging.getLogger(__name__).warning(
-            "Channel video status writeback failed for video_id=%s: %s",
-            job.video_id, e,
-        )
+            from podcast_research.db.session import get_session
+            from podcast_research.db.models import ChannelVideo
+            from datetime import datetime
+            session = get_session()
+            try:
+                cv = session.query(ChannelVideo).filter_by(
+                    video_id=job.video_id
+                ).first()
+                if cv:
+                    cv.status = status
+                    cv.active_job_id = None  # P2-M.2: job completed
+                    cv.last_checked_at = datetime.now()
+                    if report_id is not None:
+                        cv.report_id = report_id
+                    if failure_reason:
+                        cv.failure_reason = failure_reason
+                    else:
+                        cv.failure_reason = ""
+                    session.commit()
+            finally:
+                session.close()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Channel video status writeback failed for video_id=%s: %s",
+                job.video_id, e,
+            )
+        return
+
+    # Path 2: Report-id based reverse lookup (sync retry jobs)
+    if report_id:
+        _writeback_sync_result(report_id, status=status, error=failure_reason)
 
 
 def _set_result_links(job_id: str, job_type: str, report_id: int | None) -> None:

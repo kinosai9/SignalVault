@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
+
 REQUIRED_SECTIONS_TOPIC = [
     "## Proposed Current Understanding",
     "## Proposed Key Claims",
@@ -128,7 +130,7 @@ def validate_patch_file(patch_path: Path, vault_path: Path) -> PatchValidationRe
         result.issues.append("File not found")
         return result
 
-    content = patch_path.read_text(encoding="utf-8")
+    content = read_text_safe(patch_path)
 
     # 1. Check frontmatter
     fm = _parse_patch_frontmatter(content)

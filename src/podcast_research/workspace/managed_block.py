@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
+
 MARKER_PREFIX = "<!-- PODCAST-RESEARCH:BEGIN"
 MARKER_SUFFIX = "<!-- PODCAST-RESEARCH:END"
 
@@ -30,7 +32,7 @@ def _upsert_managed_block(file_path: Path, block_name: str, content: str) -> Non
     end = f"{MARKER_SUFFIX} {block_name} -->"
 
     if file_path.exists():
-        existing = file_path.read_text(encoding="utf-8")
+        existing = read_text_safe(file_path)
     else:
         existing = ""
 
@@ -57,7 +59,7 @@ def _remove_managed_block(file_path: Path, block_name: str) -> bool:
     if not file_path.exists():
         return False
 
-    existing = file_path.read_text(encoding="utf-8")
+    existing = read_text_safe(file_path)
     pattern = re.compile(
         r"\n*" + re.escape(begin) + r".*?" + re.escape(end) + r"\n*",
         re.DOTALL,
@@ -75,4 +77,4 @@ def _has_managed_block(file_path: Path, block_name: str) -> bool:
     if not file_path.exists():
         return False
     begin = f"{MARKER_PREFIX} {block_name} -->"
-    return begin in file_path.read_text(encoding="utf-8")
+    return begin in read_text_safe(file_path)

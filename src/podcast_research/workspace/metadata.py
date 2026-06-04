@@ -15,6 +15,7 @@ from podcast_research.claim_signal.review import (
     _parse_frontmatter,
     _ensure_frontmatter_field,
 )
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def polish_report_metadata(
     # Phase 1: Polish report files themselves
     for p in sorted(reports_dir.glob("*.md")):
         try:
-            content = p.read_text(encoding="utf-8")
+            content = read_text_safe(p)
         except Exception:
             logger.warning(f"Cannot read report: {p}")
             continue
@@ -124,7 +125,7 @@ def polish_report_metadata(
     title_map: dict[str, str] = {}
     for p in sorted(reports_dir.glob("*.md")):
         try:
-            content = p.read_text(encoding="utf-8")
+            content = read_text_safe(p)
         except Exception:
             continue
         fm = _parse_frontmatter(content)
@@ -148,7 +149,7 @@ def polish_report_metadata(
             continue
         for p in sorted(card_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 continue
             updated_content = _refresh_source_report_display(content, title_map)
@@ -329,7 +330,7 @@ def _write_metadata_log(
 
     # Append to existing log
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         header_end = existing.find("\n\n", existing.find("# Report Metadata Polish Log"))
         if header_end > 0:
             new_entry = "\n".join(lines[2:])

@@ -637,3 +637,251 @@ class TestE2EEdgeCases:
         reports = list((vault / "01_Reports").glob("*.md"))
         assert len(reports) == 1, \
             f"Should have exactly 1 report file after double sync, got {len(reports)}"
+
+
+# ── P2-M.1.2: Encoding Fallback Tests ──────────────────────────────────
+
+class TestReadTextSafe:
+    """Encoding fallback for read_text_safe utility."""
+
+    def test_read_text_safe_utf8(self, tmp_path):
+        """read_text_safe should read UTF-8 files correctly."""
+        from podcast_research.utils.file_io import read_text_safe
+
+        path = tmp_path / "utf8.md"
+        content = "中文测试 content with UTF-8 你好世界\n第二行"
+        path.write_text(content, encoding="utf-8")
+
+        result = read_text_safe(path)
+        assert result == content
+        assert "你好世界" in result
+
+    def test_read_text_safe_gb18030(self, tmp_path):
+        """read_text_safe should fall back to gb18030 for GBK-encoded files."""
+        from podcast_research.utils.file_io import read_text_safe
+
+        path = tmp_path / "gbk.md"
+        content = "GBK编码的中文内容测试\n包含特殊字符：【投资分析】"
+        path.write_text(content, encoding="gbk")
+
+        result = read_text_safe(path)
+        assert "GBK编码的中文内容测试" in result
+        assert "投资分析" in result
+
+    def test_read_text_safe_utf8_sig(self, tmp_path):
+        """read_text_safe should handle UTF-8 with BOM."""
+        from podcast_research.utils.file_io import read_text_safe
+
+        path = tmp_path / "bom.md"
+        content = "BOM file content 带中文"
+        path.write_text(content, encoding="utf-8-sig")
+
+        result = read_text_safe(path)
+        # utf-8-sig strips the BOM
+        assert "BOM file content 带中文" in result
+
+    def test_read_text_safe_fallback_replace(self, tmp_path):
+        """read_text_safe should fall back to replace mode for invalid bytes."""
+        from podcast_research.utils.file_io import read_text_safe
+
+        path = tmp_path / "broken.bin"
+        # Write raw bytes that are invalid in all common encodings
+        broken = b"Valid start \x80\x81\xfe\xff invalid bytes \x90\x91 end"
+        path.write_bytes(broken)
+
+        result = read_text_safe(path)
+        # Should return something (with replacement chars)
+        assert len(result) > 0
+        assert "Valid" in result or "end" in result
+
+    def test_write_text_utf8_roundtrip(self, tmp_path):
+        """write_text_utf8 should produce files that read_text_safe can read."""
+        from podcast_research.utils.file_io import read_text_safe, write_text_utf8
+
+        path = tmp_path / "roundtrip.md"
+        content = "中文 roundtrip test ★ 特殊字符"
+
+        write_text_utf8(path, content)
+        result = read_text_safe(path)
+
+        assert result == content
+        # Also verify it's valid UTF-8 directly
+        path.read_text(encoding="utf-8")  # should not raise
+
+    def test_sync_survives_gb18030_card(self, tmp_path):
+        """Sync should not crash when vault contains a GBK-encoded topic card."""
+        from podcast_research.utils.file_io import read_text_safe
+
+        vault = tmp_path / "vault"
+        vault.mkdir()
+
+        # Create a GBK-encoded topic card in the vault
+        topics_dir = vault / "02_Topics"
+        topics_dir.mkdir()
+        gbk_card = topics_dir / "GBK Topic.md"
+        gbk_card.write_text(
+            "---\ntype: topic\ntopic: GBK编码主题\nstatus: core\n---\n# GBK编码主题\n\n中文内容。",
+            encoding="gbk",
+        )
+
+        # Run sync with a normal report — should not crash on the GBK card
+        extraction = _make_rich_extraction(channel_name="Test Channel")
+        report_id = _setup_clean_db_with_report(tmp_path, extraction, video_id="gbksync1")
+
+        result = sync_report_to_knowledge_base(report_id, vault_path=vault)
+        # Sync should succeed; GBK card read may have used fallback
+        assert result.error == "", \
+            f"Sync should succeed even with GBK card in vault: {result.error}"
+
+        # Verify the GBK card is still readable (wasn't corrupted)
+        card_content = read_text_safe(gbk_card)
+        assert "GBK编码主题" in card_content
+
+
+# ── P2-M.3: Archive & Scanner Filtering Tests ──────────────────────────
+
+class TestArchiveCurrentVideoOutputs:
+    """archive_current_video_outputs() tests."""
+
+    def test_archive_copies_old_report(self, tmp_path):
+        """Old report is copied to Archive/Reports/."""
+        from podcast_research.exporters.obsidian import archive_current_video_outputs
+
+        vault = tmp_path / "vault"
+        reports_dir = vault / "01_Reports"
+        reports_dir.mkdir(parents=True)
+
+        # Create a report with known video_id
+        report_path = reports_dir / "2026-06-01_TestChan_testVid001.md"
+        report_path.write_text("---\ntype: report\nchannel: TestChan\nvideo_id: testVid001\n---\n# Test Report\n\nContent.", encoding="utf-8")
+
+        result = archive_current_video_outputs("testVid001", vault)
+        assert result["reports_archived"] == 1
+
+        archive_dir = vault / "99_System" / "Archive" / "Reports"
+        archived_files = list(archive_dir.glob("*.md"))
+        assert len(archived_files) == 1
+        assert "2026-06-01_TestChan_testVid001" in archived_files[0].name
+
+    def test_archive_does_not_delete_original(self, tmp_path):
+        """Archive copies, does not delete original file."""
+        from podcast_research.exporters.obsidian import archive_current_video_outputs
+
+        vault = tmp_path / "vault"
+        reports_dir = vault / "01_Reports"
+        reports_dir.mkdir(parents=True)
+
+        report_path = reports_dir / "2026-06-01_TestChan_nodel1.md"
+        report_path.write_text("---\ntype: report\nchannel: TestChan\nvideo_id: nodel1\n---\n# Content", encoding="utf-8")
+
+        archive_current_video_outputs("nodel1", vault)
+
+        # Original still exists
+        assert report_path.exists()
+        # Archive copy exists too
+        archive_dir = vault / "99_System" / "Archive" / "Reports"
+        assert len(list(archive_dir.glob("*.md"))) == 1
+
+    def test_archive_marks_claims_as_archived(self, tmp_path):
+        """Claims referencing the archived report are marked status: archived."""
+        from podcast_research.exporters.obsidian import archive_current_video_outputs
+
+        vault = tmp_path / "vault"
+        (vault / "01_Reports").mkdir(parents=True)
+        (vault / "06_Claims").mkdir(parents=True)
+
+        report_path = vault / "01_Reports" / "2026-06-01_TestChan_vid1.md"
+        report_path.write_text("---\ntype: report\nchannel: TestChan\nvideo_id: vid1\n---\n# Content", encoding="utf-8")
+
+        claim_path = vault / "06_Claims" / "claim1.md"
+        claim_path.write_text("---\ntype: claim\nstatus: active\nclaim: Test claim\nsource_reports:\n  - 2026-06-01_TestChan_vid1.md\n---\n# Test Claim\n\nEvidence.", encoding="utf-8")
+
+        result = archive_current_video_outputs("vid1", vault)
+        assert result["claims_archived"] == 1
+
+        # Verify the claim frontmatter was updated
+        content = claim_path.read_text(encoding="utf-8")
+        assert "status: archived" in content
+        assert "archived_reason: rerun_video" in content
+
+    def test_archive_marks_signals_as_archived(self, tmp_path):
+        """Signals referencing the archived report are marked status: archived."""
+        from podcast_research.exporters.obsidian import archive_current_video_outputs
+
+        vault = tmp_path / "vault"
+        (vault / "01_Reports").mkdir(parents=True)
+        (vault / "07_Signals").mkdir(parents=True)
+
+        report_path = vault / "01_Reports" / "2026-06-01_TestChan_sig1.md"
+        report_path.write_text("---\ntype: report\nchannel: TestChan\nvideo_id: sig1\n---\n# Content", encoding="utf-8")
+
+        signal_path = vault / "07_Signals" / "signal1.md"
+        signal_path.write_text("---\ntype: signal\nstatus: open\nsignal: Test signal\nsource_reports:\n  - 2026-06-01_TestChan_sig1.md\n---\n# Test Signal", encoding="utf-8")
+
+        result = archive_current_video_outputs("sig1", vault)
+        assert result["signals_archived"] == 1
+
+        content = signal_path.read_text(encoding="utf-8")
+        assert "status: archived" in content
+
+
+class TestScannerArchivedFiltering:
+    """Scanner excludes archived claims/signals."""
+
+    def test_archived_claim_excluded_from_scanner(self, tmp_path):
+        """Archived claims are NOT included in WorkspaceSnapshot."""
+        from podcast_research.workspace.scanner import VaultScanner
+
+        vault = tmp_path / "vault"
+        (vault / "06_Claims").mkdir(parents=True)
+
+        # Active claim
+        (vault / "06_Claims" / "active_claim.md").write_text(
+            "---\ntype: claim\nstatus: active\nclaim: Active\nsource_reports: []\nrelated_topics: []\nrelated_companies: []\n---\n# Active", encoding="utf-8")
+        # Archived claim
+        (vault / "06_Claims" / "archived_claim.md").write_text(
+            "---\ntype: claim\nstatus: archived\nclaim: Archived\nsource_reports: []\nrelated_topics: []\nrelated_companies: []\n---\n# Archived", encoding="utf-8")
+
+        scanner = VaultScanner(vault)
+        snapshot = scanner.scan()
+
+        assert len(snapshot.claims) == 1
+        assert snapshot.claims[0].status == "active"
+
+    def test_archived_signal_excluded_from_scanner(self, tmp_path):
+        """Archived signals are NOT included in WorkspaceSnapshot."""
+        from podcast_research.workspace.scanner import VaultScanner
+
+        vault = tmp_path / "vault"
+        (vault / "07_Signals").mkdir(parents=True)
+
+        (vault / "07_Signals" / "open_sig.md").write_text(
+            "---\ntype: signal\nstatus: open\nsignal: Open\nsource_reports: []\nrelated_topics: []\nrelated_companies: []\n---\n# Open", encoding="utf-8")
+        (vault / "07_Signals" / "archived_sig.md").write_text(
+            "---\ntype: signal\nstatus: archived\nsignal: Archived\nsource_reports: []\nrelated_topics: []\nrelated_companies: []\n---\n# Archived", encoding="utf-8")
+
+        scanner = VaultScanner(vault)
+        snapshot = scanner.scan()
+
+        assert len(snapshot.signals) == 1
+        assert snapshot.signals[0].status == "open"
+
+    def test_source_report_no_duplicate_after_rerun(self, tmp_path):
+        """Card Source Reports should not duplicate after rerun with same filename."""
+        from podcast_research.exporters.obsidian import _append_source_reports
+
+        vault = tmp_path / "vault"
+        card_dir = vault / "02_Topics"
+        card_dir.mkdir(parents=True)
+
+        card_path = card_dir / "Test Topic.md"
+        card_path.write_text(
+            "---\ntype: topic\ntopic: Test Topic\n---\n# Test Topic\n\n## Source Reports\n\n- [[2026-06-01_TestChan_vid1]]\n\n## Timeline\n",
+            encoding="utf-8",
+        )
+
+        # Same report link should not be appended again
+        result = _append_source_reports(
+            card_path, new_links=["- [[2026-06-01_TestChan_vid1]]"],
+        )
+        assert result is False  # No changes needed — already exists

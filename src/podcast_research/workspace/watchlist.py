@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
 from podcast_research.workspace.scanner import WorkspaceSnapshot
 
 logger = logging.getLogger(__name__)
@@ -192,7 +193,7 @@ def load_watchlist(vault_path: Path) -> WatchlistConfig:
     if not path.exists():
         return WatchlistConfig()
     try:
-        content = path.read_text(encoding="utf-8")
+        content = read_text_safe(path)
         return _parse_watchlist_yaml(content)
     except Exception:
         logger.warning("Failed to parse Watchlist.yaml, using empty config")

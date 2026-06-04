@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from podcast_research.llm_wiki.validator import _parse_patch_frontmatter
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ def list_applied_patches(vault_path: Path) -> list[AppliedPatch]:
 
     results = []
     for pf in sorted(patches_dir.glob("*.md")):
-        content = pf.read_text(encoding="utf-8")
+        content = read_text_safe(pf)
         fm = _parse_patch_frontmatter(content)
         if fm.get("status") != "applied":
             continue
@@ -125,7 +126,7 @@ def list_applied_patches(vault_path: Path) -> list[AppliedPatch]:
         if target_card_rel:
             target_path = vault_path / target_card_rel
             if target_path.exists():
-                target_content = target_path.read_text(encoding="utf-8")
+                target_content = read_text_safe(target_path)
                 if _make_marker_begin(patch_id) in target_content:
                     marker_exists = "yes"
                 else:
@@ -181,7 +182,7 @@ def rollback_patch(
     )
 
     # Read patch frontmatter
-    patch_content = patch_path.read_text(encoding="utf-8")
+    patch_content = read_text_safe(patch_path)
     fm = _parse_patch_frontmatter(patch_content)
     status = fm.get("status", "")
     target_card_rel = fm.get("target_card", fm.get("applied_to", ""))
@@ -203,7 +204,7 @@ def rollback_patch(
         result.errors.append(f"Target card not found: {target_card_rel}")
         return result
 
-    target_content = target_card_path.read_text(encoding="utf-8")
+    target_content = read_text_safe(target_card_path)
     blocks = _count_marker_blocks(target_content, pid)
     result.blocks_removed = blocks
 
@@ -257,7 +258,7 @@ def _write_rollback_log(vault_path: Path, patch_id: str, target_name: str, block
     )
 
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         header = "# Patch Rollback Log"
         if header in existing:
             existing = existing.replace(header + "\n\n", header + "\n\n" + entry)
@@ -291,7 +292,7 @@ def reject_patch(
     pid = _extract_patch_id(patch_path)
     result = RejectResult(patch_path=patch_path, patch_id=pid)
 
-    patch_content = patch_path.read_text(encoding="utf-8")
+    patch_content = read_text_safe(patch_path)
     fm = _parse_patch_frontmatter(patch_content)
     status = fm.get("status", "")
 
@@ -341,7 +342,7 @@ def _write_reject_log(vault_path: Path, patch_id: str, target_name: str, reason:
     )
 
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         header = "# Patch Reject Log"
         if header in existing:
             existing = existing.replace(header + "\n\n", header + "\n\n" + entry)

@@ -464,7 +464,7 @@ def test_cli_obsidian_export_no_vault(monkeypatch):
     assert result.exit_code == 1
 
 
-def test_cli_obsidian_export_no_vault_with_env_set(monkeypatch, tmp_path):
+def test_cli_obsidian_export_no_vault_with_env_set(seeded_db, monkeypatch, tmp_path):
     """monkeypatch 设置 OBSIDIAN_VAULT_PATH 后不传 --vault 仍能走通。"""
     from typer.testing import CliRunner
     from podcast_research.cli import app

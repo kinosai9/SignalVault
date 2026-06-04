@@ -16,6 +16,7 @@ from podcast_research.llm_wiki.validator import (
     validate_patch_file,
     PatchValidationResult,
 )
+from podcast_research.utils.file_io import read_text_safe
 from podcast_research.llm_wiki.taxonomy import (
     SECTION_ORDER,
     get_section_position,
@@ -276,7 +277,7 @@ def apply_patch(
     result.target_name = validation.target
 
     # --- 2. Check frontmatter fields ---
-    fm = _parse_patch_frontmatter(patch_path.read_text(encoding="utf-8"))
+    fm = _parse_patch_frontmatter(read_text_safe(patch_path))
     if not fm:
         result.errors.append("Missing YAML frontmatter")
         return result
@@ -322,7 +323,7 @@ def apply_patch(
     result.target_card_path = target_card_path
 
     # --- 5. Parse patch sections ---
-    patch_content = patch_path.read_text(encoding="utf-8")
+    patch_content = read_text_safe(patch_path)
     # Use company or topic section map based on target_type
     use_company_map = target_type == "company"
     active_section_map = COMPANY_SECTION_MAP if use_company_map else SECTION_MAP
@@ -345,7 +346,7 @@ def apply_patch(
         )
 
     # --- 6. Check for duplicate markers ---
-    target_content = target_card_path.read_text(encoding="utf-8")
+    target_content = read_text_safe(target_card_path)
     if _has_marker_in_file(target_content, patch_id):
         result.errors.append(
             f"Patch '{patch_id}' already applied to target card (marker found)"
@@ -431,7 +432,7 @@ def apply_patch(
         log_entry += f"  - {s.replace('## ', '')}\n"
 
     if log_path.exists():
-        existing_log = log_path.read_text(encoding="utf-8")
+        existing_log = read_text_safe(log_path)
         # Insert after header
         if "# Patch Apply Log" in existing_log:
             existing_log = existing_log.replace("# Patch Apply Log\n\n", "# Patch Apply Log\n\n" + log_entry)

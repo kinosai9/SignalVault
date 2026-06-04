@@ -17,6 +17,7 @@ from podcast_research.claim_signal.review import (
     _parse_frontmatter,
     _ensure_frontmatter_field,
 )
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ def cleanup_long_tail_topics(
             continue
 
         try:
-            content = path.read_text(encoding="utf-8")
+            content = read_text_safe(path)
         except Exception:
             logger.warning(f"Cannot read topic: {path}")
             continue
@@ -288,7 +289,7 @@ def _is_better_casing(a: str, b: str) -> bool:
 
 def _rename_topic(path: Path, new_name: str, topics_dir: Path) -> None:
     """Rename a topic card file and update its frontmatter."""
-    content = path.read_text(encoding="utf-8")
+    content = read_text_safe(path)
     fm = _parse_frontmatter(content)
     old_name = fm.get("topic", path.stem)
 
@@ -323,8 +324,8 @@ def _rename_topic(path: Path, new_name: str, topics_dir: Path) -> None:
 
 def _merge_source_reports(from_path: Path, to_path: Path) -> None:
     """Merge source reports from from_path into to_path."""
-    from_content = from_path.read_text(encoding="utf-8")
-    to_content = to_path.read_text(encoding="utf-8")
+    from_content = read_text_safe(from_path)
+    to_content = read_text_safe(to_path)
 
     from_fm = _parse_frontmatter(from_content)
     to_fm = _parse_frontmatter(to_content)
@@ -418,7 +419,7 @@ def _tag_quality(path: Path, quality: str) -> None:
     """Add topic_quality field to a topic card frontmatter."""
     if not path.exists():
         return
-    content = path.read_text(encoding="utf-8")
+    content = read_text_safe(path)
     updated = _ensure_frontmatter_field(content, "topic_quality", quality)
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     updated = _ensure_frontmatter_field(updated, "updated_at", f'"{now_iso}"')

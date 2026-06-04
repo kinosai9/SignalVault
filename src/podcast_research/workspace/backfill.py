@@ -18,6 +18,7 @@ from podcast_research.claim_signal.review import (
     _ensure_frontmatter_field,
     _update_frontmatter_field,
 )
+from podcast_research.utils.file_io import read_text_safe
 from podcast_research.llm_wiki.taxonomy import (
     TOPIC_CANONICAL_MAP,
     KNOWN_NON_COMPANY,
@@ -78,7 +79,7 @@ def backfill_relations(
     if claims_dir.exists():
         for p in sorted(claims_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read claim: {p}")
                 continue
@@ -98,7 +99,7 @@ def backfill_relations(
     if signals_dir.exists():
         for p in sorted(signals_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read signal: {p}")
                 continue
@@ -505,7 +506,7 @@ def _write_backfill_log(
 
     # Append to existing log (or create new)
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         # Insert after the first # heading line
         header_end = existing.find("\n\n", existing.find("# Relation Backfill Log"))
         if header_end > 0:

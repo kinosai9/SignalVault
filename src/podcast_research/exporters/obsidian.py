@@ -8,6 +8,10 @@
 
 from __future__ import annotations
 
+# P2-M.3: Current system versions — written to report frontmatter
+CURRENT_PIPELINE_VERSION = "p2-m3"
+CURRENT_SYNC_VERSION = "p2-m3"
+
 import json
 import logging
 import re
@@ -18,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from podcast_research.db.models import Report, Episode, InvestmentViewRecord
+from podcast_research.utils.file_io import read_text_safe
 from podcast_research.db.repository import _parse_focus_areas, _infer_source_type
 from podcast_research.db.session import get_session, init_db
 from podcast_research.exporters.markdown_utils import (
@@ -72,6 +77,8 @@ def _build_report_frontmatter(
         ("published_at", source_info.get("published_at", "")),
         ("analyzed_at", report.analysis_timestamp.strftime("%Y-%m-%d %H:%M") if report.analysis_timestamp else ""),
         ("prompt_version", extraction.get("prompt_version", report.prompt_version)),
+        ("pipeline_version", CURRENT_PIPELINE_VERSION),
+        ("sync_version", CURRENT_SYNC_VERSION),
         ("model", metadata.get("model", report.llm_model)),
         ("focus_areas", _parse_focus_areas(report.focus_areas)),
         ("tags", ["podcast-report"]),
@@ -386,7 +393,7 @@ def export_channel_card(
 
     else:
         # File exists and no overwrite: append recent reports only
-        existing = filepath.read_text(encoding="utf-8")
+        existing = read_text_safe(filepath)
         new_reports_block = ""
         if recent_reports:
             new_links = [wiki_link(r["filename"]) for r in recent_reports]
@@ -468,7 +475,7 @@ def _export_log(vault_path: Path, created: int, skipped: int, updated: int = 0) 
     entry.append("")
 
     if filepath.exists():
-        existing = filepath.read_text(encoding="utf-8")
+        existing = read_text_safe(filepath)
         content = existing.rstrip() + "\n\n" + "\n".join(entry) + "\n"
     else:
         content = "# Export Log\n\n" + "\n".join(entry) + "\n"
@@ -866,7 +873,7 @@ def _analyze_unknown_file(filepath: Path, cv_ch_map: dict) -> dict:
     Returns dict with file, video_id, channel_name, suggested_filename,
     action, reason.
     """
-    content = filepath.read_text(encoding="utf-8")
+    content = read_text_safe(filepath)
     fm = _parse_yaml_frontmatter(content)
     video_id = fm.get("video_id", "")
 
@@ -1134,7 +1141,7 @@ def _scan_report_frontmatters(vault_path: Path) -> list[dict]:
 
     results = []
     for filepath in sorted(reports_dir.glob("*.md")):
-        content = filepath.read_text(encoding="utf-8")
+        content = read_text_safe(filepath)
         fm = _parse_yaml_frontmatter(content)
 
         # Extract title from first H1 heading
@@ -1265,7 +1272,7 @@ def sync_channel_cards(
         if dry_run:
             # Check if card already has all links
             if card_exists and not overwrite:
-                existing_content = card_path.read_text(encoding="utf-8")
+                existing_content = read_text_safe(card_path)
                 new_links = [
                     f"[[{r['filename']}]]" for r in ch_reports
                     if f"[[{r['filename']}]]" not in existing_content
@@ -1325,7 +1332,7 @@ def sync_channel_cards(
 
         elif action == "update":
             # Append only new report links
-            existing_content = card_path.read_text(encoding="utf-8")
+            existing_content = read_text_safe(card_path)
             new_links = []
             for link_line in report_links:
                 # Extract the [[filename]] part
@@ -1659,7 +1666,7 @@ def _append_source_reports(path: Path, new_links: list[str]) -> bool:
 
     Returns True if any new links were added.
     """
-    existing_content = path.read_text(encoding="utf-8")
+    existing_content = read_text_safe(path)
 
     # Filter out already-existing links
     to_add = []
@@ -1773,7 +1780,7 @@ def _generate_card_log(
     ]
 
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         content = existing.rstrip() + "\n\n" + "\n".join(entry) + "\n"
     else:
         content = "# Card Generation Log\n\n" + "\n".join(entry) + "\n"
@@ -1826,7 +1833,7 @@ def generate_cards(
         report_files = report_files[:limit]
 
     for filepath in report_files:
-        content = filepath.read_text(encoding="utf-8")
+        content = read_text_safe(filepath)
         fm = _parse_yaml_frontmatter(content)
 
         channel = fm.get("channel", "").strip()
@@ -1897,7 +1904,7 @@ def generate_cards(
 
             if dry_run:
                 if card_exists and not overwrite:
-                    existing_content = card_path.read_text(encoding="utf-8")
+                    existing_content = read_text_safe(card_path)
                     new_links = [
                         f"[[{r['filename']}]]" for r in reports
                         if f"[[{r['filename']}]]" not in existing_content
@@ -1962,7 +1969,7 @@ def generate_cards(
 
             if dry_run:
                 if card_exists and not overwrite:
-                    existing_content = card_path.read_text(encoding="utf-8")
+                    existing_content = read_text_safe(card_path)
                     new_links = [
                         f"[[{r['filename']}]]" for r in reports
                         if f"[[{r['filename']}]]" not in existing_content
@@ -2223,7 +2230,7 @@ def _find_topic_aliases(vault_path: Path) -> list[dict]:
 
 def _extract_source_reports_from_card(card_path: Path) -> list[str]:
     """Extract Source Reports lines from an existing card."""
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     lines = content.split("\n")
     report_lines = []
     in_source_reports = False
@@ -2266,7 +2273,7 @@ def _cleanup_card_log(
     ]
 
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         content = existing.rstrip() + "\n\n" + "\n".join(entry) + "\n"
     else:
         content = "# Card Cleanup Log\n\n" + "\n".join(entry) + "\n"
@@ -2662,7 +2669,7 @@ def _scan_topic_cards(vault_path: Path) -> list[dict]:
 
     results = []
     for card_path in sorted(topics_dir.glob("*.md")):
-        content = card_path.read_text(encoding="utf-8")
+        content = read_text_safe(card_path)
 
         # Count source reports
         source_reports = []
@@ -2832,7 +2839,7 @@ def consolidate_topics(
             canonical_path = topics_dir / f"{canonical_name}.md"
 
             # Read old card's source reports
-            old_content = old_path.read_text(encoding="utf-8")
+            old_content = read_text_safe(old_path)
             old_source_reports = _extract_source_reports_from_card(old_path)
 
             # Check if old_path and canonical_path are the same file (case-insensitive filesystem)
@@ -2914,7 +2921,7 @@ def consolidate_topics(
                 card_path = r["path"]
                 if card_path.exists():
                     # Read existing content
-                    content = card_path.read_text(encoding="utf-8")
+                    content = read_text_safe(card_path)
 
                     # Update frontmatter with status
                     if "---" in content:
@@ -3077,9 +3084,123 @@ def _consolidation_log(
 
     log_path = system_dir / "Topic Consolidation Log.md"
     if log_path.exists():
-        existing = log_path.read_text(encoding="utf-8")
+        existing = read_text_safe(log_path)
         content = existing + "\n" + log_entry
     else:
         content = "# Topic Consolidation Log\n\n" + log_entry
 
     log_path.write_text(content, encoding="utf-8")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P2-M.3: Rerun — Archive Current Video Outputs
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+def archive_current_video_outputs(video_id: str, vault_path: Path) -> dict:
+    """Archive old reports, mark old claims/signals as archived for a given video_id.
+
+    Returns:
+        {"reports_archived": int, "claims_archived": int, "signals_archived": int}
+    """
+    result = {"reports_archived": 0, "claims_archived": 0, "signals_archived": 0}
+    archive_dir = vault_path / "99_System" / "Archive" / "Reports"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    reports_dir = vault_path / "01_Reports"
+    matched_report_files = []
+
+    # Step 1: Find and archive reports matching this video_id
+    if reports_dir.exists():
+        for rf in sorted(reports_dir.glob("*.md")):
+            try:
+                content = read_text_safe(rf)
+                fm = _parse_yaml_frontmatter(content)
+                if fm.get("video_id", "").strip() == video_id:
+                    matched_report_files.append(rf)
+            except Exception:
+                continue
+
+    for rf in matched_report_files:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dest = archive_dir / f"{rf.stem}_{ts}{rf.suffix}"
+        if dest.exists():
+            dest = archive_dir / f"{rf.stem}_{ts}_b{rf.suffix}"
+        shutil.copy2(str(rf), str(dest))
+        result["reports_archived"] += 1
+
+    if not matched_report_files:
+        return result
+
+    # Step 2: Mark claims as archived if they reference any matching report
+    # Note: _parse_yaml_frontmatter cannot read list-type fields like source_reports.
+    # We search for the report filename directly in the raw content.
+    claim_filenames = {rf.name for rf in matched_report_files}
+    claims_dir = vault_path / "06_Claims"
+    if claims_dir.exists():
+        for cf in sorted(claims_dir.glob("*.md")):
+            try:
+                content = read_text_safe(cf)
+                # Check if any matched report filename appears in the file
+                if any(fn in content for fn in claim_filenames):
+                    _update_frontmatter_fields(cf, {
+                        "status": "archived",
+                        "archived_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "archived_reason": "rerun_video",
+                    })
+                    result["claims_archived"] += 1
+            except Exception:
+                continue
+
+    # Step 3: Mark signals as archived
+    signals_dir = vault_path / "07_Signals"
+    if signals_dir.exists():
+        for sf in sorted(signals_dir.glob("*.md")):
+            try:
+                content = read_text_safe(sf)
+                if any(fn in content for fn in claim_filenames):
+                    _update_frontmatter_fields(sf, {
+                        "status": "archived",
+                        "archived_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "archived_reason": "rerun_video",
+                    })
+                    result["signals_archived"] += 1
+            except Exception:
+                continue
+
+    return result
+
+
+def _update_frontmatter_fields(card_path: Path, updates: dict) -> None:
+    """Update frontmatter fields in an existing card file. Reads and rewrites."""
+    content = read_text_safe(card_path)
+    lines = content.split("\n")
+
+    if not lines or lines[0].strip() != "---":
+        return
+
+    # Find closing ---
+    end_idx = None
+    for i in range(1, min(len(lines), 50)):
+        if lines[i].strip() == "---":
+            end_idx = i
+            break
+    if end_idx is None:
+        return
+
+    # Apply updates to existing fields
+    updated_keys = set()
+    new_lines = lines[:end_idx]
+    for i, line in enumerate(new_lines):
+        for key, val in updates.items():
+            if line.startswith(f"{key}:") and key not in updated_keys:
+                new_lines[i] = f"{key}: {val}"
+                updated_keys.add(key)
+
+    # Add new fields not found
+    for key, val in updates.items():
+        if key not in updated_keys:
+            new_lines.insert(-1, f"{key}: {val}")
+
+    result = "\n".join(new_lines + lines[end_idx:])
+    card_path.write_text(result, encoding="utf-8")

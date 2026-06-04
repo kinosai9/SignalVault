@@ -10,6 +10,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from podcast_research.utils.file_io import read_text_safe
+
 
 @dataclass
 class SourceReport:
@@ -53,7 +55,7 @@ def find_core_topics(vault_path: Path) -> list[Path]:
 
     core_topics = []
     for card_path in sorted(topics_dir.glob("*.md")):
-        content = card_path.read_text(encoding="utf-8")
+        content = read_text_safe(card_path)
         # Check if frontmatter contains status: core
         if _has_status_core(content):
             core_topics.append(card_path)
@@ -89,7 +91,7 @@ def build_topic_context(
         TopicContext with card content and extracted report sections
     """
     topic_name = topic_card_path.stem
-    content = topic_card_path.read_text(encoding="utf-8")
+    content = read_text_safe(topic_card_path)
 
     # Extract source reports from card
     source_report_refs = _extract_source_reports(content)
@@ -147,7 +149,7 @@ def _extract_source_reports(content: str) -> list[str]:
 
 def _read_source_report(report_path: Path) -> SourceReport:
     """Read a source report and extract relevant sections."""
-    content = report_path.read_text(encoding="utf-8")
+    content = read_text_safe(report_path)
     filename = report_path.stem
 
     # Parse frontmatter
@@ -291,7 +293,7 @@ def find_companies(
     priority = []
     rest = []
     for card_path in all_cards:
-        content = card_path.read_text(encoding="utf-8")
+        content = read_text_safe(card_path)
         fm = _parse_frontmatter(content)
         card_type = fm.get("type", "")
         if card_type != "company":
@@ -326,7 +328,7 @@ def build_company_context(
         CompanyContext with card content and extracted report sections
     """
     company_name = company_card_path.stem
-    content = company_card_path.read_text(encoding="utf-8")
+    content = read_text_safe(company_card_path)
 
     # Extract source reports from card
     source_report_refs = _extract_source_reports(content)

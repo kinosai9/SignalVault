@@ -23,16 +23,7 @@ VALID_SIGNAL_TYPES = {
     "financial_metric", "unknown",
 }
 
-
-def _safe_read_text(path: Path) -> str:
-    """Read a file with encoding fallback: UTF-8 -> GBK -> UTF-8 replace."""
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        try:
-            return path.read_text(encoding="gbk")
-        except Exception:
-            return path.read_text(encoding="utf-8", errors="replace")
+from podcast_research.utils.file_io import read_text_safe
 
 
 @dataclass
@@ -153,7 +144,7 @@ def list_claims(
 
     results = []
     for card_path in sorted(claims_dir.glob("*.md")):
-        content = card_path.read_text(encoding="utf-8")
+        content = read_text_safe(card_path)
         fm = _parse_frontmatter(content)
         card_status = fm.get("status", "active")
 
@@ -198,7 +189,7 @@ def list_signals(
 
     results = []
     for card_path in sorted(signals_dir.glob("*.md")):
-        content = card_path.read_text(encoding="utf-8")
+        content = read_text_safe(card_path)
         fm = _parse_frontmatter(content)
         card_status = fm.get("status", "open")
 
@@ -227,7 +218,7 @@ def get_claim(vault_path: Path, claim_id: str) -> str | None:
     card_path = vault_path / "06_Claims" / f"{claim_id}.md"
     if not card_path.exists():
         return None
-    return card_path.read_text(encoding="utf-8")
+    return read_text_safe(card_path)
 
 
 def get_signal(vault_path: Path, signal_id: str) -> str | None:
@@ -235,7 +226,7 @@ def get_signal(vault_path: Path, signal_id: str) -> str | None:
     card_path = vault_path / "07_Signals" / f"{signal_id}.md"
     if not card_path.exists():
         return None
-    return card_path.read_text(encoding="utf-8")
+    return read_text_safe(card_path)
 
 
 def update_claim_status(
@@ -264,7 +255,7 @@ def update_claim_status(
         logger.warning("Invalid claim status: %s", new_status)
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -326,7 +317,7 @@ def update_signal_status(
         logger.warning("Invalid signal status: %s", new_status)
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -436,7 +427,7 @@ def _write_claim_review_log(vault_path: Path, claim_id: str, status: str, note: 
     entry += "\n"
 
     if log_path.exists():
-        existing = _safe_read_text(log_path)
+        existing = read_text_safe(log_path)
         header = "# Claim Review Log"
         if header in existing:
             existing = existing.replace(header + "\n\n", header + "\n\n" + entry)
@@ -460,7 +451,7 @@ def _write_signal_review_log(vault_path: Path, signal_id: str, status: str, note
     entry += "\n"
 
     if log_path.exists():
-        existing = _safe_read_text(log_path)
+        existing = read_text_safe(log_path)
         header = "# Signal Review Log"
         if header in existing:
             existing = existing.replace(header + "\n\n", header + "\n\n" + entry)
@@ -497,7 +488,7 @@ def update_claim_meta(
     if granularity and granularity not in VALID_GRANULARITY:
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     updated = _update_frontmatter_field(content, "updated_at", f'"{now_iso}"')
     if quality:
@@ -535,7 +526,7 @@ def update_signal_meta(
     if signal_type and signal_type not in VALID_SIGNAL_TYPES:
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     updated = _update_frontmatter_field(content, "updated_at", f'"{now_iso}"')
     if quality:
@@ -657,7 +648,7 @@ def generate_claim_backlog(vault_path: Path) -> None:
     lines = ["# Claim Review Backlog\n", f"\nGenerated: {now}\n"]
     lines.append(f"\nTotal: {len(sorted_claims)}\n\n")
     for c in sorted_claims:
-        fm = _parse_frontmatter((vault_path / "06_Claims" / f"{c.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "06_Claims" / f"{c.card_id}.md"))
         quality = fm.get("quality", "medium")
         priority = fm.get("review_priority", "normal")
         granularity = fm.get("granularity", "atomic")
@@ -690,7 +681,7 @@ def generate_signal_backlog(vault_path: Path) -> None:
     lines = ["# Signal Review Backlog\n", f"\nGenerated: {now}\n"]
     lines.append(f"\nTotal: {len(sorted_signals)}\n\n")
     for s in sorted_signals:
-        fm = _parse_frontmatter((vault_path / "07_Signals" / f"{s.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "07_Signals" / f"{s.card_id}.md"))
         quality = fm.get("quality", "medium")
         priority = fm.get("review_priority", "normal")
         stype = fm.get("signal_type", "unknown")
@@ -723,7 +714,7 @@ def _update_claim_index_with_meta(vault_path: Path) -> None:
 
     lines.append("## Claims\n")
     for c in claims:
-        fm = _parse_frontmatter((vault_path / "06_Claims" / f"{c.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "06_Claims" / f"{c.card_id}.md"))
         q = fm.get("quality", "medium")
         p = fm.get("review_priority", "normal")
         g = fm.get("granularity", "atomic")
@@ -754,7 +745,7 @@ def _update_signal_index_with_meta(vault_path: Path) -> None:
 
     lines.append("## Signals\n")
     for s in signals:
-        fm = _parse_frontmatter((vault_path / "07_Signals" / f"{s.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "07_Signals" / f"{s.card_id}.md"))
         q = fm.get("quality", "medium")
         p = fm.get("review_priority", "normal")
         st = fm.get("signal_type", "unknown")
@@ -803,7 +794,7 @@ def update_signal_tracking(
     if tracking_method and tracking_method not in VALID_TRACKING_METHODS:
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     updated = _update_frontmatter_field(content, "updated_at", f'"{now_iso}"')
 
@@ -844,7 +835,7 @@ def add_signal_update(
     if not card_path.exists():
         return False
 
-    content = card_path.read_text(encoding="utf-8")
+    content = read_text_safe(card_path)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     check_iso = checked_at or now_iso
@@ -889,7 +880,7 @@ def generate_signal_tracking_backlog(vault_path: Path) -> None:
         return
 
     def sort_key(s):
-        fm = _parse_frontmatter((vault_path / "07_Signals" / f"{s.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "07_Signals" / f"{s.card_id}.md"))
         tracking_status = fm.get("tracking_status", "not_started")
         tstatus_order = {"active": 0, "not_started": 1, "paused": 2, "resolved": 3, "invalidated": 4, "archived": 5}
         prio = {"high": 0, "normal": 1, "low": 2}
@@ -903,7 +894,7 @@ def generate_signal_tracking_backlog(vault_path: Path) -> None:
     lines = ["# Signal Tracking Backlog\n", f"\nGenerated: {now}\n"]
     lines.append(f"\nTotal: {len(sorted_signals)}\n\n")
     for s in sorted_signals:
-        fm = _parse_frontmatter((vault_path / "07_Signals" / f"{s.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "07_Signals" / f"{s.card_id}.md"))
         tstatus = fm.get("tracking_status", "not_started")
         tmethod = fm.get("tracking_method", "manual")
         tquery = fm.get("tracking_query", "")[:40]
@@ -937,7 +928,7 @@ def _update_signal_index_with_tracking(vault_path: Path) -> None:
 
     lines.append("## Signals\n")
     for s in signals:
-        fm = _parse_frontmatter((vault_path / "07_Signals" / f"{s.card_id}.md").read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(read_text_safe(vault_path / "07_Signals" / f"{s.card_id}.md"))
         tstatus = fm.get("tracking_status", "not_started")
         tmethod = fm.get("tracking_method", "manual")
         last_check = fm.get("last_checked_at", "")[:10]
@@ -967,7 +958,7 @@ def _write_signal_tracking_log(vault_path: Path, signal_id: str, action: str, de
     entry = f"## {now}\n\n- **Signal**: [[../07_Signals/{signal_id}]]\n- **Action**: {action}\n- **Detail**: {detail}\n\n"
 
     if log_path.exists():
-        existing = _safe_read_text(log_path)
+        existing = read_text_safe(log_path)
         header = "# Signal Tracking Log"
         if header in existing:
             existing = existing.replace(header + "\n\n", header + "\n\n" + entry)

@@ -13,6 +13,7 @@ from podcast_research.claim_signal.review import (
     _parse_frontmatter,
     _ensure_frontmatter_field,
 )
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def refresh_curation_status(
     if topics_dir.exists():
         for p in sorted(topics_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read topic: {p}")
                 continue
@@ -66,7 +67,7 @@ def refresh_curation_status(
     if companies_dir.exists():
         for p in sorted(companies_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read company: {p}")
                 continue
@@ -82,7 +83,7 @@ def refresh_curation_status(
     if claims_dir.exists():
         for p in sorted(claims_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read claim: {p}")
                 continue
@@ -99,7 +100,7 @@ def refresh_curation_status(
     if signals_dir.exists():
         for p in sorted(signals_dir.glob("*.md")):
             try:
-                content = p.read_text(encoding="utf-8")
+                content = read_text_safe(p)
             except Exception:
                 logger.warning(f"Cannot read signal: {p}")
                 continue
