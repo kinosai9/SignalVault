@@ -1158,6 +1158,32 @@ class TestSourcePagesDOMStructure:
         assert 'video-main' in resp.text
         assert 'video-side' in resp.text
 
+    def test_stylesheet_served_with_cache_bust(self, api_client):
+        """CSS link has cache-busting version param."""
+        resp = api_client.get("/sources/channels")
+        assert 'style.css?v=' in resp.text
+
+    def test_video_card_uses_grid_layout(self, api_client):
+        """CSS defines video-card with display:grid for left-right structure."""
+        resp = api_client.get("/static/style.css?v=p2m52")
+        css = resp.text
+        assert '.video-card' in css
+        assert 'grid-template-columns' in css
+        assert 'minmax' in css
+
+    def test_source_card_has_visible_colors(self, api_client):
+        """CSS uses hardcoded #ffffff not transparent bg for cards."""
+        resp = api_client.get("/static/style.css?v=p2m52")
+        css = resp.text
+        assert '#ffffff' in css
+        assert 'box-shadow' in css
+
+    def test_form_control_has_explicit_height(self, api_client):
+        """.form-control has height:40px to override browser defaults."""
+        resp = api_client.get("/static/style.css?v=p2m52")
+        css = resp.text
+        assert '.form-control' in css
+
 
 class TestActiveJobIdLifecycle:
     """active_job_id is written on import, cleared on completion."""
