@@ -1,14 +1,12 @@
 """P2-A1: Tech/AI Prompt v2 + model extension tests."""
 
 import json
-import pytest
-
 
 # --- Model backward compatibility ---
 
 def test_investment_view_defaults_v2():
     """新字段有合理默认值，不影响旧调用。"""
-    from podcast_research.analysis.models import InvestmentView, Evidence
+    from podcast_research.analysis.models import InvestmentView
     v = InvestmentView(
         target_name="NVIDIA",
         view_direction="bullish",
@@ -166,10 +164,11 @@ def test_prompt_contains_focus_areas_placeholder():
 
 def test_mock_provider_outputs_v2_fields():
     """mock provider 输出包含新字段。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
-    from podcast_research.subtitles.parser import parse_subtitle
-    from podcast_research.subtitles.cleaner import clean_segments
     from pathlib import Path
+
+    from podcast_research.llm.mock_provider import MockLLMProvider
+    from podcast_research.subtitles.cleaner import clean_segments
+    from podcast_research.subtitles.parser import parse_subtitle
 
     sample_path = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     segments = parse_subtitle(sample_path)
@@ -186,8 +185,8 @@ def test_mock_provider_outputs_v2_fields():
 
 def test_mock_report_contains_tech_insights_section():
     """mock 报告包含 Tech/Industry Insights 章节。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
     from podcast_research.analysis.models import ExtractionResult, TechIndustryInsight
+    from podcast_research.llm.mock_provider import MockLLMProvider
 
     extraction = ExtractionResult(
         metadata={"source": "mock"},
@@ -210,8 +209,8 @@ def test_mock_report_contains_tech_insights_section():
 
 def test_mock_report_contains_non_focus_items_section():
     """mock 报告包含 Non-focus Items 章节。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
     from podcast_research.analysis.models import ExtractionResult
+    from podcast_research.llm.mock_provider import MockLLMProvider
 
     extraction = ExtractionResult(
         metadata={"source": "mock"},
@@ -226,8 +225,11 @@ def test_mock_report_contains_non_focus_items_section():
 
 def test_mock_report_v2_has_expanded_columns():
     """mock 报告矩阵表格包含 AI 价值链/商业影响/证据强度/时间范围列。"""
+    from podcast_research.analysis.models import (
+        ExtractionResult,
+        InvestmentView,
+    )
     from podcast_research.llm.mock_provider import MockLLMProvider
-    from podcast_research.analysis.models import ExtractionResult, InvestmentView, Evidence
 
     extraction = ExtractionResult(
         metadata={"source": "mock"},
@@ -255,10 +257,17 @@ def test_mock_report_v2_has_expanded_columns():
 
 def test_save_investment_views_v2_fields(db_session):
     """入库的 investment_view 包含 P2-A1 新字段。"""
-    from podcast_research.analysis.models import InvestmentView, Evidence
-    from podcast_research.db.repository import save_episode, save_report, save_investment_views
+    from podcast_research.analysis.models import (
+        Evidence,
+        ExtractionResult,
+        InvestmentView,
+    )
     from podcast_research.db.models import InvestmentViewRecord
-    from podcast_research.analysis.models import ExtractionResult
+    from podcast_research.db.repository import (
+        save_episode,
+        save_investment_views,
+        save_report,
+    )
 
     ep_id = save_episode(db_session, "test", "test.srt", "srt", "hash")
     extraction = ExtractionResult(
@@ -339,8 +348,8 @@ def test_tech_industry_insight_topic_tags_default():
 
 def test_mock_report_shows_insight_topic_tags():
     """mock 报告展示 insight topic_tags。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
     from podcast_research.analysis.models import ExtractionResult, TechIndustryInsight
+    from podcast_research.llm.mock_provider import MockLLMProvider
 
     extraction = ExtractionResult(
         metadata={"source": "mock"},
@@ -362,10 +371,11 @@ def test_mock_report_shows_insight_topic_tags():
 
 def test_mock_insights_have_topic_tags():
     """mock provider 的 _extract_insights 生成 topic_tags。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
-    from podcast_research.subtitles.parser import parse_subtitle
-    from podcast_research.subtitles.cleaner import clean_segments
     from pathlib import Path
+
+    from podcast_research.llm.mock_provider import MockLLMProvider
+    from podcast_research.subtitles.cleaner import clean_segments
+    from podcast_research.subtitles.parser import parse_subtitle
 
     sample_path = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     segments = parse_subtitle(sample_path)

@@ -134,7 +134,9 @@ def sync_report_to_knowledge_base(
 
         # Step 2c: Generate claims/signals from reports (P2-L.2: fix company relation count)
         _progress("generating_claims_signals")
-        from podcast_research.claim_signal.generator import generate_all as generate_claims_signals
+        from podcast_research.claim_signal.generator import (
+            generate_all as generate_claims_signals,
+        )
 
         cs_result = generate_claims_signals(
             vault_path=vault_path,
@@ -154,8 +156,8 @@ def sync_report_to_knowledge_base(
         _progress("updating_relations")
         from podcast_research.workspace import (
             backfill_relations,
-            refresh_curation_status,
             polish_report_metadata,
+            refresh_curation_status,
         )
 
         rel_result = backfill_relations(vault_path, dry_run=False, apply=True)

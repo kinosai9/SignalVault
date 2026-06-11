@@ -149,6 +149,7 @@ def test_api_sources(api_client, seeded_db) -> None:
 
 def test_serve_command_help() -> None:
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()

@@ -13,12 +13,10 @@ import json
 import logging
 from collections import Counter
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
 
-from podcast_research.db.repository import _parse_focus_areas
+from podcast_research.db.models import Episode, InvestmentViewRecord, Report
 from podcast_research.db.session import get_session, init_db
-from podcast_research.db.models import Report, Episode, InvestmentViewRecord
 
 logger = logging.getLogger(__name__)
 

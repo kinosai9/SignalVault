@@ -11,12 +11,10 @@ from datetime import datetime
 from pathlib import Path
 
 from podcast_research.claim_signal.extractor import (
-    extract_claims,
-    extract_signals,
     ClaimCandidate,
     SignalCandidate,
-    _make_slug,
-    _make_signal_slug,
+    extract_claims,
+    extract_signals,
 )
 
 logger = logging.getLogger(__name__)
@@ -125,7 +123,7 @@ updated_at: "{now}"
     if candidate.evidence_timestamp:
         card += f"- Timestamp: {candidate.evidence_timestamp}\n"
 
-    card += f"""
+    card += """
 ## Related Topics
 
 ## Related Companies

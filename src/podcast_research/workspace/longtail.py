@@ -14,8 +14,8 @@ from datetime import datetime
 from pathlib import Path
 
 from podcast_research.claim_signal.review import (
-    _parse_frontmatter,
     _ensure_frontmatter_field,
+    _parse_frontmatter,
 )
 from podcast_research.utils.file_io import read_text_safe
 
@@ -132,7 +132,7 @@ def cleanup_long_tail_topics(
 
         stats["topics_scanned"] += 1
         fm = _parse_frontmatter(content)
-        status = fm.get("status", "")
+        fm.get("status", "")
 
         result = {
             "topic": name,
@@ -167,10 +167,8 @@ def cleanup_long_tail_topics(
                     # Pick the better-cased one as canonical
                     if _is_better_casing(name, other):
                         canonical = name
-                        old = other
                     else:
                         canonical = other
-                        old = name
                     result["suggested_name"] = canonical
                     result["action"] = "merge_topic"
                     result["reason"] = f"case duplicate → '{canonical}'"

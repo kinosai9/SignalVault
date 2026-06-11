@@ -10,16 +10,15 @@ Both modes produce patches with YAML frontmatter and Review Checklist.
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from podcast_research.llm_wiki.context_builder import TopicContext, CompanyContext
+from podcast_research.llm_wiki.context_builder import CompanyContext, TopicContext
 from podcast_research.llm_wiki.prompts import (
-    GENERATE_PATCH_SYSTEM,
-    GENERATE_PATCH_USER,
     GENERATE_COMPANY_PATCH_SYSTEM,
     GENERATE_COMPANY_PATCH_USER,
+    GENERATE_PATCH_SYSTEM,
+    GENERATE_PATCH_USER,
     build_source_reports_context,
 )
 
@@ -133,7 +132,7 @@ def generate_topic_patch(
         raise ValueError(f"Unknown provider: {provider}")
 
     # Build frontmatter
-    target_card_rel = str(topic_context.topic_card_path).replace("\\", "/")
+    str(topic_context.topic_card_path).replace("\\", "/")
     # Try to extract relative path from vault
     # Since we don't have vault_path here, use a default
     frontmatter = _build_frontmatter(
@@ -428,8 +427,8 @@ def _generate_mock_company_patch_body(company_context: CompanyContext) -> str:
     mock_risks = [
         f"- Competitive pressure in {company_name}'s core markets\n"
         f"  - Source: mock-evidence",
-        f"- Regulatory uncertainty\n"
-        f"  - Source: mock-evidence",
+        "- Regulatory uncertainty\n"
+        "  - Source: mock-evidence",
     ]
     risks_text = "\n".join(mock_risks)
 

@@ -1,6 +1,5 @@
 """P1-E: channels / channel_videos 测试"""
 
-import pytest
 
 
 # --- ChannelVideoAdapter tests ---
@@ -88,7 +87,11 @@ def test_add_channel_dedup(db_session):
 
 
 def test_upsert_videos(db_session):
-    from podcast_research.db.channel_repository import add_channel, upsert_videos, list_channel_videos
+    from podcast_research.db.channel_repository import (
+        add_channel,
+        list_channel_videos,
+        upsert_videos,
+    )
 
     cid = add_channel(db_session, "@test", "https://example.com", "Test")
     db_session.commit()
@@ -113,7 +116,12 @@ def test_upsert_videos(db_session):
 
 
 def test_mark_video_status(db_session):
-    from podcast_research.db.channel_repository import add_channel, upsert_videos, mark_video_status, get_video
+    from podcast_research.db.channel_repository import (
+        add_channel,
+        get_video,
+        mark_video_status,
+        upsert_videos,
+    )
 
     cid = add_channel(db_session, "@test", "https://example.com", "Test")
     db_session.commit()
@@ -139,6 +147,7 @@ def test_mark_video_status_not_found(db_session):
 
 def test_cli_channels_add(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -149,6 +158,7 @@ def test_cli_channels_add(db_session):
 
 def test_cli_channels_list(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     # add first
@@ -162,6 +172,7 @@ def test_cli_channels_list(db_session):
 
 def test_cli_channels_list_empty(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -171,6 +182,7 @@ def test_cli_channels_list_empty(db_session):
 
 def test_cli_channels_refresh(monkeypatch, db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     # add channel first
@@ -202,6 +214,7 @@ def test_cli_channels_refresh(monkeypatch, db_session):
 
 def test_cli_channels_videos(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -213,6 +226,7 @@ def test_cli_channels_videos(db_session):
 
 def test_cli_channels_analyze_video_dry_run(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -226,8 +240,13 @@ def test_cli_channels_analyze_video_dry_run(db_session):
 
 def test_cli_channels_analyze_video_already_analyzed(db_session, monkeypatch):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
-    from podcast_research.db.channel_repository import add_channel, upsert_videos, mark_video_status
+    from podcast_research.db.channel_repository import (
+        add_channel,
+        mark_video_status,
+        upsert_videos,
+    )
 
     runner = CliRunner()
     cid = add_channel(db_session, "@test", "https://youtu.be/@test", "Test")
@@ -288,7 +307,10 @@ def test_add_channel_default_values(db_session):
 
 
 def test_seed_tech_ai_adds_4_channels(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     result = seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -316,7 +338,11 @@ def test_seed_tech_ai_idempotent(db_session):
 
 def test_seed_heals_existing_default_channel(db_session):
     """旧 add_channel（空 tags + secondary priority）在 seed 时自动补齐配置。"""
-    from podcast_research.db.channel_repository import add_channel, seed_default_channels, get_channel
+    from podcast_research.db.channel_repository import (
+        add_channel,
+        get_channel,
+        seed_default_channels,
+    )
 
     # 模拟 P1-E 旧 add_channel：无 tags、priority=secondary
     cid = add_channel(db_session, "@allin", "https://www.youtube.com/@allin", "All-In Podcast")
@@ -339,7 +365,10 @@ def test_seed_heals_existing_default_channel(db_session):
 
 
 def test_list_channels_filter_by_tag(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -352,7 +381,10 @@ def test_list_channels_filter_by_tag(db_session):
 
 
 def test_list_channels_filter_by_priority(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -362,7 +394,10 @@ def test_list_channels_filter_by_priority(db_session):
 
 
 def test_list_channels_filter_by_tag_and_priority(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -373,7 +408,10 @@ def test_list_channels_filter_by_tag_and_priority(db_session):
 
 
 def test_seed_channels_have_default_focus(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -384,7 +422,10 @@ def test_seed_channels_have_default_focus(db_session):
 
 
 def test_seed_channels_have_tags(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, list_channels
+    from podcast_research.db.channel_repository import (
+        list_channels,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -396,7 +437,11 @@ def test_seed_channels_have_tags(db_session):
 
 
 def test_update_channel_tags_add(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, update_channel_tags, get_channel
+    from podcast_research.db.channel_repository import (
+        get_channel,
+        seed_default_channels,
+        update_channel_tags,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -413,7 +458,11 @@ def test_update_channel_tags_add(db_session):
 
 
 def test_update_channel_tags_remove(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, update_channel_tags, get_channel
+    from podcast_research.db.channel_repository import (
+        get_channel,
+        seed_default_channels,
+        update_channel_tags,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -429,7 +478,11 @@ def test_update_channel_tags_remove(db_session):
 
 
 def test_update_channel_tags_set(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, update_channel_tags, get_channel
+    from podcast_research.db.channel_repository import (
+        get_channel,
+        seed_default_channels,
+        update_channel_tags,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -451,7 +504,10 @@ def test_update_channel_tags_nonexistent(db_session):
 
 
 def test_get_channel_defaults(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels, get_channel_defaults
+    from podcast_research.db.channel_repository import (
+        get_channel_defaults,
+        seed_default_channels,
+    )
 
     seed_default_channels(db_session, channel_pack="tech_ai")
     db_session.commit()
@@ -468,6 +524,7 @@ def test_get_channel_defaults(db_session):
 
 def test_cli_channels_seed_tech_ai(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -478,6 +535,7 @@ def test_cli_channels_seed_tech_ai(db_session):
 
 def test_cli_channels_list_tag(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -489,6 +547,7 @@ def test_cli_channels_list_tag(db_session):
 
 def test_cli_channels_list_priority(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -500,6 +559,7 @@ def test_cli_channels_list_priority(db_session):
 
 def test_cli_channels_tag_add(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -512,6 +572,7 @@ def test_cli_channels_tag_add(db_session):
 
 def test_cli_channels_tag_remove(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -523,6 +584,7 @@ def test_cli_channels_tag_remove(db_session):
 
 def test_cli_channels_tag_set(db_session):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -538,7 +600,9 @@ def test_cli_channels_tag_set(db_session):
 def test_get_channel_video_by_video_id_returns_joined_metadata(db_session):
     """联表查询返回 channel + channel_video 完整元数据。"""
     from podcast_research.db.channel_repository import (
-        add_channel, upsert_videos, get_channel_video_by_video_id,
+        add_channel,
+        get_channel_video_by_video_id,
+        upsert_videos,
     )
 
     cid = add_channel(db_session, "@BG2Pod", "https://www.youtube.com/@BG2Pod", "BG2Pod",
@@ -626,8 +690,8 @@ def test_source_info_override_does_not_overwrite_existing():
 
 def test_report_markdown_shows_channel_metadata():
     """Markdown 报告数据来源部分展示频道名和视频标题。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
     from podcast_research.analysis.models import ExtractionResult
+    from podcast_research.llm.mock_provider import MockLLMProvider
 
     provider = MockLLMProvider()
     extraction = ExtractionResult(
@@ -666,8 +730,8 @@ def test_report_markdown_shows_channel_metadata():
 
 def test_report_markdown_no_channel_metadata_still_works():
     """没有频道元数据时报告正常渲染（不崩溃）。"""
-    from podcast_research.llm.mock_provider import MockLLMProvider
     from podcast_research.analysis.models import ExtractionResult
+    from podcast_research.llm.mock_provider import MockLLMProvider
 
     provider = MockLLMProvider()
     extraction = ExtractionResult(
@@ -692,12 +756,14 @@ def test_report_markdown_no_channel_metadata_still_works():
 def test_normal_youtube_url_path_unaffected(db_session, tmp_path, monkeypatch):
     """普通 --youtube-url 路径不受 metadata propagation 影响。"""
     from pathlib import Path
-    from typer.testing import CliRunner
     from unittest.mock import MagicMock, patch
+
+    from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
-    sample_srt = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
+    Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
 
     # 验证普通 youtube-url 分析仍正常工作（mock + --mock 不走真实 API）
     mock_transcript_data = [

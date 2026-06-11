@@ -2,18 +2,23 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from podcast_research.utils.file_io import read_text_safe
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from podcast_research.analysis.models import ExtractionResult, InvestmentView, TrackingSignal, Entity
-from podcast_research.db.models import (
-    Episode,
-    Report,
-    InvestmentViewRecord,
-    TrackingSignalRecord,
-    EntityRecord,
+from podcast_research.analysis.models import (
+    Entity,
+    ExtractionResult,
+    InvestmentView,
+    TrackingSignal,
 )
+from podcast_research.db.models import (
+    EntityRecord,
+    Episode,
+    InvestmentViewRecord,
+    Report,
+    TrackingSignalRecord,
+)
+from podcast_research.utils.file_io import read_text_safe
 
 
 def save_episode(

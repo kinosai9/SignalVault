@@ -110,10 +110,7 @@ def _extract_wiki_links(text: str) -> list[str]:
 def _is_investment_advice(text: str) -> bool:
     """Check if text contains investment advice keywords."""
     text_lower = text.lower()
-    for kw in _INVESTMENT_ADVICE_KEYWORDS:
-        if kw in text_lower:
-            return True
-    return False
+    return any(kw in text_lower for kw in _INVESTMENT_ADVICE_KEYWORDS)
 
 
 def _extract_bullet_items(content: str, section_header: str) -> list[dict]:
@@ -278,7 +275,6 @@ def extract_claims(
                 if "status: applied" not in content[:500]:
                     continue
 
-                patch_id = patch_path.stem
                 for section in _CLAIM_SECTIONS:
                     items = _extract_bullet_items(content, section)
                     for item in items:

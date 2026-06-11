@@ -10,35 +10,35 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from podcast_research.workspace.managed_block import (
-    _upsert_managed_block,
-    _remove_managed_block,
-    _has_managed_block,
-)
-from podcast_research.workspace.scanner import (
-    VaultScanner,
-    WorkspaceSnapshot,
-    ReportInfo,
-    TopicInfo,
-    CompanyInfo,
-    ClaimInfo,
-    SignalInfo,
-    ChannelInfo,
-    LWPatchInfo,
-)
+from podcast_research.workspace.backfill import backfill_relations
+from podcast_research.workspace.curation import refresh_curation_status
 from podcast_research.workspace.generators import (
-    generate_home_dashboard,
-    generate_knowledge_map,
-    generate_review_queue,
     BLOCK_HOME,
     BLOCK_KNOWLEDGE_MAP,
     BLOCK_REVIEW_QUEUE,
+    generate_home_dashboard,
+    generate_knowledge_map,
+    generate_review_queue,
 )
-from podcast_research.workspace.backfill import backfill_relations
-from podcast_research.workspace.curation import refresh_curation_status
-from podcast_research.workspace.metadata import polish_report_metadata
 from podcast_research.workspace.longtail import cleanup_long_tail_topics
-from podcast_research.workspace.research_brief import generate_brief, ResearchBrief
+from podcast_research.workspace.managed_block import (
+    _has_managed_block,
+    _remove_managed_block,
+    _upsert_managed_block,
+)
+from podcast_research.workspace.metadata import polish_report_metadata
+from podcast_research.workspace.research_brief import ResearchBrief, generate_brief
+from podcast_research.workspace.scanner import (
+    ChannelInfo,
+    ClaimInfo,
+    CompanyInfo,
+    LWPatchInfo,
+    ReportInfo,
+    SignalInfo,
+    TopicInfo,
+    VaultScanner,
+    WorkspaceSnapshot,
+)
 
 logger = logging.getLogger(__name__)
 

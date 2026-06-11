@@ -1,11 +1,12 @@
 """P2-E: LLM-WIKI patch generation tests."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from podcast_research.llm_wiki import (
-    find_core_topics,
     build_topic_context,
+    find_core_topics,
     generate_topic_patch,
     write_patch_file,
 )
@@ -292,6 +293,7 @@ def test_write_patch_file_collision(tmp_path):
 def test_cli_llm_wiki_dry_run(tmp_path):
     """Test CLI llm-wiki generate-patches --dry-run."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -320,6 +322,7 @@ def test_cli_llm_wiki_dry_run(tmp_path):
 def test_cli_llm_wiki_mock_mode(tmp_path):
     """Test CLI llm-wiki generate-patches --mock."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -355,6 +358,7 @@ def test_cli_llm_wiki_mock_mode(tmp_path):
 def test_cli_llm_wiki_specific_topic(tmp_path):
     """Test CLI llm-wiki generate-patches --topic."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -390,6 +394,7 @@ def test_cli_llm_wiki_specific_topic(tmp_path):
 def test_cli_llm_wiki_core_only(tmp_path):
     """Test CLI llm-wiki generate-patches --core-only."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -424,8 +429,9 @@ def test_cli_llm_wiki_core_only(tmp_path):
 def test_cli_llm_wiki_no_vault(monkeypatch):
     """Test CLI llm-wiki generate-patches without vault."""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 
@@ -439,6 +445,7 @@ def test_cli_llm_wiki_no_vault(monkeypatch):
 def test_cli_llm_wiki_topic_not_found(tmp_path):
     """Test CLI llm-wiki generate-patches with non-existent topic."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -459,6 +466,7 @@ def test_cli_llm_wiki_topic_not_found(tmp_path):
 def test_cli_llm_wiki_no_source_reports(tmp_path):
     """Test CLI llm-wiki generate-patches when topic has no source reports."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -541,8 +549,9 @@ def test_find_core_topics_no_topics_dir(tmp_path):
 def test_cli_llm_wiki_no_mock_without_api_key(tmp_path, monkeypatch):
     """Test CLI --no-mock fails gracefully without API config."""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "LLM_API_KEY", "")
     monkeypatch.setattr(podcast_research.config, "LLM_BASE_URL", "")
@@ -825,6 +834,7 @@ def test_validate_patches_no_frontmatter(tmp_path):
 def test_cli_validate_patches(tmp_path):
     """Test CLI llm-wiki validate-patches command."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -857,6 +867,7 @@ def test_cli_validate_patches(tmp_path):
 def test_cli_validate_patches_empty(tmp_path):
     """Test CLI validate-patches with no patches."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -875,6 +886,7 @@ def test_cli_validate_patches_empty(tmp_path):
 def test_cli_validate_patches_specific_patch(tmp_path):
     """Test CLI validate-patches --patch for a specific file."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -907,6 +919,7 @@ def test_cli_validate_patches_specific_patch(tmp_path):
 def test_cli_llm_wiki_dry_run_does_not_write(tmp_path):
     """Test that dry-run does not write patch files."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1061,7 +1074,7 @@ def test_apply_patch_invalid_patch_rejected(tmp_path):
     from podcast_research.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
-    patch_rel = str(patch_path.relative_to(vault))
+    str(patch_path.relative_to(vault))
 
     # Create invalid patch (no frontmatter)
     bad_patch = vault / "00_Inbox" / "LLM_Patches" / "bad.md"
@@ -1155,7 +1168,7 @@ def test_apply_patch_section_mapping(tmp_path):
 
 def test_apply_patch_creates_missing_section(tmp_path):
     """Test that missing target section is created."""
-    from podcast_research.llm_wiki.applier import apply_patch, _extract_patch_id
+    from podcast_research.llm_wiki.applier import _extract_patch_id, apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, target_name="New Topic")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1268,6 +1281,7 @@ def test_apply_patch_company_cards_untouched(tmp_path):
 def test_cli_apply_patch_dry_run(tmp_path):
     """Test CLI apply-patch --dry-run."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
@@ -1290,6 +1304,7 @@ def test_cli_apply_patch_dry_run(tmp_path):
 def test_cli_apply_patch_apply_without_confirm_rejected(tmp_path):
     """Test CLI apply-patch --apply without --confirm-reviewed is rejected."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
@@ -1309,6 +1324,7 @@ def test_cli_apply_patch_apply_without_confirm_rejected(tmp_path):
 def test_cli_apply_patch_apply_with_confirm(tmp_path):
     """Test CLI apply-patch --apply --confirm-reviewed."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
@@ -1375,7 +1391,7 @@ def test_section_inserted_at_correct_position(tmp_path):
             section_positions[stripped] = content.split("\n").index(line)
 
     # Verify sections appear in canonical order
-    section_names_in_file = sorted(section_positions.keys(), key=lambda s: section_positions[s])
+    sorted(section_positions.keys(), key=lambda s: section_positions[s])
     # Check that Current Understanding comes before Key Claims
     cu_idx = section_positions.get("## Current Understanding", -1)
     kc_idx = section_positions.get("## Key Claims", -1)
@@ -1383,7 +1399,7 @@ def test_section_inserted_at_correct_position(tmp_path):
     rt_idx = section_positions.get("## Related Topics", -1)
     oq_idx = section_positions.get("## Open Questions", -1)
     tl_idx = section_positions.get("## Timeline", -1)
-    sr_idx = section_positions.get("## Source Reports", -1)
+    section_positions.get("## Source Reports", -1)
 
     assert cu_idx < kc_idx, "Current Understanding should be before Key Claims"
     assert kc_idx < rc_idx, "Key Claims should be before Related Companies"
@@ -1484,8 +1500,8 @@ def test_classify_entity():
 
 def test_source_report_context_includes_channel():
     """Test that source report context includes channel info."""
-    from podcast_research.llm_wiki.prompts import build_source_reports_context
     from podcast_research.llm_wiki.context_builder import SourceReport
+    from podcast_research.llm_wiki.prompts import build_source_reports_context
 
     reports = [
         SourceReport(
@@ -1633,6 +1649,7 @@ def test_generate_company_patch_mock(tmp_path):
 def test_cli_company_mock(tmp_path):
     """Test CLI --company --mock."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1664,6 +1681,7 @@ def test_cli_company_mock(tmp_path):
 def test_cli_company_dry_run(tmp_path):
     """Test CLI --company --dry-run."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1691,6 +1709,7 @@ def test_cli_company_dry_run(tmp_path):
 def test_cli_topic_and_company_mutually_exclusive(tmp_path):
     """Test --topic and --company cannot be used together."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1722,7 +1741,10 @@ def test_validate_company_patch(tmp_path):
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
     from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import generate_company_patch, write_patch_file
+    from podcast_research.llm_wiki.patch_generator import (
+        generate_company_patch,
+        write_patch_file,
+    )
 
     company_path = companies_dir / "NVIDIA.md"
     context = build_company_context(vault, company_path, max_reports=5)
@@ -1753,7 +1775,10 @@ def test_apply_company_patch_dry_run(tmp_path):
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
     from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import generate_company_patch, write_patch_file
+    from podcast_research.llm_wiki.patch_generator import (
+        generate_company_patch,
+        write_patch_file,
+    )
 
     company_path = companies_dir / "NVIDIA.md"
     context = build_company_context(vault, company_path, max_reports=5)
@@ -1790,7 +1815,10 @@ def test_apply_company_patch_with_marker(tmp_path):
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
     from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import generate_company_patch, write_patch_file
+    from podcast_research.llm_wiki.patch_generator import (
+        generate_company_patch,
+        write_patch_file,
+    )
 
     company_path = companies_dir / "NVIDIA.md"
     context = build_company_context(vault, company_path, max_reports=5)
@@ -1821,7 +1849,6 @@ def _make_applied_patch_in_vault(vault, patch_id, target_type="topic",
                                   target_name="AI Agents",
                                   target_card_rel="02_Topics/AI Agents.md"):
     """Helper: create a patch with status=applied and markers in target card."""
-    from pathlib import Path
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
     patches_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1923,7 +1950,7 @@ applied_to: "02_Topics/Missing.md"
 
 def test_rollback_dry_run_does_not_write(tmp_path):
     """Test rollback dry-run doesn't modify files."""
-    from podcast_research.llm_wiki.rollback import rollback_patch, _count_marker_blocks
+    from podcast_research.llm_wiki.rollback import _count_marker_blocks, rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1941,7 +1968,7 @@ def test_rollback_dry_run_does_not_write(tmp_path):
 
 def test_rollback_apply_removes_markers(tmp_path):
     """Test rollback apply removes marker blocks."""
-    from podcast_research.llm_wiki.rollback import rollback_patch, _count_marker_blocks
+    from podcast_research.llm_wiki.rollback import _count_marker_blocks, rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2142,6 +2169,7 @@ auto_apply: false
 def test_cli_list_applied(tmp_path):
     """Test CLI list-applied-patches."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2158,6 +2186,7 @@ def test_cli_list_applied(tmp_path):
 def test_cli_rollback_dry_run(tmp_path):
     """Test CLI rollback-patch --dry-run."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2179,6 +2208,7 @@ def test_cli_rollback_dry_run(tmp_path):
 def test_cli_reject_patch(tmp_path):
     """Test CLI reject-patch."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"

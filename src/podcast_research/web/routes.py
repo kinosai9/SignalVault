@@ -1,6 +1,5 @@
 """P1-C / P2-I.2 / P2-K.2.1: HTML pages + actions — /dashboard /reports /tasks /patches /search + POST actions"""
 
-import os
 import re
 from pathlib import Path
 
@@ -225,7 +224,10 @@ def _build_dashboard_context(vault_path: Path) -> dict:
             "patch_id": p.patch_id,
         })
 
-    from podcast_research.workspace.generators import _sort_claims_by_priority, _sort_signals_by_priority
+    from podcast_research.workspace.generators import (
+        _sort_claims_by_priority,
+        _sort_signals_by_priority,
+    )
 
     review_claims = []
     for c in _sort_claims_by_priority(snapshot.review_claims())[:5]:
@@ -268,7 +270,9 @@ def _build_dashboard_context(vault_path: Path) -> dict:
     # Build watchlist brief
     try:
         from podcast_research.workspace.watchlist import (
-            load_watchlist, generate_watchlist_brief, ensure_watchlist_template,
+            ensure_watchlist_template,
+            generate_watchlist_brief,
+            load_watchlist,
         )
         wl_config = load_watchlist(vault_path)
         watchlist_items = generate_watchlist_brief(snapshot, vault_path) if (
@@ -539,9 +543,12 @@ def page_research_brief(request: Request):
         return _render("research_brief.html", ctx)
 
     try:
-        from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.watchlist import load_watchlist, generate_watchlist_brief
+        from podcast_research.workspace.scanner import VaultScanner
+        from podcast_research.workspace.watchlist import (
+            generate_watchlist_brief,
+            load_watchlist,
+        )
 
         scanner = VaultScanner(vp)
         snapshot = scanner.scan()
@@ -609,7 +616,10 @@ def page_watchlist_settings(request: Request):
     if not vp.exists():
         return _render("watchlist_settings.html", ctx)
 
-    from podcast_research.workspace.watchlist import load_watchlist, ensure_watchlist_template
+    from podcast_research.workspace.watchlist import (
+        ensure_watchlist_template,
+        load_watchlist,
+    )
     ensure_watchlist_template(vp)
     config = load_watchlist(vp)
     ctx["config"] = config
@@ -618,7 +628,9 @@ def page_watchlist_settings(request: Request):
     try:
         from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.watchlist import (
-            get_suggested_companies, get_suggested_topics, resolve_watchlist_name,
+            get_suggested_companies,
+            get_suggested_topics,
+            resolve_watchlist_name,
         )
         scanner = VaultScanner(vp)
         snapshot = scanner.scan()
@@ -713,7 +725,7 @@ def action_content_analyze(
 
     flow_mode: "full" = analyze + auto sync (full_flow), "report_only" = analysis only.
     """
-    from podcast_research.utils.youtube import is_youtube_url, extract_video_id
+    from podcast_research.utils.youtube import is_youtube_url
 
     # Validate URL
     url = youtube_url.strip()
@@ -761,6 +773,7 @@ def page_content_job(job_id: str):
 def api_job_status(job_id: str):
     """Delegate to unified task status API."""
     from fastapi.responses import JSONResponse
+
     from podcast_research.services.job_service import get_job_status
 
     data = get_job_status(job_id)
@@ -829,6 +842,7 @@ def page_sync_job(request: Request, job_id: str):
 def api_sync_job_status(job_id: str):
     """Delegate to unified task status API."""
     from fastapi.responses import JSONResponse
+
     from podcast_research.services.job_service import get_job_status
 
     data = get_job_status(job_id)
@@ -843,7 +857,13 @@ def api_sync_job_status(job_id: str):
 @router.get("/tasks")
 def page_tasks(request: Request):
     """Unified task list page — shows all recent jobs."""
-    from podcast_research.services.job_service import list_jobs, JOB_TYPE_LABELS, _now_epoch, _compute_elapsed, _ALL_STAGES
+    from podcast_research.services.job_service import (
+        _ALL_STAGES,
+        JOB_TYPE_LABELS,
+        _compute_elapsed,
+        _now_epoch,
+        list_jobs,
+    )
 
     raw_jobs = list_jobs(limit=50)
     now = _now_epoch()
@@ -885,6 +905,7 @@ def page_task_detail(request: Request, job_id: str):
 def api_task_status(job_id: str):
     """Unified task status JSON endpoint for polling."""
     from fastapi.responses import JSONResponse
+
     from podcast_research.services.job_service import get_job_status
 
     data = get_job_status(job_id)
@@ -1059,8 +1080,10 @@ def action_refresh_workspace(request: Request):
     vp = Path(vault_path_str)
     try:
         from podcast_research.workspace import (
-            backfill_relations, refresh_curation_status,
-            polish_report_metadata, refresh_workspace,
+            backfill_relations,
+            polish_report_metadata,
+            refresh_curation_status,
+            refresh_workspace,
         )
         r1 = backfill_relations(vp, dry_run=False, apply=True)
         r2 = refresh_curation_status(vp, dry_run=False)
@@ -1191,9 +1214,16 @@ def _build_sources_videos_context(
         watchlist_filter: only show watchlist-matching videos
         long_filter: only show videos > 90 minutes
     """
-    from podcast_research.db.repository import list_channel_videos, get_channel, detect_video_import_status
-    from podcast_research.services.watchlist_matcher import match_video_to_watchlist, compute_recommendation
-    from podcast_research.workspace.watchlist import load_watchlist, WatchlistConfig
+    from podcast_research.db.repository import (
+        detect_video_import_status,
+        get_channel,
+        list_channel_videos,
+    )
+    from podcast_research.services.watchlist_matcher import (
+        compute_recommendation,
+        match_video_to_watchlist,
+    )
+    from podcast_research.workspace.watchlist import WatchlistConfig, load_watchlist
 
     session = _get_session()
     try:
@@ -1310,9 +1340,9 @@ def action_add_channel(
     if not vp_str:
         return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
 
-    from podcast_research.utils.youtube import extract_channel_id, is_youtube_url
-    from podcast_research.db.repository import upsert_channel
     from podcast_research.db.models import Channel
+    from podcast_research.db.repository import upsert_channel
+    from podcast_research.utils.youtube import extract_channel_id, is_youtube_url
 
     if not is_youtube_url(channel_url) and "youtube.com" not in channel_url.lower():
         return RedirectResponse(
@@ -1470,7 +1500,8 @@ def action_refresh_channel(request: Request, channel_id: int):
 
     from podcast_research.db.repository import get_channel
     from podcast_research.services.job_service import (
-        create_channel_refresh_job, start_channel_refresh_job,
+        create_channel_refresh_job,
+        start_channel_refresh_job,
     )
 
     session = _get_session()
@@ -1496,7 +1527,10 @@ def action_refresh_channel(request: Request, channel_id: int):
 @router.post("/sources/channels/{channel_id}/videos/{video_id}/skip")
 def action_skip_video(request: Request, channel_id: int, video_id: str):
     """Mark a video as skipped."""
-    from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
+    from podcast_research.db.repository import (
+        get_channel_video_by_video_id,
+        update_channel_video_status,
+    )
 
     session = _get_session()
     try:
@@ -1524,11 +1558,16 @@ def action_import_video(
 ):
     """Import a video from channel list — with duplicate guard."""
     from podcast_research.db.repository import (
-        get_channel, get_channel_video_by_video_id, update_channel_video_status,
         detect_video_import_status,
+        get_channel,
+        get_channel_video_by_video_id,
+        update_channel_video_status,
     )
     from podcast_research.services.job_service import (
-        create_job, start_job, create_sync_job, start_sync_job,
+        create_job,
+        create_sync_job,
+        start_job,
+        start_sync_job,
     )
 
     vp_str = _get_vault_path()
@@ -1652,7 +1691,11 @@ def page_rerun_video(request: Request, channel_id: int, video_id: str):
     if not vp_str:
         return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
 
-    from podcast_research.db.repository import get_channel, get_channel_video_by_video_id, detect_video_import_status
+    from podcast_research.db.repository import (
+        detect_video_import_status,
+        get_channel,
+        get_channel_video_by_video_id,
+    )
     from podcast_research.db.session import get_session
 
     session = get_session()
@@ -1703,9 +1746,12 @@ def action_rerun_video(request: Request, channel_id: int, video_id: str):
     if not vp_str:
         return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
 
-    from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
-    from podcast_research.services.job_service import create_job, start_job
+    from podcast_research.db.repository import (
+        get_channel_video_by_video_id,
+        update_channel_video_status,
+    )
     from podcast_research.exporters.obsidian import archive_current_video_outputs
+    from podcast_research.services.job_service import create_job, start_job
 
     vp = Path(vp_str)
 

@@ -7,7 +7,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api import (
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    YouTubeTranscriptApi,
+)
 
 from podcast_research.adapters.base import TranscriptAdapter, TranscriptResult
 from podcast_research.analysis.models import SubtitleSegment

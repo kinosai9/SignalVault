@@ -13,7 +13,9 @@ from rich.panel import Panel
 from rich.table import Table
 
 from podcast_research.analysis.pipeline import analyze as run_analyze
-from podcast_research.analysis.pipeline import analyze_from_transcript as run_analyze_from_transcript
+from podcast_research.analysis.pipeline import (
+    analyze_from_transcript as run_analyze_from_transcript,
+)
 from podcast_research.config import LLM_PROVIDER, TRANSCRIPT_CACHE_DIR, ensure_dirs
 from podcast_research.logging_config import setup_logging
 
@@ -104,7 +106,9 @@ def main(
     chunking_config["overlap_chars"] = chunk_overlap
 
     if youtube_url:
-        from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
+        from podcast_research.adapters.youtube_transcript import (
+            YouTubeTranscriptAdapter,
+        )
 
         lang_list = [l.strip() for l in youtube_lang.split(",") if l.strip()] if youtube_lang else None
 
@@ -399,7 +403,7 @@ def reports_rebuild_index() -> None:
     finally:
         session.close()
 
-    console.print(f"[green]FTS index rebuilt[/green]")
+    console.print("[green]FTS index rebuilt[/green]")
     console.print(f"Reports indexed: {count}")
 
 
@@ -618,7 +622,7 @@ def channels_tag(
     set_tags: str = typer.Option(None, "--set", help="覆盖全部标签，逗号分隔"),
 ) -> None:
     """管理频道标签。"""
-    from podcast_research.db.channel_repository import update_channel_tags, get_channel
+    from podcast_research.db.channel_repository import get_channel, update_channel_tags
     from podcast_research.db.session import get_session, init_db
 
     if not add and not remove and not set_tags:
@@ -633,7 +637,6 @@ def channels_tag(
             console.print(f"[red]频道 ID={channel_id} 不存在[/red]")
             raise typer.Exit(code=1)
 
-        op_desc = []
         add_list = [t.strip() for t in add.split(",") if t.strip()] if add else None
         remove_list = [t.strip() for t in remove.split(",") if t.strip()] if remove else None
         set_list = [t.strip() for t in set_tags.split(",") if t.strip()] if set_tags else None
@@ -676,7 +679,7 @@ def channels_seed_tech_ai() -> None:
     finally:
         session.close()
 
-    console.print(f"[green]Tech/AI 默认频道包播种完成[/green]")
+    console.print("[green]Tech/AI 默认频道包播种完成[/green]")
     console.print(f"  新增: {result['added']}")
     console.print(f"  更新(补齐配置): {result.get('updated', 0)}")
     console.print(f"  跳过(已配置): {result['skipped']}")
@@ -939,6 +942,7 @@ def obsidian_export(
 ) -> None:
     """导出报告到 Obsidian Vault。P2-C v1: 仅导出 YouTube 报告和频道卡片。"""
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import export_to_vault
 
@@ -999,7 +1003,7 @@ def obsidian_export(
         console.print(table)
         return
 
-    console.print(f"[green]Obsidian Export 完成[/green]")
+    console.print("[green]Obsidian Export 完成[/green]")
     console.print(f"  Vault: {vault_path}")
     console.print(f"  Reports exported: {result['created']}")
     console.print(f"  Reports skipped: {result['skipped']}")
@@ -1020,6 +1024,7 @@ def obsidian_cleanup_unknown(
     apply 模式将旧文件移到 99_System/UnknownChannel_Backup/，不直接删除。
     """
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
 
@@ -1070,14 +1075,14 @@ def obsidian_cleanup_unknown(
         return
 
     if apply:
-        console.print(f"[green]UnknownChannel Cleanup 完成[/green]")
+        console.print("[green]UnknownChannel Cleanup 完成[/green]")
         console.print(f"  Vault: {vault_path}")
         console.print(f"  Renamed/Re-exported: {result['renamed']}")
         console.print(f"  Moved to backup: {result['moved']}")
         console.print(f"  Skipped: {result['skipped']}")
     else:
         # No --dry-run and no --apply: show results as info only
-        console.print(f"[yellow]提示：使用 --apply 执行迁移，--dry-run 预览[/yellow]")
+        console.print("[yellow]提示：使用 --apply 执行迁移，--dry-run 预览[/yellow]")
         console.print(f"  发现 {len(results)} 个 UnknownChannel 文件")
         for r in results:
             status = "✓" if r["action"] == "rename_or_reexport" else "?"
@@ -1093,6 +1098,7 @@ def obsidian_sync_channel_cards(
 ) -> None:
     """同步频道卡片。扫描 01_Reports/ 的 frontmatter，创建或更新 05_Channels/ 频道卡。"""
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import sync_channel_cards
 
@@ -1137,7 +1143,7 @@ def obsidian_sync_channel_cards(
         console.print(table)
         return
 
-    console.print(f"[green]Channel Card Sync 完成[/green]")
+    console.print("[green]Channel Card Sync 完成[/green]")
     console.print(f"  Vault: {vault_path}")
     console.print(f"  Created: {result['created']}")
     console.print(f"  Updated: {result['updated']}")
@@ -1156,6 +1162,7 @@ def obsidian_generate_cards(
 ) -> None:
     """生成 Topic / Company Cards。扫描 01_Reports/ 提取主题和公司实体，创建或更新 02_Topics/ 和 03_Companies/ 卡片。"""
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import generate_cards
 
@@ -1209,7 +1216,7 @@ def obsidian_generate_cards(
         console.print(table)
         return
 
-    console.print(f"[green]Card Generation 完成[/green]")
+    console.print("[green]Card Generation 完成[/green]")
     console.print(f"  Vault: {vault_path}")
     console.print(f"  Topics created: {result['topics_created']}")
     console.print(f"  Topics updated: {result['topics_updated']}")
@@ -1229,6 +1236,7 @@ def obsidian_cleanup_cards(
 ) -> None:
     """清理 Topic / Company Cards 分类。检测非公司实体并迁移到 Topic，合并同义 Topic 别名。"""
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import cleanup_cards
 
@@ -1291,14 +1299,14 @@ def obsidian_cleanup_cards(
         return
 
     if apply:
-        console.print(f"[green]Card Cleanup 完成[/green]")
+        console.print("[green]Card Cleanup 完成[/green]")
         console.print(f"  Vault: {vault_path}")
         console.print(f"  Migrated (company → topic): {result['migrated']}")
         console.print(f"  Merged (topic aliases): {result['merged']}")
         console.print(f"  Kept as company: {result['kept']}")
         console.print(f"  Manual review needed: {result['manual_review']}")
     else:
-        console.print(f"[yellow]提示：使用 --apply 执行清理，--dry-run 预览[/yellow]")
+        console.print("[yellow]提示：使用 --apply 执行清理，--dry-run 预览[/yellow]")
         console.print(f"  发现 {len(result['results'])} 个需要处理的卡片")
         for r in result["results"][:10]:
             symbol = "✓" if r["action"] == "keep" else ("→" if r["action"] in ("migrate_to_topic", "merge_topic") else "?")
@@ -1321,6 +1329,7 @@ def obsidian_consolidate_topics(
 ) -> None:
     """整合 Topic taxonomy：合并别名、标记 status、生成 taxonomy index。"""
     from pathlib import Path
+
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.exporters.obsidian import consolidate_topics
 
@@ -1393,7 +1402,7 @@ def obsidian_consolidate_topics(
         return
 
     if apply:
-        console.print(f"[green]Topic Taxonomy Consolidation 完成[/green]")
+        console.print("[green]Topic Taxonomy Consolidation 完成[/green]")
         console.print(f"  Vault: {vault_path}")
         console.print(f"  Core topics: {result['core_count']}")
         console.print(f"  Emerging topics: {result['emerging_count']}")
@@ -1401,7 +1410,7 @@ def obsidian_consolidate_topics(
         console.print(f"  Manual review: {result['manual_review_count']}")
         console.print(f"  Merged (alias → canonical): {result['merged_count']}")
     else:
-        console.print(f"[yellow]提示：使用 --apply 执行整合，--dry-run 预览[/yellow]")
+        console.print("[yellow]提示：使用 --apply 执行整合，--dry-run 预览[/yellow]")
         console.print(f"  发现 {len(result['results'])} 个 topic cards")
         for r in result["results"][:10]:
             status_symbol = {"core": "★", "emerging": "◐", "long_tail": "○", "manual_review": "?"}.get(r["status"], " ")
@@ -1430,8 +1439,8 @@ def obsidian_generate_claims_signals(
 
     写入 06_Claims/ 和 07_Signals/。Deterministic 规则提取，不调用 LLM。
     """
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.generator import generate_all
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1486,12 +1495,12 @@ def obsidian_generate_claims_signals(
         console.print(f"[dim]Signals: {result.signals_created} new, {result.signals_overwritten} overwrite, {result.signals_skipped} skip[/dim]")
         return
 
-    console.print(f"[green]Claim / Signal Generation 完成[/green]")
+    console.print("[green]Claim / Signal Generation 完成[/green]")
     console.print(f"  Claims created: {result.claims_created}")
     console.print(f"  Claims skipped: {result.claims_skipped}")
     console.print(f"  Signals created: {result.signals_created}")
     console.print(f"  Signals skipped: {result.signals_skipped}")
-    console.print(f"  Indexes: 99_System/Claim Index.md, Signal Index.md, Claim_Signal_Generation_Log.md")
+    console.print("  Indexes: 99_System/Claim Index.md, Signal Index.md, Claim_Signal_Generation_Log.md")
 
 
 # --- workspace 子命令组 (under obsidian) ---
@@ -1565,7 +1574,7 @@ def workspace_refresh(
 
     if dry_run:
         console.print("\n[dim][DRY-RUN] 未写入文件。预览内容请见上方表格。[/dim]")
-        console.print(f"[dim]将生成: Home.md, 99_System/Knowledge Map.md, 99_System/Review Queue.md[/dim]")
+        console.print("[dim]将生成: Home.md, 99_System/Knowledge Map.md, 99_System/Review Queue.md[/dim]")
     else:
         for f in result["files_written"]:
             console.print(f"  [green]已写入:[/green] {f}")
@@ -1605,7 +1614,7 @@ def workspace_backfill_relations(
     result = backfill_relations(vault_path=vault_path, dry_run=dry_run, apply=apply)
 
     stats = result["stats"]
-    console.print(f"[green]Relation Backfill 扫描完成[/green]")
+    console.print("[green]Relation Backfill 扫描完成[/green]")
     console.print(f"  Claims scanned: {stats['claims_scanned']}")
     console.print(f"  Signals scanned: {stats['signals_scanned']}")
     console.print(f"  Claims updated: {stats['claims_updated']}")
@@ -1627,7 +1636,7 @@ def workspace_backfill_relations(
                 console.print(f"  [cyan]{r['card_id']}[/cyan] ({r['card_type']}): {', '.join(parts)}")
 
     if apply:
-        console.print(f"\n[green]已写入:[/green] 99_System/Relation_Backfill_Log.md")
+        console.print("\n[green]已写入:[/green] 99_System/Relation_Backfill_Log.md")
 
 
 @workspace_app.command("refresh-curation-status")
@@ -1659,7 +1668,7 @@ def workspace_refresh_curation_status(
     result = refresh_curation_status(vault_path=vault_path, dry_run=dry_run)
 
     stats = result["stats"]
-    console.print(f"[green]Curation Status 刷新完成[/green]")
+    console.print("[green]Curation Status 刷新完成[/green]")
     console.print(f"  Topics: {stats['topics_scanned']} scanned, {stats['topics_updated']} updated")
     console.print(f"  Companies: {stats['companies_scanned']} scanned, {stats['companies_updated']} updated")
     console.print(f"  Claims: {stats['claims_scanned']} scanned, {stats['claims_updated']} updated")
@@ -1709,7 +1718,7 @@ def workspace_polish_report_metadata(
     result = polish_report_metadata(vault_path=vault_path, dry_run=dry_run, apply=apply, overwrite_title=overwrite_title)
     stats = result["stats"]
 
-    console.print(f"[green]Report Metadata Polish 完成[/green]")
+    console.print("[green]Report Metadata Polish 完成[/green]")
     console.print(f"  Reports scanned: {stats['reports_scanned']}")
     console.print(f"  Titles updated: {stats['titles_updated']}")
     console.print(f"  Published dates updated: {stats['published_dates_updated']}")
@@ -1761,7 +1770,7 @@ def workspace_cleanup_long_tail_topics(
     result = cleanup_long_tail_topics(vault_path=vault_path, dry_run=dry_run, apply=apply)
     stats = result["stats"]
 
-    console.print(f"[green]Long-tail Topic Cleanup 完成[/green]")
+    console.print("[green]Long-tail Topic Cleanup 完成[/green]")
     console.print(f"  Topics scanned: {stats['topics_scanned']}")
     console.print(f"  Renamed: {stats['renamed']}")
     console.print(f"  Merged: {stats['merged']}")
@@ -1793,8 +1802,11 @@ def workspace_watchlist_brief(
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.workspace.scanner import VaultScanner
     from podcast_research.workspace.watchlist import (
-        load_watchlist, ensure_watchlist_template,
-        generate_watchlist_brief, render_watchlist_markdown, write_watchlist_brief,
+        ensure_watchlist_template,
+        generate_watchlist_brief,
+        load_watchlist,
+        render_watchlist_markdown,
+        write_watchlist_brief,
     )
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
@@ -1818,7 +1830,7 @@ def workspace_watchlist_brief(
     brief = generate_watchlist_brief(snapshot, vp)
 
     if dry_run:
-        console.print(f"\n[bold]Watchlist Brief Preview[/bold]\n")
+        console.print("\n[bold]Watchlist Brief Preview[/bold]\n")
         for item in brief:
             icon = {"direct": "●", "indirect": "◐", "no_new_evidence": "○"}.get(item.status, "○")
             console.print(f"  {icon} [cyan]{item.name}[/cyan] ({item.item_type}): {item.summary[:100]}")
@@ -1845,8 +1857,8 @@ def claims_list(
     limit: int = typer.Option(None, "--limit", help="最多返回数量"),
 ) -> None:
     """列出 06_Claims/ 中的 Claim 卡片。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import list_claims
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1881,8 +1893,8 @@ def claims_show(
     claim_id: str = typer.Argument(..., help="Claim card ID（文件名 stem）"),
 ) -> None:
     """查看单个 Claim 卡片完整内容。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import get_claim
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1904,8 +1916,8 @@ def claims_update_status(
     note: str = typer.Option("", "--note", help="审阅备注"),
 ) -> None:
     """更新 Claim 卡片状态。追加 Review History，更新 Index，写 log。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import update_claim_status
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1915,7 +1927,7 @@ def claims_update_status(
 
     ok = update_claim_status(vault_path, claim_id, status, note=note)
     if not ok:
-        console.print(f"[red]更新失败：claim 不存在或状态非法。[/red]")
+        console.print("[red]更新失败：claim 不存在或状态非法。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Claim '{claim_id}' status updated to {status}[/green]")
 
@@ -1927,8 +1939,8 @@ def signals_list(
     limit: int = typer.Option(None, "--limit", help="最多返回数量"),
 ) -> None:
     """列出 07_Signals/ 中的 Signal 卡片。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import list_signals
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1963,8 +1975,8 @@ def signals_show(
     signal_id: str = typer.Argument(..., help="Signal card ID（文件名 stem）"),
 ) -> None:
     """查看单个 Signal 卡片完整内容。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import get_signal
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1986,8 +1998,8 @@ def signals_update_status(
     note: str = typer.Option("", "--note", help="审阅备注"),
 ) -> None:
     """更新 Signal 卡片状态。追加 Updates，更新 Index，写 log。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import update_signal_status
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -1997,7 +2009,7 @@ def signals_update_status(
 
     ok = update_signal_status(vault_path, signal_id, status, note=note)
     if not ok:
-        console.print(f"[red]更新失败：signal 不存在或状态非法。[/red]")
+        console.print("[red]更新失败：signal 不存在或状态非法。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Signal '{signal_id}' status updated to {status}[/green]")
 
@@ -2011,8 +2023,8 @@ def claims_update_meta(
     granularity: str = typer.Option(None, "--granularity", help="atomic / broad / duplicate / unclear"),
 ) -> None:
     """更新 Claim 卡片的 quality / review_priority / granularity metadata。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import update_claim_meta
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2027,7 +2039,7 @@ def claims_update_meta(
     ok = update_claim_meta(vault_path, claim_id, quality=quality,
                            review_priority=review_priority, granularity=granularity)
     if not ok:
-        console.print(f"[red]更新失败：claim 不存在或参数非法。[/red]")
+        console.print("[red]更新失败：claim 不存在或参数非法。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Claim '{claim_id}' metadata updated[/green]")
 
@@ -2041,8 +2053,8 @@ def signals_update_meta(
     signal_type: str = typer.Option(None, "--signal-type", help="competition / technology_bottleneck / regulation / adoption / business_model / pricing / infrastructure / market_structure / financial_metric / unknown"),
 ) -> None:
     """更新 Signal 卡片的 quality / review_priority / signal_type metadata。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import update_signal_meta
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2057,7 +2069,7 @@ def signals_update_meta(
     ok = update_signal_meta(vault_path, signal_id, quality=quality,
                             review_priority=review_priority, signal_type=signal_type)
     if not ok:
-        console.print(f"[red]更新失败：signal 不存在或参数非法。[/red]")
+        console.print("[red]更新失败：signal 不存在或参数非法。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Signal '{signal_id}' metadata updated[/green]")
 
@@ -2067,8 +2079,8 @@ def claims_find_similar(
     vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
 ) -> None:
     """查找相似的 Claim 对（基于 token overlap）。不修改任何文件。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import find_similar_claims
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2099,8 +2111,8 @@ def signals_find_similar(
     vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
 ) -> None:
     """查找相似的 Signal 对（基于 token overlap）。不修改任何文件。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import find_similar_signals
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2131,8 +2143,8 @@ def claims_backlog(
     vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
 ) -> None:
     """生成 Claim Review Backlog（按 priority 排序，写入 99_System/）。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import generate_claim_backlog
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2149,8 +2161,8 @@ def signals_backlog(
     vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
 ) -> None:
     """生成 Signal Review Backlog（按 priority 排序，写入 99_System/）。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import generate_signal_backlog
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2173,8 +2185,8 @@ def signals_update_tracking(
     invalidation_criteria: str = typer.Option(None, "--invalidation-criteria", help="何种条件下标记 invalidated"),
 ) -> None:
     """设置 Signal 的 tracking 元数据。更新 frontmatter，写 log。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import update_signal_tracking
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2189,7 +2201,7 @@ def signals_update_tracking(
                                 resolution_criteria=resolution_criteria,
                                 invalidation_criteria=invalidation_criteria)
     if not ok:
-        console.print(f"[red]更新失败：signal 不存在或参数非法。[/red]")
+        console.print("[red]更新失败：signal 不存在或参数非法。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Signal '{signal_id}' tracking updated[/green]")
 
@@ -2205,8 +2217,8 @@ def signals_add_update(
     checked_at: str = typer.Option(None, "--checked-at", help="检查时间 ISO"),
 ) -> None:
     """向 Signal Card 追加一条人工更新记录。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import add_signal_update
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2217,7 +2229,7 @@ def signals_add_update(
     ok = add_signal_update(vault_path, signal_id, note=note, source=source,
                            evidence_url=evidence_url, new_status=status, checked_at=checked_at)
     if not ok:
-        console.print(f"[red]更新失败：signal 不存在。[/red]")
+        console.print("[red]更新失败：signal 不存在。[/red]")
         raise typer.Exit(code=1)
     console.print(f"[green]Signal '{signal_id}' update added[/green]")
 
@@ -2227,8 +2239,8 @@ def signals_tracking_backlog(
     vault: str = typer.Option(None, "--vault", help="Obsidian Vault 路径（覆盖 .env 配置）"),
 ) -> None:
     """生成 Signal Tracking Backlog（按 tracking 优先级排序，写入 99_System/）。"""
-    from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.claim_signal.review import generate_signal_tracking_backlog
+    from podcast_research.config import OBSIDIAN_VAULT_PATH
 
     vault_path_str = vault or OBSIDIAN_VAULT_PATH
     if not vault_path_str:
@@ -2263,8 +2275,8 @@ def llm_wiki_generate_patches(
     """
     from podcast_research.config import OBSIDIAN_VAULT_PATH
     from podcast_research.llm_wiki import (
-        find_core_topics,
         build_topic_context,
+        find_core_topics,
         generate_topic_patch,
         write_patch_file,
     )
@@ -2309,7 +2321,6 @@ def llm_wiki_generate_patches(
     # --- Company branch ---
     if company:
         from podcast_research.llm_wiki import (
-            find_companies,
             build_company_context,
             generate_company_patch,
         )
@@ -2332,7 +2343,7 @@ def llm_wiki_generate_patches(
         try:
             context = build_company_context(vault_path, company_path, max_reports)
             if not context.source_reports:
-                console.print(f"[yellow]跳过：无 source reports[/yellow]")
+                console.print("[yellow]跳过：无 source reports[/yellow]")
                 raise typer.Exit(code=0)
 
             patch_md = generate_company_patch(
@@ -2401,7 +2412,7 @@ def llm_wiki_generate_patches(
             # Build context
             context = build_topic_context(vault_path, topic_path, max_reports)
             if not context.source_reports:
-                console.print(f"  [yellow]跳过：无 source reports[/yellow]")
+                console.print("  [yellow]跳过：无 source reports[/yellow]")
                 continue
 
             console.print(f"  Source reports: {len(context.source_reports)}")
@@ -2545,7 +2556,7 @@ def llm_wiki_apply_patch(
     )
 
     if result.errors:
-        console.print(f"[red]Apply 被拒绝:[/red]")
+        console.print("[red]Apply 被拒绝:[/red]")
         for err in result.errors:
             console.print(f"  [red]- {err}[/red]")
 
@@ -2573,13 +2584,13 @@ def llm_wiki_apply_patch(
     console.print(table)
 
     if result.applied:
-        console.print(f"\n[green]Patch applied successfully[/green]")
+        console.print("\n[green]Patch applied successfully[/green]")
         console.print(f"  Target: {target_rel}")
         console.print(f"  Sections: {len(result.sections_applied)}")
-        console.print(f"  Log: 99_System/Patch_Apply_Log.md")
+        console.print("  Log: 99_System/Patch_Apply_Log.md")
 
     if dry_run and not result.errors:
-        console.print(f"\n[dim]使用 --apply --confirm-reviewed 执行写入[/dim]")
+        console.print("\n[dim]使用 --apply --confirm-reviewed 执行写入[/dim]")
 
 
 @llm_wiki_app.command("list-applied-patches")
@@ -2669,7 +2680,7 @@ def llm_wiki_rollback(
     console.print(table)
 
     if dry_run and result.blocks_removed > 0:
-        console.print(f"\n[dim]使用 --apply 执行回滚[/dim]")
+        console.print("\n[dim]使用 --apply 执行回滚[/dim]")
 
 
 @llm_wiki_app.command("reject-patch")

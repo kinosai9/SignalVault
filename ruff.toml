@@ -1,0 +1,44 @@
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # Pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long
+    "B008",   # do not perform function calls in argument defaults
+    "SIM108", # use ternary operator
+    "B904",   # raise from err — intentional for typer.Exit pattern
+]
+exclude = [
+    ".venv",
+    "__pycache__",
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[lint.per-file-ignores]
+"tests/*" = ["SIM105", "SIM117"]
+"src/podcast_research/llm/mock_provider.py" = ["SIM102", "SIM103"]
+"src/podcast_research/cli.py" = ["E402", "SIM102", "E741"]
+"src/podcast_research/workspace/*" = ["E402", "F401"]
+"src/podcast_research/claim_signal/review.py" = ["E402", "SIM102"]
+"src/podcast_research/analysis/pipeline.py" = ["E741"]
+"src/podcast_research/subtitles/parser.py" = ["E741"]
+"src/podcast_research/db/fts.py" = ["E402"]
+"src/podcast_research/db/repository.py" = ["E402"]
+"src/podcast_research/exporters/obsidian.py" = ["E402"]
+"src/podcast_research/evaluation.py" = ["SIM102"]
+"src/podcast_research/llm_wiki/applier.py" = ["B007"]
+"src/podcast_research/llm_wiki/validator.py" = ["F402"]
+"src/podcast_research/web/routes.py" = ["SIM105"]
+"src/podcast_research/workspace/metadata.py" = ["SIM102"]
+"src/podcast_research/workspace/watchlist.py" = ["SIM102"]
+"tests/test_llm_wiki.py" = ["E741"]
+"tests/test_sources_channels.py" = ["E702", "I001"]

@@ -1,18 +1,15 @@
 """P2-C: Obsidian Export v1 tests. All tests use tmp_path vault, never real vault."""
 
 import json
-import pytest
-from pathlib import Path
-from datetime import datetime
 from collections import OrderedDict
+from pathlib import Path
 
 from podcast_research.exporters.markdown_utils import (
-    sanitize_filename,
     build_frontmatter,
+    sanitize_filename,
     wiki_link,
     wiki_links_from_list,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # markdown_utils tests
@@ -81,9 +78,9 @@ def test_wiki_links_from_list():
 
 def test_export_report_creates_file(seeded_db, tmp_path):
     """Report export 生成正确文件。"""
+    from podcast_research.db.models import Episode, InvestmentViewRecord, Report
     from podcast_research.db.session import get_session
-    from podcast_research.db.models import Report, Episode, InvestmentViewRecord
-    from podcast_research.exporters.obsidian import export_report, _load_extraction
+    from podcast_research.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).first()
@@ -125,9 +122,9 @@ def test_export_report_creates_file(seeded_db, tmp_path):
 
 def test_export_report_skips_existing(seeded_db, tmp_path):
     """已存在文件默认 skip。"""
+    from podcast_research.db.models import Episode, Report
     from podcast_research.db.session import get_session
-    from podcast_research.db.models import Report, Episode
-    from podcast_research.exporters.obsidian import export_report, _load_extraction
+    from podcast_research.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     # Use report #3 (NVIDIA, youtube, video_id=abc123)
@@ -143,11 +140,9 @@ def test_export_report_skips_existing(seeded_db, tmp_path):
     (vault / "01_Reports").mkdir()
 
     # Pre-create file matching the expected filename pattern
-    filename = f"2026-06-01_UnknownChannel_{vid}.md"  # date is from analysis_timestamp
     # Actually the date depends on analysis_timestamp - just find any file written
     # Pre-create using a shell glob or just write the expected path after the export
     # Simpler approach: create the exact file the exporter would write
-    from podcast_research.exporters.markdown_utils import sanitize_filename
     # The exporter constructs: {date}_{ch_safe}_{vid}.md
     date_str = report.analysis_timestamp.strftime("%Y-%m-%d")
     exp_filename = f"{date_str}_BG2Pod_{vid}.md"
@@ -162,9 +157,9 @@ def test_export_report_skips_existing(seeded_db, tmp_path):
 
 def test_export_report_overwrite(seeded_db, tmp_path):
     """--overwrite 覆盖已存在文件。"""
+    from podcast_research.db.models import Episode, Report
     from podcast_research.db.session import get_session
-    from podcast_research.db.models import Report, Episode
-    from podcast_research.exporters.obsidian import export_report, _load_extraction
+    from podcast_research.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     # Use report #3 (youtube, has video_id)
@@ -195,9 +190,9 @@ def test_export_report_overwrite(seeded_db, tmp_path):
 
 def test_export_report_has_frontmatter_fields(seeded_db, tmp_path):
     """Report frontmatter 包含所有必需字段。"""
+    from podcast_research.db.models import Episode, Report
     from podcast_research.db.session import get_session
-    from podcast_research.db.models import Report, Episode, InvestmentViewRecord
-    from podcast_research.exporters.obsidian import export_report, _load_extraction
+    from podcast_research.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).first()
@@ -221,9 +216,9 @@ def test_export_report_has_frontmatter_fields(seeded_db, tmp_path):
 
 def test_export_report_wiki_links(seeded_db, tmp_path):
     """Report 中 entity wiki links 正确生成。"""
+    from podcast_research.db.models import Episode, Report
     from podcast_research.db.session import get_session
-    from podcast_research.db.models import Report, Episode
-    from podcast_research.exporters.obsidian import export_report, _load_extraction
+    from podcast_research.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).filter(Report.id == 3).first()  # NVIDIA report
@@ -345,7 +340,7 @@ def test_export_log_generation(seeded_db, tmp_path):
     vault = tmp_path / "vault"
     vault.mkdir()
 
-    result = export_to_vault(vault, source_type="youtube", limit=3)
+    export_to_vault(vault, source_type="youtube", limit=3)
 
     log_path = vault / "99_System" / "Export Log.md"
     assert log_path.exists()
@@ -420,6 +415,7 @@ def test_export_report_id_specific(seeded_db, tmp_path):
 def test_cli_obsidian_export_dry_run(seeded_db, tmp_path):
     """CLI obsidian export --dry-run 不写入。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -439,6 +435,7 @@ def test_cli_obsidian_export_dry_run(seeded_db, tmp_path):
 def test_cli_obsidian_export_vault_not_exists():
     """Vault 路径不存在时报错。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -453,8 +450,9 @@ def test_cli_obsidian_export_vault_not_exists():
 def test_cli_obsidian_export_no_vault(monkeypatch):
     """未指定 --vault 且 .env 未配置时报错。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     # Isolate from local .env OBSIDIAN_VAULT_PATH
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
@@ -467,8 +465,9 @@ def test_cli_obsidian_export_no_vault(monkeypatch):
 def test_cli_obsidian_export_no_vault_with_env_set(seeded_db, monkeypatch, tmp_path):
     """monkeypatch 设置 OBSIDIAN_VAULT_PATH 后不传 --vault 仍能走通。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     # Even if .env has OBSIDIAN_VAULT_PATH, monkeypatch overrides it
     fake_vault = tmp_path / "fake_vault"
@@ -485,6 +484,7 @@ def test_cli_obsidian_export_no_vault_with_env_set(seeded_db, monkeypatch, tmp_p
 def test_cli_obsidian_export_basic(seeded_db, tmp_path):
     """CLI obsidian export 基本运行。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -643,7 +643,10 @@ def _seed_two_youtube_reports(session):
 def _make_extraction_helper(target="NVIDIA", direction="bullish"):
     """Helper to create ExtractionResult for tests."""
     from podcast_research.analysis.models import (
-        Entity, ExtractionResult, InvestmentView, TrackingSignal,
+        Entity,
+        ExtractionResult,
+        InvestmentView,
+        TrackingSignal,
     )
     return ExtractionResult(
         focus_areas=["tech"],
@@ -899,6 +902,7 @@ def test_dry_run_no_files_written_with_filters(seeded_db, tmp_path):
 def test_cli_obsidian_export_channel_filter(seeded_db, tmp_path):
     """CLI --channel 过滤参数工作。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -918,6 +922,7 @@ def test_cli_obsidian_export_channel_filter(seeded_db, tmp_path):
 def test_cli_obsidian_export_only_with_channel(seeded_db, tmp_path):
     """CLI --only-with-channel 参数工作。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -937,6 +942,7 @@ def test_cli_obsidian_export_only_with_channel(seeded_db, tmp_path):
 def test_cli_obsidian_enhanced_dry_run_table(seeded_db, tmp_path):
     """CLI enhanced dry-run 表格包含 Action/Reason 列。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1219,11 +1225,11 @@ def test_cleanup_apply_no_delete(tmp_path, seeded_db):
     vault = tmp_path / "vault"
     old_file = _create_unknown_report(vault, "nomatch_vid")
 
-    result = cleanup_unknown_channel_files(vault, apply=True)
+    cleanup_unknown_channel_files(vault, apply=True)
 
     # File with no backfill match → skipped (not deleted)
     # It should either still be in place or moved, but NOT deleted
-    backup_dir = vault / "99_System" / "UnknownChannel_Backup"
+    vault / "99_System" / "UnknownChannel_Backup"
     all_files_in_vault = list(vault.rglob("*.md"))
     all_names = [f.name for f in all_files_in_vault]
     # The file should still exist somewhere
@@ -1233,8 +1239,9 @@ def test_cleanup_apply_no_delete(tmp_path, seeded_db):
 def test_cli_cleanup_unknown_dry_run(seeded_db, tmp_path, monkeypatch):
     """CLI cleanup-unknown --dry-run 工作。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     vault = tmp_path / "vault"
     _create_unknown_report(vault, "vid001")
@@ -1254,8 +1261,9 @@ def test_cli_cleanup_unknown_dry_run(seeded_db, tmp_path, monkeypatch):
 def test_cli_cleanup_unknown_no_vault(monkeypatch):
     """CLI cleanup-unknown 无 vault 时报错。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 
@@ -1330,7 +1338,10 @@ def test_scan_report_frontmatters_reads_title(tmp_path):
 
 def test_group_reports_by_channel(tmp_path):
     """_group_reports_by_channel 正确分组并跳过 unknown。"""
-    from podcast_research.exporters.obsidian import _scan_report_frontmatters, _group_reports_by_channel
+    from podcast_research.exporters.obsidian import (
+        _group_reports_by_channel,
+        _scan_report_frontmatters,
+    )
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1571,6 +1582,7 @@ def test_sync_no_reports_dir(tmp_path):
 def test_cli_sync_channel_cards_dry_run(tmp_path, monkeypatch):
     """CLI sync-channel-cards --dry-run 工作。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1592,6 +1604,7 @@ def test_cli_sync_channel_cards_dry_run(tmp_path, monkeypatch):
 def test_cli_sync_channel_cards_real(tmp_path, monkeypatch):
     """CLI sync-channel-cards 实际执行。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -1612,8 +1625,9 @@ def test_cli_sync_channel_cards_real(tmp_path, monkeypatch):
 def test_cli_sync_channel_cards_no_vault(monkeypatch):
     """CLI sync-channel-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 
@@ -1808,7 +1822,7 @@ def test_generate_card_existing_append_only(tmp_path):
     new_report = SAMPLE_REPORT_MD.replace("vid001", "vid002").replace("TechPod", "TechPod")
     _create_sample_report(vault, "2026-05-30_TechPod_vid002.md", new_report)
 
-    result = generate_cards(vault, topics_only=True)
+    generate_cards(vault, topics_only=True)
 
     updated_content = ai_infra_card.read_text(encoding="utf-8")
     # User content preserved
@@ -1902,7 +1916,7 @@ def test_generate_cards_channel_filter(tmp_path):
     result = generate_cards(vault, channel_filter="techpod")
 
     # Cards should only contain TechPod reports
-    for r in result["results"]:
+    for _r in result["results"]:
         # All source reports should be from TechPod
         pass  # The filter is applied during scan, so results reflect filtered data
 
@@ -2018,6 +2032,7 @@ def test_generate_cards_no_reports_dir(tmp_path):
 def test_cli_generate_cards_dry_run(tmp_path):
     """CLI generate-cards --dry-run 工作。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2038,6 +2053,7 @@ def test_cli_generate_cards_dry_run(tmp_path):
 def test_cli_generate_cards_real(tmp_path):
     """CLI generate-cards 实际执行。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2056,8 +2072,9 @@ def test_cli_generate_cards_real(tmp_path):
 def test_cli_generate_cards_no_vault(monkeypatch):
     """CLI generate-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 
@@ -2069,6 +2086,7 @@ def test_cli_generate_cards_no_vault(monkeypatch):
 def test_cli_generate_cards_conflicting_flags(tmp_path):
     """--topics-only 和 --companies-only 不能同时使用。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2165,7 +2183,10 @@ def test_classify_company_chinese():
 
 def test_find_topic_aliases(tmp_path):
     """topic alias 检测：Ai Agent → AI Agents。"""
-    from podcast_research.exporters.obsidian import _find_topic_aliases, _write_topic_card
+    from podcast_research.exporters.obsidian import (
+        _find_topic_aliases,
+        _write_topic_card,
+    )
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2185,7 +2206,7 @@ def test_find_topic_aliases(tmp_path):
 
 def test_cleanup_cards_dry_run_no_files(tmp_path):
     """dry-run 不写文件。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card
+    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2212,7 +2233,7 @@ def test_cleanup_cards_dry_run_no_files(tmp_path):
 
 def test_cleanup_cards_apply_migrates_company(tmp_path):
     """apply 迁移 Company → Topic。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card
+    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2244,7 +2265,7 @@ def test_cleanup_cards_apply_migrates_company(tmp_path):
 
 def test_cleanup_cards_apply_no_delete(tmp_path):
     """apply 不删除旧文件，而是移到 backup。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card
+    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2255,7 +2276,7 @@ def test_cleanup_cards_apply_no_delete(tmp_path):
 
     _write_company_card(companies_dir / "Enterprise SaaS.md", "Enterprise SaaS", [])
 
-    result = cleanup_cards(vault, apply=True)
+    cleanup_cards(vault, apply=True)
 
     # File should exist somewhere (moved to backup)
     all_files = list(vault.rglob("*.md"))
@@ -2265,7 +2286,7 @@ def test_cleanup_cards_apply_no_delete(tmp_path):
 
 def test_cleanup_cards_topic_alias_merge(tmp_path):
     """topic alias merge 生效。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_topic_card
+    from podcast_research.exporters.obsidian import _write_topic_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2292,7 +2313,7 @@ def test_cleanup_cards_topic_alias_merge(tmp_path):
 
 def test_cleanup_cards_source_reports_no_duplicate(tmp_path):
     """Source Reports 合并不重复。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_topic_card
+    from podcast_research.exporters.obsidian import _write_topic_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2319,7 +2340,11 @@ def test_cleanup_cards_source_reports_no_duplicate(tmp_path):
 
 def test_cleanup_cards_index_update(tmp_path):
     """Index 更新。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card, _write_topic_card
+    from podcast_research.exporters.obsidian import (
+        _write_company_card,
+        _write_topic_card,
+        cleanup_cards,
+    )
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2346,7 +2371,11 @@ def test_cleanup_cards_index_update(tmp_path):
 
 def test_cleanup_cards_topics_only(tmp_path):
     """--topics-only 只处理 topics。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card, _write_topic_card
+    from podcast_research.exporters.obsidian import (
+        _write_company_card,
+        _write_topic_card,
+        cleanup_cards,
+    )
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2359,7 +2388,7 @@ def test_cleanup_cards_topics_only(tmp_path):
     _write_company_card(companies_dir / "CPU Supply.md", "CPU Supply", [])
     _write_topic_card(topics_dir / "Ai Agent.md", "Ai Agent", [])
 
-    result = cleanup_cards(vault, apply=True, topics_only=True)
+    cleanup_cards(vault, apply=True, topics_only=True)
 
     # CPU Supply should NOT be migrated (companies_only=False, topics_only=True)
     assert (companies_dir / "CPU Supply.md").exists()
@@ -2369,7 +2398,11 @@ def test_cleanup_cards_topics_only(tmp_path):
 
 def test_cleanup_cards_companies_only(tmp_path):
     """--companies-only 只处理 companies。"""
-    from podcast_research.exporters.obsidian import cleanup_cards, _write_company_card, _write_topic_card
+    from podcast_research.exporters.obsidian import (
+        _write_company_card,
+        _write_topic_card,
+        cleanup_cards,
+    )
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2382,7 +2415,7 @@ def test_cleanup_cards_companies_only(tmp_path):
     _write_company_card(companies_dir / "CPU Supply.md", "CPU Supply", [])
     _write_topic_card(topics_dir / "Ai Agent.md", "Ai Agent", [])
 
-    result = cleanup_cards(vault, apply=True, companies_only=True)
+    cleanup_cards(vault, apply=True, companies_only=True)
 
     # CPU Supply should be migrated
     assert not (companies_dir / "CPU Supply.md").exists()
@@ -2407,6 +2440,7 @@ def test_cleanup_cards_empty_vault(tmp_path):
 def test_cli_cleanup_cards_dry_run(tmp_path):
     """CLI cleanup-cards --dry-run 工作。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
     from podcast_research.exporters.obsidian import _write_company_card
 
@@ -2429,8 +2463,9 @@ def test_cli_cleanup_cards_dry_run(tmp_path):
 def test_cli_cleanup_cards_no_vault(monkeypatch):
     """CLI cleanup-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 
@@ -2442,6 +2477,7 @@ def test_cli_cleanup_cards_no_vault(monkeypatch):
 def test_cli_cleanup_cards_conflicting_flags(tmp_path):
     """--topics-only 和 --companies-only 不能同时使用。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2711,6 +2747,7 @@ def test_consolidate_empty_vault(tmp_path):
 def test_cli_consolidate_topics_dry_run(tmp_path):
     """CLI consolidate-topics --dry-run works."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -2730,8 +2767,9 @@ def test_cli_consolidate_topics_dry_run(tmp_path):
 def test_cli_consolidate_topics_no_vault(monkeypatch):
     """CLI consolidate-topics without vault errors."""
     from typer.testing import CliRunner
-    from podcast_research.cli import app
+
     import podcast_research.config
+    from podcast_research.cli import app
 
     monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
 

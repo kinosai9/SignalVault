@@ -1,12 +1,11 @@
 """P2-K.1: Analyze service — reusable wrapper for YouTube analysis pipeline."""
 
-from dataclasses import dataclass, field
-from pathlib import Path
+import contextlib
+from dataclasses import dataclass
 
 from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
 from podcast_research.analysis.pipeline import analyze_from_transcript
 from podcast_research.config import TRANSCRIPT_CACHE_DIR, ensure_dirs
-from podcast_research.utils.youtube import extract_video_id
 
 
 @dataclass
@@ -24,8 +23,8 @@ def _backfill_channel_metadata(video_id: str) -> dict | None:
     """
     import json
     try:
-        from podcast_research.db.session import init_db, get_session
         from podcast_research.db.models import Channel, ChannelVideo
+        from podcast_research.db.session import get_session, init_db
 
         init_db()
         session = get_session()
@@ -40,10 +39,8 @@ def _backfill_channel_metadata(video_id: str) -> dict | None:
 
             tags = []
             if channel.tags and channel.tags != "[]":
-                try:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
                     tags = json.loads(channel.tags)
-                except (json.JSONDecodeError, TypeError):
-                    pass
 
             return {
                 "channel_name": channel.name,
@@ -102,7 +99,7 @@ def analyze_youtube_url(
         return AnalyzeResult(
             success=False,
             error_type="invalid_url",
-            message=f"无法获取该视频的字幕。请确认链接是否有效。",
+            message="无法获取该视频的字幕。请确认链接是否有效。",
         )
 
     # 2. Backfill channel metadata from DB (P2-L.2: fix channel metadata loss)

@@ -12,8 +12,8 @@ from datetime import datetime
 from pathlib import Path
 
 from podcast_research.claim_signal.review import (
-    _parse_frontmatter,
     _ensure_frontmatter_field,
+    _parse_frontmatter,
 )
 from podcast_research.utils.file_io import read_text_safe
 
@@ -129,7 +129,7 @@ def polish_report_metadata(
         except Exception:
             continue
         fm = _parse_frontmatter(content)
-        vid = fm.get("video_id", "")
+        fm.get("video_id", "")
         ch = fm.get("channel", "")
         t = fm.get("title", "")
         if not t:
@@ -171,9 +171,9 @@ def polish_report_metadata(
 def _load_db_metadata() -> dict[str, dict]:
     """Load channel_videos metadata from SQLite DB, keyed by video_id."""
     try:
+
+        from podcast_research.db.models import Channel, ChannelVideo
         from podcast_research.db.session import SessionLocal
-        from podcast_research.db.models import ChannelVideo, Channel
-        import json
 
         session = SessionLocal()
         try:
@@ -301,16 +301,16 @@ def _write_metadata_log(
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lines = [
-        f"# Report Metadata Polish Log",
-        f"",
+        "# Report Metadata Polish Log",
+        "",
         f"## {now}",
-        f"",
+        "",
         f"- Reports scanned: {stats['reports_scanned']}",
         f"- Titles updated: {stats['titles_updated']}",
         f"- Published dates updated: {stats['published_dates_updated']}",
         f"- H1 headings fixed: {stats['h1_fixed']}",
         f"- Display names updated: {stats['display_names_updated']}",
-        f"",
+        "",
     ]
 
     updated_reports = [r for r in results if r.get("action") == "update_metadata"]

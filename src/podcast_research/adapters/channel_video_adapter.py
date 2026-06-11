@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,6 @@ class ChannelVideoAdapter:
         不使用 --flat-playlist（该模式不返回 upload_date/timestamp），
         直接做完整 playlist 提取以获取发布日期。
         """
-        import json
 
         import yt_dlp
 

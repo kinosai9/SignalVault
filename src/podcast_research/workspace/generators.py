@@ -6,8 +6,8 @@ No file I/O, no LLM calls, no external APIs.
 
 from __future__ import annotations
 
-from podcast_research.workspace.scanner import WorkspaceSnapshot
 from podcast_research.utils.display import clean_display_text
+from podcast_research.workspace.scanner import WorkspaceSnapshot
 
 # Managed block names
 BLOCK_HOME = "home-dashboard"

@@ -130,9 +130,7 @@ def get_suggested_companies(snapshot) -> list[str]:
     from podcast_research.llm_wiki.context_builder import HIGH_VALUE_COMPANIES
     suggestions = []
     for c in snapshot.companies:
-        if c.name in HIGH_VALUE_COMPANIES or len(c.source_reports) >= 2:
-            suggestions.append(c.name)
-        elif snapshot.claims_count_for(c.name) > 0 or snapshot.signals_count_for(c.name) > 0:
+        if c.name in HIGH_VALUE_COMPANIES or len(c.source_reports) >= 2 or snapshot.claims_count_for(c.name) > 0 or snapshot.signals_count_for(c.name) > 0:
             suggestions.append(c.name)
     return sorted(set(suggestions))[:10]
 
@@ -397,7 +395,7 @@ def _get_active_topic_names(snapshot: WorkspaceSnapshot) -> set[str]:
 def _build_item_summary(item: WatchlistItemBrief) -> str:
     """Build natural language summary for a watchlist item."""
     if not item.card_exists:
-        return f"未找到对应知识卡片，建议先分析相关报告。"
+        return "未找到对应知识卡片，建议先分析相关报告。"
 
     if item.status == "direct":
         parts = []
@@ -411,14 +409,14 @@ def _build_item_summary(item: WatchlistItemBrief) -> str:
 
     elif item.status == "indirect":
         return (
-            f"本轮未直接提到，但通过相关主题/公司存在间接关联。"
-            f"建议继续关注相关方向的变化。"
+            "本轮未直接提到，但通过相关主题/公司存在间接关联。"
+            "建议继续关注相关方向的变化。"
         )
 
     else:
         return (
-            f"本轮暂无新证据。当前判断仍主要依赖既有报告，"
-            f"建议等待新的相关信息后再更新判断。"
+            "本轮暂无新证据。当前判断仍主要依赖既有报告，"
+            "建议等待新的相关信息后再更新判断。"
         )
 
 
@@ -436,7 +434,7 @@ def render_watchlist_markdown(brief: list[WatchlistItemBrief]) -> str:
     from podcast_research.utils.display import clean_display_text
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines = [f"# Watchlist Brief", f"", f"*Generated: {now}*", ""]
+    lines = ["# Watchlist Brief", "", f"*Generated: {now}*", ""]
 
     companies = [b for b in brief if b.item_type == "company"]
     topics = [b for b in brief if b.item_type == "topic"]

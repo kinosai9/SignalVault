@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 from typer.testing import CliRunner
 
 from podcast_research.cli import app

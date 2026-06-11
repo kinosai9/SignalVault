@@ -3,12 +3,27 @@
 All tests use mock provider — no real LLM API calls.
 """
 
-import pytest
 from pathlib import Path
 
+from podcast_research.analysis.chunking import (
+    MAX_MERGED_ENTITIES,
+    MAX_MERGED_INVESTMENT_VIEWS,
+    _compact_entities,
+    _compact_insights,
+    _compact_signals,
+    _compact_views,
+    _dedup_entities,
+    _dedup_insights,
+    _dedup_risks,
+    _dedup_signals,
+    _dedup_views,
+    chunk_transcript,
+    is_long_transcript,
+    merge_extraction_results,
+)
 from podcast_research.analysis.models import (
-    Evidence,
     Entity,
+    Evidence,
     ExtractionResult,
     InvestmentView,
     Risk,
@@ -16,26 +31,6 @@ from podcast_research.analysis.models import (
     TechIndustryInsight,
     TrackingSignal,
 )
-from podcast_research.analysis.chunking import (
-    is_long_transcript,
-    chunk_transcript,
-    merge_extraction_results,
-    _dedup_views,
-    _dedup_entities,
-    _dedup_insights,
-    _dedup_risks,
-    _dedup_signals,
-    _compact_views,
-    _compact_insights,
-    _compact_entities,
-    _compact_signals,
-    DEFAULT_CHUNK_CHAR_LIMIT,
-    DEFAULT_CHUNK_OVERLAP_CHARS,
-    MAX_MERGED_INVESTMENT_VIEWS,
-    MAX_MERGED_TECH_INSIGHTS,
-    MAX_MERGED_ENTITIES,
-)
-
 
 # ── Helpers ──
 
@@ -395,7 +390,7 @@ def test_merge_preserves_total_count_in_metadata():
 def test_merge_compaction_enforces_limits():
     """合并后不超过 compaction 上限。"""
     results = []
-    for i in range(5):
+    for _i in range(5):
         extraction = ExtractionResult(
             investment_views=[_make_view(f"Target{j}") for j in range(10)],
             mentioned_entities=[Entity(name=f"Entity{j}") for j in range(30)],
@@ -485,6 +480,7 @@ def test_pipeline_no_chunking_config_forced(db_session, tmp_path):
 def test_cli_chunked_flag(db_session, tmp_path):
     """CLI --chunked 参数可用。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
@@ -502,6 +498,7 @@ def test_cli_chunked_flag(db_session, tmp_path):
 def test_cli_no_chunking_flag(db_session, tmp_path):
     """CLI --no-chunking 参数可用。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"

@@ -16,7 +16,7 @@ import threading
 import time as _time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Callable
 
 _MAX_JOBS = 50
@@ -572,7 +572,7 @@ def get_job_status(job_id: str) -> dict[str, Any] | None:
         _FAILURE_MESSAGES = {
             "transcript_failed": ("无法获取视频字幕", "请检查视频链接是否有效，或稍后重试。"),
             "analysis_failed": ("AI 分析未完成", f"分析在「{_stage_message(job.stage)}」阶段失败。"),
-            "report_failed": ("报告生成失败", f"报告保存阶段失败。"),
+            "report_failed": ("报告生成失败", "报告保存阶段失败。"),
             "sync_failed_after_report": ("报告已生成，但知识库同步失败", job.error or "同步过程中遇到错误。"),
             "rerun_failed": ("重新整理失败，旧版本已保留", job.error or "重新整理过程中遇到错误。"),
         }
@@ -584,9 +584,7 @@ def get_job_status(job_id: str) -> dict[str, Any] | None:
         if failure_kind == "sync_failed_after_report":
             result_links["report"] = f"/reports/{job.report_id}"
             result_links["retry_sync"] = f"/reports/{job.report_id}/sync"
-        elif failure_kind == "rerun_failed":
-            result_links["retry"] = f"/tasks/{job.job_id}"
-        elif failure_kind in ("transcript_failed", "analysis_failed", "report_failed"):
+        elif failure_kind == "rerun_failed" or failure_kind in ("transcript_failed", "analysis_failed", "report_failed"):
             result_links["retry"] = f"/tasks/{job.job_id}"
 
     # Build stage_progress for chunk display
@@ -701,7 +699,9 @@ def start_job(job: AnalysisJob, progress_callback: Callable | None = None) -> No
                 update_job(job.job_id, stage="saving_report",
                            message="正在保存报告")
 
-                from podcast_research.services.sync_service import sync_report_to_knowledge_base
+                from podcast_research.services.sync_service import (
+                    sync_report_to_knowledge_base,
+                )
 
                 def _sync_progress(stage: str, msg: str, **kwargs: Any) -> None:
                     # Map sync stages to job updates; skip "success" stage from sync
@@ -764,7 +764,9 @@ def start_sync_job(job: AnalysisJob) -> None:
                 _JOBS[job.job_id].last_heartbeat_at = now
 
         try:
-            from podcast_research.services.sync_service import sync_report_to_knowledge_base
+            from podcast_research.services.sync_service import (
+                sync_report_to_knowledge_base,
+            )
 
             def _progress(stage: str, msg: str, **kwargs: Any) -> None:
                 update_job(
@@ -823,10 +825,11 @@ def _writeback_sync_result(
     import logging as _logging
     _log = _logging.getLogger(__name__)
     try:
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_report
-        from podcast_research.db.models import ChannelVideo
         from datetime import datetime
+
+        from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_report
+        from podcast_research.db.session import get_session
 
         session = get_session()
         try:
@@ -882,9 +885,10 @@ def _writeback_channel_video_status(
     # Path 1: Direct video_id lookup (full_flow from channel_videos page)
     if job.source_type == "channel_video" and job.video_id:
         try:
-            from podcast_research.db.session import get_session
-            from podcast_research.db.models import ChannelVideo
             from datetime import datetime
+
+            from podcast_research.db.models import ChannelVideo
+            from podcast_research.db.session import get_session
             session = get_session()
             try:
                 cv = session.query(ChannelVideo).filter_by(
@@ -1005,11 +1009,11 @@ def start_channel_refresh_job(job: AnalysisJob) -> None:
 
         try:
             from podcast_research.adapters.channel_video_adapter import (
-                ChannelVideoAdapter, ChannelVideoItem,
+                ChannelVideoAdapter,
             )
             from podcast_research.db.repository import (
-                upsert_channel_video, refresh_channel_timestamp,
-                detect_video_import_status,
+                refresh_channel_timestamp,
+                upsert_channel_video,
             )
             from podcast_research.db.session import get_session
 
@@ -1059,7 +1063,7 @@ def start_channel_refresh_job(job: AnalysisJob) -> None:
                 if job.source_channel_id:
                     refresh_channel_timestamp(session, job.source_channel_id)
                 session.commit()
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 raise
             finally:

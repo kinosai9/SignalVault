@@ -1,6 +1,5 @@
 """P2-F.1: Claim / Signal Review Workflow tests."""
 
-import pytest
 from pathlib import Path
 
 
@@ -259,6 +258,7 @@ def test_update_updates_index(tmp_path):
 def test_cli_claims_list(tmp_path):
     """Test CLI claims list."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -273,6 +273,7 @@ def test_cli_claims_list(tmp_path):
 def test_cli_signals_list(tmp_path):
     """Test CLI signals list."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -287,6 +288,7 @@ def test_cli_signals_list(tmp_path):
 def test_cli_claims_update(tmp_path):
     """Test CLI claims update-status."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -305,6 +307,7 @@ def test_cli_claims_update(tmp_path):
 def test_cli_signals_update(tmp_path):
     """Test CLI signals update-status."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"

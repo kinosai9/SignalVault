@@ -1,6 +1,5 @@
 """P2-F: Claim / Signal Card Generation tests."""
 
-import pytest
 from pathlib import Path
 
 
@@ -250,7 +249,7 @@ def test_dry_run_does_not_write(tmp_path):
     claims_dir = vault / "06_Claims"
     signals_dir = vault / "07_Signals"
 
-    result = generate_all(vault, dry_run=True)
+    generate_all(vault, dry_run=True)
     assert not claims_dir.exists() or len(list(claims_dir.glob("*.md"))) == 0
     assert not signals_dir.exists() or len(list(signals_dir.glob("*.md"))) == 0
 
@@ -392,6 +391,7 @@ def test_source_patches_only(tmp_path):
 def test_cli_generate_claims_signals_dry_run(tmp_path):
     """Test CLI obsidian generate-claims-signals --dry-run."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = _create_vault(tmp_path)
@@ -409,6 +409,7 @@ def test_cli_generate_claims_signals_dry_run(tmp_path):
 def test_cli_claims_only(tmp_path):
     """Test CLI --claims-only."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = _create_vault(tmp_path)
@@ -427,6 +428,7 @@ def test_cli_claims_only(tmp_path):
 def test_cli_mutual_exclusion(tmp_path):
     """Test --claims-only and --signals-only mutual exclusion."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()

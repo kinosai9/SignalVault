@@ -14,16 +14,14 @@ from datetime import datetime
 from pathlib import Path
 
 from podcast_research.claim_signal.review import (
-    _parse_frontmatter,
     _ensure_frontmatter_field,
-    _update_frontmatter_field,
+    _parse_frontmatter,
+)
+from podcast_research.llm_wiki.taxonomy import (
+    KNOWN_NON_COMPANY,
+    TOPIC_CANONICAL_MAP,
 )
 from podcast_research.utils.file_io import read_text_safe
-from podcast_research.llm_wiki.taxonomy import (
-    TOPIC_CANONICAL_MAP,
-    KNOWN_NON_COMPANY,
-    normalize_topic_name,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +394,7 @@ def _replace_frontmatter_list(content: str, field: str, values: list[str]) -> st
     field_found = False
     skip_until_next_field = False
 
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         stripped = line.strip()
 
         if stripped == "---" and not fm_closed:
@@ -416,10 +414,7 @@ def _replace_frontmatter_list(content: str, field: str, values: list[str]) -> st
         if in_fm and not fm_closed:
             if field_found and skip_until_next_field:
                 # We're in the old list items; skip until next field or closing ---
-                if ":" in stripped and not stripped.startswith("-"):
-                    skip_until_next_field = False
-                    result.append(line)
-                elif stripped == "---":
+                if ":" in stripped and not stripped.startswith("-") or stripped == "---":
                     skip_until_next_field = False
                     result.append(line)
                 continue
@@ -475,7 +470,7 @@ def _write_backfill_log(
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lines = [
-        f"# Relation Backfill Log",
+        "# Relation Backfill Log",
         "",
         f"## {now}",
         "",

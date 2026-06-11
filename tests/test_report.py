@@ -1,6 +1,6 @@
 """Markdown 报告生成测试。"""
 
-from podcast_research.analysis.models import ExtractionResult, InvestmentView, Risk, TrackingSignal, Entity
+from podcast_research.analysis.models import ExtractionResult
 from podcast_research.llm.mock_provider import MockLLMProvider
 
 # 用包含投资关键词的测试文本模拟真实字幕

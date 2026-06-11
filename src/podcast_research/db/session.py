@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import Session, sessionmaker
 
 from podcast_research.config import DB_PATH
 from podcast_research.db.models import Base

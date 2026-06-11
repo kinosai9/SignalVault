@@ -2,25 +2,20 @@
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
-from podcast_research.workspace.managed_block import (
-    _upsert_managed_block,
-    _remove_managed_block,
-    _has_managed_block,
-)
-from podcast_research.workspace.scanner import VaultScanner
+from podcast_research.workspace import refresh_workspace
 from podcast_research.workspace.generators import (
     generate_home_dashboard,
     generate_knowledge_map,
     generate_review_queue,
-    BLOCK_HOME,
-    BLOCK_KNOWLEDGE_MAP,
-    BLOCK_REVIEW_QUEUE,
 )
-from podcast_research.workspace import refresh_workspace
-
+from podcast_research.workspace.managed_block import (
+    _has_managed_block,
+    _remove_managed_block,
+    _upsert_managed_block,
+)
+from podcast_research.workspace.scanner import VaultScanner
 
 # ── Vault builder helpers ──────────────────────────────────────────
 
@@ -627,7 +622,7 @@ class TestRefreshWorkspace:
         _add_topic(vault, "AI Agents", status="core", source_reports=["r1"])
         _add_channel(vault, "TestChannel")
 
-        result = refresh_workspace(vault, dry_run=False)
+        refresh_workspace(vault, dry_run=False)
 
         home = vault / "Home.md"
         km = vault / "99_System" / "Knowledge Map.md"
@@ -695,7 +690,7 @@ class TestRefreshWorkspace:
         vault = _make_vault(tmp_path)
         _add_report(vault, "r1")
 
-        result = refresh_workspace(vault, dry_run=False, knowledge_map_only=True)
+        refresh_workspace(vault, dry_run=False, knowledge_map_only=True)
 
         assert not (vault / "Home.md").exists()
         assert (vault / "99_System" / "Knowledge Map.md").exists()
@@ -705,7 +700,7 @@ class TestRefreshWorkspace:
         vault = _make_vault(tmp_path)
         _add_report(vault, "r1")
 
-        result = refresh_workspace(vault, dry_run=False, review_queue_only=True)
+        refresh_workspace(vault, dry_run=False, review_queue_only=True)
 
         assert not (vault / "Home.md").exists()
         assert not (vault / "99_System" / "Knowledge Map.md").exists()
@@ -738,6 +733,7 @@ class TestWorkspaceCLI:
 
     def test_refresh_dry_run(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         vault = _make_vault(tmp_path)
@@ -757,6 +753,7 @@ class TestWorkspaceCLI:
 
     def test_refresh_requires_vault(self):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         runner = CliRunner()
@@ -768,6 +765,7 @@ class TestWorkspaceCLI:
 
     def test_refresh_mutually_exclusive_flags(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         vault = _make_vault(tmp_path)
@@ -1215,8 +1213,8 @@ class TestHomeDashboardCuration:
     def test_includes_curation_column(self, tmp_path):
         vault = _make_vault(tmp_path)
         _add_topic(vault, "AI Agents", status="core")
-        from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.generators import generate_home_dashboard
+        from podcast_research.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         content = generate_home_dashboard(snapshot)
@@ -1229,8 +1227,8 @@ class TestReviewQueueTopN:
         for i in range(15):
             _add_claim(vault, f"claim_{i:03d}", status="active",
                         claim_text=f"Claim {i}")
-        from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.generators import generate_review_queue
+        from podcast_research.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         content = generate_review_queue(snapshot)
@@ -1243,8 +1241,8 @@ class TestReviewQueueTopN:
         for i in range(15):
             _add_signal(vault, f"signal_{i:03d}", status="open",
                          signal_text=f"Signal {i}")
-        from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.generators import generate_review_queue
+        from podcast_research.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         content = generate_review_queue(snapshot)
@@ -1256,8 +1254,8 @@ class TestReviewQueueTopN:
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_001", status="active")
         _add_claim(vault, "claim_002", status="challenged")
-        from podcast_research.workspace.scanner import VaultScanner
         from podcast_research.workspace.generators import generate_review_queue
+        from podcast_research.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         content = generate_review_queue(snapshot)
@@ -1271,6 +1269,7 @@ class TestReviewQueueTopN:
 class TestBackfillCLI:
     def test_backfill_dry_run(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         vault = _make_vault(tmp_path)
@@ -1302,6 +1301,7 @@ AI Agents.
 
     def test_backfill_requires_flag(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         vault = _make_vault(tmp_path)
@@ -1314,6 +1314,7 @@ AI Agents.
 
     def test_curation_status_dry_run(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
 
         vault = _make_vault(tmp_path)
@@ -1395,7 +1396,10 @@ tags: []
         assert title == "DB Title"
 
     def test_h1_is_video_id_detection(self):
-        from podcast_research.workspace.metadata import _h1_is_video_id, _is_video_id_string
+        from podcast_research.workspace.metadata import (
+            _h1_is_video_id,
+            _is_video_id_string,
+        )
         assert _is_video_id_string("d6EMk6dyrOU")
         assert _is_video_id_string("CSYWbbP_OkY")
         assert not _is_video_id_string("Human Readable Title")
@@ -1541,6 +1545,7 @@ source_reports: []
 class TestMetadataCLI:
     def test_metadata_dry_run(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
         vault = _make_vault(tmp_path)
         p = vault / "01_Reports" / "test.md"
@@ -1562,6 +1567,7 @@ tags: []
 
     def test_longtail_cleanup_dry_run(self, tmp_path):
         from typer.testing import CliRunner
+
         from podcast_research.cli import app
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Cicd", status="long_tail", source_reports=["r1"])

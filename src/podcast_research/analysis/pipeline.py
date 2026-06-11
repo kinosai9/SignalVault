@@ -4,9 +4,9 @@ import json
 import logging
 from pathlib import Path
 
-from podcast_research.analysis.models import ExtractionResult, SubtitleSegment
 from podcast_research.adapters.base import TranscriptResult
-from podcast_research.config import REPORT_DIR, SUBTITLE_DIR, ensure_dirs
+from podcast_research.analysis.models import ExtractionResult, SubtitleSegment
+from podcast_research.config import REPORT_DIR, ensure_dirs
 from podcast_research.db.repository import (
     save_entities,
     save_episode,
@@ -55,8 +55,10 @@ def get_llm_provider(provider_name: str) -> LLMProvider:
     if provider_name == "mock":
         return MockLLMProvider()
     if provider_name in ("openai-compatible", "openai_compatible"):
-        from podcast_research.llm.openai_compatible_provider import OpenAICompatibleProvider
-        from podcast_research.config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
+        from podcast_research.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+        from podcast_research.llm.openai_compatible_provider import (
+            OpenAICompatibleProvider,
+        )
         if not LLM_API_KEY:
             raise ValueError("openai-compatible provider 需要配置 LLM_API_KEY（见 .env）")
         return OpenAICompatibleProvider(
@@ -139,8 +141,8 @@ def _run_pipeline(
       enabled=False: force no chunk (long transcript WARNING)
     """
     from podcast_research.analysis.chunking import (
-        is_long_transcript,
         chunk_transcript,
+        is_long_transcript,
         merge_extraction_results,
     )
 

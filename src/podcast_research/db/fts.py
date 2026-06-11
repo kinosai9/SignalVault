@@ -8,7 +8,6 @@
 
 import logging
 import re
-from typing import Any
 
 _CJK_RE = re.compile(r"([一-鿿㐀-䶿])")
 
@@ -86,7 +85,6 @@ def rebuild_search_index(session: Session) -> int:
         return 0
 
     from podcast_research.db.models import (
-        EntityRecord,
         Episode,
         InvestmentViewRecord,
         Report,

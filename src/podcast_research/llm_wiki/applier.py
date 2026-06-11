@@ -12,17 +12,15 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from podcast_research.llm_wiki.validator import (
-    validate_patch_file,
-    PatchValidationResult,
-)
-from podcast_research.utils.file_io import read_text_safe
 from podcast_research.llm_wiki.taxonomy import (
-    SECTION_ORDER,
+    classify_entity,
     get_section_position,
     normalize_topic_name,
-    classify_entity,
 )
+from podcast_research.llm_wiki.validator import (
+    validate_patch_file,
+)
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 

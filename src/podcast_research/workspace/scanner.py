@@ -214,9 +214,7 @@ class WorkspaceSnapshot:
         for c in self.companies:
             if c.name.lower() in _NOT_A_COMPANY:
                 continue  # Skip: this is a concept, not a company
-            if c.name in HIGH_VALUE_COMPANIES:
-                result.append(c)
-            elif len(c.source_reports) >= 2:
+            if c.name in HIGH_VALUE_COMPANIES or len(c.source_reports) >= 2:
                 result.append(c)
         return result
 

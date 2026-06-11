@@ -1,13 +1,13 @@
 """字幕解析器测试。"""
 
-import pytest
-
 from pathlib import Path
+
+import pytest
 
 from podcast_research.analysis.models import SubtitleSegment
 from podcast_research.subtitles.parser import (
-    _parse_vtt,
     _normalize_vtt_time,
+    _parse_vtt,
     detect_format,
     parse_subtitle,
 )

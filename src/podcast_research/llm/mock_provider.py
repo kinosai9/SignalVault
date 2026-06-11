@@ -9,16 +9,14 @@ from __future__ import annotations
 import re
 
 from podcast_research.analysis.models import (
+    Entity,
+    Evidence,
     ExtractionResult,
     InvestmentView,
-    Evidence,
-    TrackingSignal,
-    Entity,
     Risk,
-    SubtitleSegment,
+    TrackingSignal,
 )
 from podcast_research.llm.base import LLMProvider
-
 
 # ── 关词库 ──
 
@@ -127,7 +125,7 @@ class MockLLMProvider(LLMProvider):
                     lines.append(f"- **频道标签**：{tags_str}")
             else:
                 path = source_info.get("source_path", "")
-                lines.append(f"- **来源**：本地字幕文件")
+                lines.append("- **来源**：本地字幕文件")
                 if path:
                     lines.append(f"- **文件**：{path}")
             lines.append("")

@@ -41,8 +41,7 @@ from podcast_research.db.repository import (
     save_report,
     save_tracking_signals,
 )
-from podcast_research.db.session import init_db, get_session, reset_engine
-
+from podcast_research.db.session import get_session, init_db, reset_engine
 
 SAMPLE_SRT = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
 
@@ -95,7 +94,7 @@ def seeded_db(db_session):
     # 报告 1: local，宁德时代
     ep1 = save_episode(session, "新能源访谈", "test.srt", "srt", "hash1")
     ex1 = _make_extraction("宁德时代", "bullish")
-    rep1 = save_report(session, ep1, ex1, f"# 新能源报告\n宁德时代储能需求增长", analysis_depth="standard")
+    rep1 = save_report(session, ep1, ex1, "# 新能源报告\n宁德时代储能需求增长", analysis_depth="standard")
     save_investment_views(session, rep1, ex1.investment_views)
     save_tracking_signals(session, rep1, ex1.tracking_signals)
     save_entities(session, ex1.mentioned_entities)
@@ -103,7 +102,7 @@ def seeded_db(db_session):
     # 报告 2: local，港股红利
     ep2 = save_episode(session, "港股策略", "test2.srt", "srt", "hash2")
     ex2 = _make_extraction("港股红利ETF", "neutral")
-    rep2 = save_report(session, ep2, ex2, f"# 港股策略报告\n港股红利估值偏低", analysis_depth="deep")
+    rep2 = save_report(session, ep2, ex2, "# 港股策略报告\n港股红利估值偏低", analysis_depth="deep")
     save_investment_views(session, rep2, ex2.investment_views)
     save_tracking_signals(session, rep2, ex2.tracking_signals)
     save_entities(session, ex2.mentioned_entities)
@@ -116,7 +115,7 @@ def seeded_db(db_session):
         language="en",
     )
     ex3 = _make_extraction("NVIDIA", "bullish")
-    rep3 = save_report(session, ep3, ex3, f"# AI Report\nNVIDIA GPU demand is strong", analysis_depth="standard")
+    rep3 = save_report(session, ep3, ex3, "# AI Report\nNVIDIA GPU demand is strong", analysis_depth="standard")
     save_investment_views(session, rep3, ex3.investment_views)
     save_tracking_signals(session, rep3, ex3.tracking_signals)
     save_entities(session, ex3.mentioned_entities)
@@ -129,6 +128,7 @@ def seeded_db(db_session):
 def api_client(db_session):
     """创建 FastAPI TestClient，复用 db_session 的临时数据库。"""
     from fastapi.testclient import TestClient
+
     from podcast_research.api.app import create_app
 
     app = create_app()

@@ -1,6 +1,5 @@
 """P1-D: FTS5 全文搜索测试"""
 
-import pytest
 
 
 def test_ensure_fts_table_creates_table(db_session):
@@ -78,8 +77,8 @@ def test_search_reports_auto_creates_fts(db_session, seeded_db):
 
 def test_cli_rebuild_index(db_session, seeded_db):
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
-    import podcast_research.db.session as session_mod
 
     # 确保 engine 指向临时数据库
     runner = CliRunner()

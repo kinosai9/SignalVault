@@ -12,6 +12,7 @@ from __future__ import annotations
 CURRENT_PIPELINE_VERSION = "p2-m3"
 CURRENT_SYNC_VERSION = "p2-m3"
 
+import contextlib
 import json
 import logging
 import re
@@ -19,19 +20,18 @@ import shutil
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
-from podcast_research.db.models import Report, Episode, InvestmentViewRecord
-from podcast_research.utils.file_io import read_text_safe
-from podcast_research.db.repository import _parse_focus_areas, _infer_source_type
+from podcast_research.db.models import Episode, InvestmentViewRecord, Report
+from podcast_research.db.repository import _infer_source_type, _parse_focus_areas
 from podcast_research.db.session import get_session, init_db
 from podcast_research.exporters.markdown_utils import (
+    _WIKI_LINK_ENTITY_TYPES,
     build_frontmatter,
     sanitize_filename,
     wiki_link,
     wiki_links_from_list,
-    _WIKI_LINK_ENTITY_TYPES,
 )
+from podcast_research.utils.file_io import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def _format_insights_list(insights_data: list[dict]) -> str:
         return "No tech/industry insights."
 
     lines = []
-    for i, ins in enumerate(insights_data):
+    for _i, ins in enumerate(insights_data):
         tags = " ".join(f"#{t}" for t in ins.get("topic_tags", []))
         lines.append(f"- **{ins.get('insight', '')}** `{tags}`")
         if ins.get("source_quote"):
@@ -515,11 +515,10 @@ def export_to_vault(
         q = session.query(Report, Episode).join(Episode, Report.episode_id == Episode.id)
 
         # Filter: only youtube for v1
-        if source_type:
-            if source_type == "youtube":
-                q = q.filter(
-                    (Episode.video_id != "") | (Episode.source_url.like("%youtube%"))
-                )
+        if source_type and source_type == "youtube":
+            q = q.filter(
+                (Episode.video_id != "") | (Episode.source_url.like("%youtube%"))
+            )
             # "local" filter not needed for v1
 
         if prompt_version:
@@ -674,13 +673,11 @@ def export_to_vault(
                 published_at = cv_meta["published_at"]
 
         # Also try channel lookup from DB (by name/URL match)
-        for ch_id, ch in ch_map.items():
+        for _ch_id, ch in ch_map.items():
             if ch.name == channel_name or ch.url == channel_url:
                 if not channel_tags:
-                    try:
+                    with contextlib.suppress(json.JSONDecodeError, TypeError):
                         channel_tags = json.loads(ch.tags) if ch.tags else []
-                    except (json.JSONDecodeError, TypeError):
-                        pass
                 if not channel_url:
                     channel_url = ch.url
                 break
@@ -839,9 +836,7 @@ def _parse_yaml_frontmatter(content: str) -> dict:
         key = line[:colon_idx].strip()
         val = line[colon_idx + 1:].strip()
         # Strip quotes
-        if val.startswith('"') and val.endswith('"'):
-            val = val[1:-1]
-        elif val.startswith("'") and val.endswith("'"):
+        if val.startswith('"') and val.endswith('"') or val.startswith("'") and val.endswith("'"):
             val = val[1:-1]
         if key:
             result[key] = val
@@ -952,10 +947,8 @@ def _re_export_report(
     for ch in ch_map.values():
         if ch.name == channel_name or ch.url == channel_url:
             if not channel_tags:
-                try:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
                     channel_tags = json.loads(ch.tags) if ch.tags else []
-                except (json.JSONDecodeError, TypeError):
-                    pass
             if not channel_url:
                 channel_url = ch.url
             break
@@ -2059,8 +2052,7 @@ _COMPANY_WHITELIST = {
     "primerica", "citigroup", "american can company",
     "massachusetts investors trust", "fidelity investments",
     "deepseek", "moonshot ai", "cloudflare", "github",
-    "langchain", "workos", "zendesk", "salesforce",
-    "pinecone", "cursor", "e2b", "daytona", "axiom",
+    "langchain", "workos", "zendesk", "pinecone", "cursor", "e2b", "daytona", "axiom",
     "chatbase",
 }
 
@@ -2602,7 +2594,6 @@ _TOPIC_ALIAS_EXTENDED = {
     "models": "AI Models",
     "ai model": "AI Models",
     "ai models": "AI Models",
-    "foundation model": "AI Models",
     "foundation models": "AI Models",
 
     # Enterprise AI (generic "enterprise" and Chinese "企业级" must merge here)

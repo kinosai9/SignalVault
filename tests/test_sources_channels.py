@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 # ── Helpers ───────────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
@@ -107,7 +106,7 @@ class TestSourcesChannelsPage:
 
     def test_channels_page_with_channels(self, api_client):
         """Channel list shows added channels."""
-        ch_id = _seed_channel(api_client, name="My Test Channel")
+        _seed_channel(api_client, name="My Test Channel")
 
         resp = api_client.get("/sources/channels")
         assert resp.status_code == 200
@@ -313,8 +312,8 @@ class TestChannelRefresh:
         time.sleep(0.3)
 
         # Check DB directly — should have exactly 3 videos (no duplicates)
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import list_channel_videos
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             videos = list_channel_videos(session, ch_id)
@@ -332,8 +331,8 @@ class TestVideoImportStatus:
 
     def test_new_video_is_new(self, api_client):
         """Unknown video_id should return 'new'."""
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import detect_video_import_status
+        from podcast_research.db.session import get_session
 
         session = get_session()
         try:
@@ -344,8 +343,8 @@ class TestVideoImportStatus:
 
     def test_analyzed_video_detected(self, api_client, seeded_db):
         """Video that exists in episodes table should be 'analyzed'."""
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import detect_video_import_status
+        from podcast_research.db.session import get_session
 
         session = get_session()
         try:
@@ -357,8 +356,8 @@ class TestVideoImportStatus:
 
     def test_synced_video_detected_in_vault(self, api_client, seeded_db, tmp_path):
         """Video in Obsidian vault frontmatter should be 'synced'."""
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import detect_video_import_status
+        from podcast_research.db.session import get_session
 
         # Create a fake vault with a report containing the video_id
         vault = tmp_path / "vault"
@@ -442,7 +441,7 @@ class TestEdgeCases:
 
     def test_chinese_status_labels(self, api_client):
         """Video list should show Chinese status labels."""
-        ch_id = _seed_channel(api_client, name="LabelTest")
+        _seed_channel(api_client, name="LabelTest")
 
         resp = api_client.get("/sources/channels")
         html = resp.text
@@ -456,10 +455,12 @@ class TestTaskSuccessPage:
 
     def test_task_success_no_spinner(self, api_client):
         """Success page should not show spinner."""
-        from podcast_research.services.job_service import (
-            create_job, start_job, update_job, AnalysisJob,
-        )
         import time
+
+        from podcast_research.services.job_service import (
+            create_job,
+            update_job,
+        )
         job = create_job(
             youtube_url="https://www.youtube.com/watch?v=dummy",
             focus_areas=["AI"],
@@ -482,7 +483,8 @@ class TestTaskSuccessPage:
     def test_task_success_checklist_full_flow(self, api_client):
         """Full flow success page should show checklist."""
         from podcast_research.services.job_service import (
-            create_job, start_job, update_job,
+            create_job,
+            update_job,
         )
         job = create_job(
             youtube_url="https://www.youtube.com/watch?v=dummy2",
@@ -505,7 +507,8 @@ class TestTaskSuccessPage:
     def test_channel_refresh_success_result_links(self, api_client):
         """channel_refresh job success should have video list link."""
         from podcast_research.services.job_service import (
-            create_channel_refresh_job, start_channel_refresh_job, update_job,
+            create_channel_refresh_job,
+            update_job,
         )
         job = create_channel_refresh_job(
             channel_url="https://www.youtube.com/@TestChan",
@@ -538,7 +541,8 @@ class TestChannelRefreshJob:
     def test_channel_refresh_job_type_label(self, api_client):
         """channel_refresh job should appear in task list with readable label."""
         from podcast_research.services.job_service import (
-            create_channel_refresh_job, update_job,
+            create_channel_refresh_job,
+            update_job,
         )
         job = create_channel_refresh_job(
             channel_url="https://www.youtube.com/@LabelChan",
@@ -585,8 +589,8 @@ class TestVideoStatusSync:
         assert "/tasks/" in resp.headers["location"]
 
         # Check DB
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "importTest1")
@@ -614,8 +618,11 @@ class TestVideoStatusSync:
         time.sleep(0.5)
 
         # Manually set status to processing
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import update_channel_video_status, get_channel_video_by_video_id
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "procVid")
@@ -649,8 +656,11 @@ class TestVideoStatusSync:
         time.sleep(0.5)
 
         # Set to synced
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import update_channel_video_status, get_channel_video_by_video_id
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "synVid")
@@ -672,7 +682,8 @@ class TestJobStatusWriteback:
     def test_full_flow_success_writes_synced(self, api_client, monkeypatch):
         """After full_flow job success, channel_videos status should be synced."""
         from podcast_research.services.job_service import (
-            create_job, update_job, _writeback_channel_video_status, AnalysisJob,
+            AnalysisJob,
+            _writeback_channel_video_status,
         )
 
         ch_id = _seed_channel(api_client)
@@ -706,8 +717,8 @@ class TestJobStatusWriteback:
             job, status="synced", report_id=99,
         )
 
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "writeback1")
@@ -718,12 +729,13 @@ class TestJobStatusWriteback:
 
     def test_full_flow_failure_writes_failed(self, seeded_db, monkeypatch):
         """After full_flow failure, channel_videos status should be failed."""
-        from podcast_research.services.job_service import (
-            _writeback_channel_video_status, AnalysisJob,
-        )
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
+        from podcast_research.services.job_service import (
+            AnalysisJob,
+            _writeback_channel_video_status,
+        )
 
         # Create a channel_video directly in DB
         session = get_session()
@@ -765,10 +777,10 @@ class TestSyncRetryWriteback:
 
     def test_retry_sync_success_writes_synced(self, seeded_db):
         """Retry sync on a previously-failed video updates status to synced."""
-        from podcast_research.services.job_service import _writeback_sync_result
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
+        from podcast_research.services.job_service import _writeback_sync_result
 
         # Create a ChannelVideo with failed status
         session = get_session()
@@ -800,10 +812,10 @@ class TestSyncRetryWriteback:
 
     def test_retry_sync_success_clears_failure_reason(self, seeded_db):
         """On sync retry success, failure_reason should be cleared."""
-        from podcast_research.services.job_service import _writeback_sync_result
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
+        from podcast_research.services.job_service import _writeback_sync_result
 
         session = get_session()
         try:
@@ -832,10 +844,10 @@ class TestSyncRetryWriteback:
 
     def test_synced_not_downgraded_by_sync_failure(self, seeded_db):
         """Already synced video stays synced even if sync fails later."""
-        from podcast_research.services.job_service import _writeback_sync_result
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
+        from podcast_research.services.job_service import _writeback_sync_result
 
         session = get_session()
         try:
@@ -906,8 +918,11 @@ class _SeedChannelWithVideosMixin:
         import time; time.sleep(0.3)
 
         if status != "new":
+            from podcast_research.db.repository import (
+                get_channel_video_by_video_id,
+                update_channel_video_status,
+            )
             from podcast_research.db.session import get_session
-            from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
             session = get_session()
             try:
                 cv = get_channel_video_by_video_id(session, video_id)
@@ -1219,8 +1234,8 @@ class TestActiveJobIdLifecycle:
         assert resp.status_code == 303
 
         # Check active_job_id was set
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "ajTest1")
@@ -1231,12 +1246,13 @@ class TestActiveJobIdLifecycle:
 
     def test_active_job_id_cleared_on_writeback(self, seeded_db):
         """writeback should clear active_job_id."""
-        from podcast_research.services.job_service import (
-            _writeback_channel_video_status, AnalysisJob,
-        )
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
+        from podcast_research.services.job_service import (
+            AnalysisJob,
+            _writeback_channel_video_status,
+        )
 
         # Create channel_video with active_job_id
         session = get_session()
@@ -1291,8 +1307,11 @@ class TestRerunButton:
         import time; time.sleep(0.3)
 
         # Set to synced
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunBtnS")
@@ -1320,8 +1339,11 @@ class TestRerunButton:
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunBtnA")
@@ -1353,8 +1375,11 @@ class TestRerunRoutes:
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunGet1")
@@ -1390,8 +1415,11 @@ class TestRerunRoutes:
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+        )
         from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunPost1")
@@ -1588,7 +1616,8 @@ class TestRecommendationBadges:
     def test_new_plus_watchlist_gets_recommended(self):
         """new + watchlist_match → 'recommended' badge."""
         from podcast_research.services.watchlist_matcher import (
-            compute_recommendation, MatchResult,
+            MatchResult,
+            compute_recommendation,
         )
         match = MatchResult(matched=True, matched_terms=["OpenAI"],
                            matched_type="company", reason="test")
@@ -1598,7 +1627,8 @@ class TestRecommendationBadges:
     def test_synced_no_recommended_badge(self):
         """synced videos don't get recommended badge even if watchlist matches."""
         from podcast_research.services.watchlist_matcher import (
-            compute_recommendation, MatchResult,
+            MatchResult,
+            compute_recommendation,
         )
         match = MatchResult(matched=True, matched_terms=["OpenAI"],
                            matched_type="company", reason="test")
@@ -1620,7 +1650,8 @@ class TestRecommendationBadges:
     def test_both_badges(self):
         """new + watchlist + long → both badges."""
         from podcast_research.services.watchlist_matcher import (
-            compute_recommendation, MatchResult,
+            MatchResult,
+            compute_recommendation,
         )
         match = MatchResult(matched=True, matched_terms=["OpenAI"],
                            matched_type="company", reason="test")
@@ -1649,8 +1680,8 @@ class TestChannelDefaultFocusEdit:
         assert "success" in resp.headers.get("location", "")
 
         # Verify in DB
-        from podcast_research.db.session import get_session
         from podcast_research.db.models import Channel
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             ch = session.query(Channel).filter_by(id=ch_id).first()
@@ -1718,8 +1749,11 @@ def _seed_channel_with_status_mix(api_client, monkeypatch):
     import time; time.sleep(0.3)
 
     # Set specific statuses
+    from podcast_research.db.repository import (
+        get_channel_video_by_video_id,
+        update_channel_video_status,
+    )
     from podcast_research.db.session import get_session
-    from podcast_research.db.repository import get_channel_video_by_video_id, update_channel_video_status
     session = get_session()
     try:
         cv = get_channel_video_by_video_id(session, "syncVideo1")
@@ -1798,8 +1832,8 @@ class TestLastJobIdWriteback:
         assert resp.status_code == 303
 
         # Check channel_video has active_job_id for log linking
-        from podcast_research.db.session import get_session
         from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "ljTest1")
@@ -1823,9 +1857,9 @@ class TestLastJobIdWriteback:
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
-        from podcast_research.db.session import get_session
-        from podcast_research.db.repository import get_channel_video_by_video_id
         from podcast_research.db.models import ChannelVideo
+        from podcast_research.db.repository import get_channel_video_by_video_id
+        from podcast_research.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "failLog1")

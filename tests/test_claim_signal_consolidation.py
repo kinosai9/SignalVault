@@ -1,6 +1,5 @@
 """P2-F.2: Claim / Signal Quality Consolidation tests."""
 
-import pytest
 from pathlib import Path
 
 
@@ -74,7 +73,7 @@ updated_at: "2026-05-30T00:00:00"
 
 def test_update_claim_meta(tmp_path):
     """Test update_claim_meta adds quality/review_priority/granularity."""
-    from podcast_research.claim_signal.review import update_claim_meta, get_claim
+    from podcast_research.claim_signal.review import get_claim, update_claim_meta
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", claim_text="AI harness claim")
@@ -90,7 +89,7 @@ def test_update_claim_meta(tmp_path):
 
 def test_update_signal_meta(tmp_path):
     """Test update_signal_meta adds quality/priority/signal_type."""
-    from podcast_research.claim_signal.review import update_signal_meta, get_signal
+    from podcast_research.claim_signal.review import get_signal, update_signal_meta
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", signal_text="CPU bottleneck signal")
@@ -169,7 +168,10 @@ def test_find_similar_does_not_modify(tmp_path):
 
 def test_backlog_generated(tmp_path):
     """Test backlog is generated."""
-    from podcast_research.claim_signal.review import generate_claim_backlog, generate_signal_backlog
+    from podcast_research.claim_signal.review import (
+        generate_claim_backlog,
+        generate_signal_backlog,
+    )
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_a", claim_text="Claim A")
@@ -184,7 +186,10 @@ def test_backlog_generated(tmp_path):
 
 def test_backlog_sorted(tmp_path):
     """Test backlog sorts by priority."""
-    from podcast_research.claim_signal.review import generate_claim_backlog, update_claim_meta
+    from podcast_research.claim_signal.review import (
+        generate_claim_backlog,
+        update_claim_meta,
+    )
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_low")
@@ -215,6 +220,7 @@ def test_update_meta_writes_log(tmp_path):
 def test_cli_claims_update_meta(tmp_path):
     """Test CLI claims update-meta."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -233,6 +239,7 @@ def test_cli_claims_update_meta(tmp_path):
 def test_cli_signals_update_meta(tmp_path):
     """Test CLI signals update-meta."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -251,6 +258,7 @@ def test_cli_signals_update_meta(tmp_path):
 def test_cli_find_similar(tmp_path):
     """Test CLI claims find-similar."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -266,6 +274,7 @@ def test_cli_find_similar(tmp_path):
 def test_cli_backlog(tmp_path):
     """Test CLI signals backlog."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"

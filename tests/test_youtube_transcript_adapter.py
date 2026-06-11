@@ -1,6 +1,5 @@
 """YouTubeTranscriptAdapter mock 测试：不调用真实 YouTube API。"""
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -8,7 +7,6 @@ import pytest
 
 from podcast_research.adapters.base import TranscriptResult
 from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
-
 
 # 模拟 youtube-transcript-api 返回的 transcript 数据
 MOCK_TRANSCRIPT_DATA = [

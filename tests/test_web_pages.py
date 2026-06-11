@@ -385,9 +385,14 @@ class TestResearchBrief:
 
     def test_brief_ranks_active_topics(self):
         """Active topic ranking uses weighted scoring"""
-        from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.scanner import WorkspaceSnapshot, TopicInfo, ClaimInfo
         from pathlib import Path
+
+        from podcast_research.workspace.research_brief import generate_brief
+        from podcast_research.workspace.scanner import (
+            ClaimInfo,
+            TopicInfo,
+            WorkspaceSnapshot,
+        )
 
         snapshot = WorkspaceSnapshot(vault_path=Path("/tmp"))
         snapshot.topics = [
@@ -411,9 +416,10 @@ class TestResearchBrief:
 
     def test_brief_no_llm_called(self):
         """Research brief uses pure rules, no LLM import"""
+        from pathlib import Path
+
         from podcast_research.workspace.research_brief import generate_brief
         from podcast_research.workspace.scanner import WorkspaceSnapshot
-        from pathlib import Path
 
         snapshot = WorkspaceSnapshot(vault_path=Path("/tmp"))
         brief = generate_brief(snapshot)
@@ -472,8 +478,8 @@ topics:
 
     def test_watchlist_direct_update(self, tmp_path):
         """Company with direct claim is marked as direct"""
+        from podcast_research.workspace.scanner import ClaimInfo, WorkspaceSnapshot
         from podcast_research.workspace.watchlist import generate_watchlist_brief
-        from podcast_research.workspace.scanner import WorkspaceSnapshot, ClaimInfo
 
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -493,8 +499,8 @@ topics:
 
     def test_watchlist_no_evidence(self, tmp_path):
         """Item with no claims/signals returns no_new_evidence"""
-        from podcast_research.workspace.watchlist import generate_watchlist_brief
         from podcast_research.workspace.scanner import WorkspaceSnapshot
+        from podcast_research.workspace.watchlist import generate_watchlist_brief
 
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -794,7 +800,6 @@ class TestContentNew:
 
     def test_job_status_api(self, api_client, tmp_path, monkeypatch):
         """GET /tasks/{id}/status returns JSON (unified task status)"""
-        from podcast_research.services.job_service import create_job
         monkeypatch.setattr(
             "podcast_research.utils.youtube.is_youtube_url", lambda u: True
         )
@@ -969,7 +974,10 @@ class TestKnowledgeSync:
             mock_sync,
         )
 
-        from podcast_research.services.job_service import create_sync_job, start_sync_job
+        from podcast_research.services.job_service import (
+            create_sync_job,
+            start_sync_job,
+        )
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1017,7 +1025,10 @@ class TestKnowledgeSync:
             mock_sync_fail,
         )
 
-        from podcast_research.services.job_service import create_sync_job, start_sync_job
+        from podcast_research.services.job_service import (
+            create_sync_job,
+            start_sync_job,
+        )
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1048,7 +1059,11 @@ class TestKnowledgeSync:
         vault.mkdir(parents=True)
 
         # Create a sync job and manually set it to success with result_links
-        from podcast_research.services.job_service import create_sync_job, update_job, _set_result_links
+        from podcast_research.services.job_service import (
+            _set_result_links,
+            create_sync_job,
+            update_job,
+        )
         job = create_sync_job(report_id=1)
         update_job(job.job_id, status="success", stage="success", message="知识库已更新")
         _set_result_links(job.job_id, "sync", 1)
@@ -1090,7 +1105,10 @@ class TestKnowledgeSync:
             mock_sync,
         )
 
-        from podcast_research.services.job_service import create_sync_job, start_sync_job
+        from podcast_research.services.job_service import (
+            create_sync_job,
+            start_sync_job,
+        )
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -2077,7 +2095,9 @@ class TestVaultSetup:
     def test_validate_vault_complete(self, tmp_path):
         """validate_vault returns is_initialized=True for complete vault."""
         vault = tmp_path / "vault"
-        from podcast_research.workspace.setup import REQUIRED_DIRS, REQUIRED_FILES, initialize_vault
+        from podcast_research.workspace.setup import (
+            initialize_vault,
+        )
         initialize_vault(vault)
 
         from podcast_research.workspace.setup import validate_vault
@@ -2207,7 +2227,11 @@ class TestExplanatoryResearchBrief:
 
     def test_summary_contains_context_not_just_counts(self, tmp_path):
         """Summary bullet should contain topic context, not just numbers."""
-        from podcast_research.workspace.research_brief import ResearchBrief, TopicInsight, _build_summary
+        from podcast_research.workspace.research_brief import (
+            ResearchBrief,
+            TopicInsight,
+            _build_summary,
+        )
         from podcast_research.workspace.scanner import WorkspaceSnapshot
 
         snapshot = WorkspaceSnapshot(vault_path=tmp_path)
@@ -2232,7 +2256,11 @@ class TestExplanatoryResearchBrief:
 
     def test_brief_uses_clean_display_text(self, tmp_path):
         """Brief summary bullets should not contain markdown artifacts."""
-        from podcast_research.workspace.research_brief import ResearchBrief, TopicInsight, _build_summary
+        from podcast_research.workspace.research_brief import (
+            ResearchBrief,
+            TopicInsight,
+            _build_summary,
+        )
         from podcast_research.workspace.scanner import WorkspaceSnapshot
 
         snapshot = WorkspaceSnapshot(vault_path=tmp_path)
@@ -2256,7 +2284,10 @@ class TestWatchlistBriefSections:
 
     def test_direct_items_labeled_as_new_evidence(self):
         """Direct items show '本轮新增' label."""
-        from podcast_research.workspace.watchlist import WatchlistItemBrief, render_watchlist_markdown
+        from podcast_research.workspace.watchlist import (
+            WatchlistItemBrief,
+            render_watchlist_markdown,
+        )
 
         item = WatchlistItemBrief(
             name="OpenAI", item_type="company",
@@ -2268,7 +2299,10 @@ class TestWatchlistBriefSections:
 
     def test_observations_labeled(self):
         """Observations show '需要继续观察' label."""
-        from podcast_research.workspace.watchlist import WatchlistItemBrief, render_watchlist_markdown
+        from podcast_research.workspace.watchlist import (
+            WatchlistItemBrief,
+            render_watchlist_markdown,
+        )
 
         item = WatchlistItemBrief(
             name="NVIDIA", item_type="company",
@@ -2281,7 +2315,10 @@ class TestWatchlistBriefSections:
 
     def test_no_new_evidence_shows_notice(self):
         """no_new_evidence items show notice text."""
-        from podcast_research.workspace.watchlist import WatchlistItemBrief, render_watchlist_markdown
+        from podcast_research.workspace.watchlist import (
+            WatchlistItemBrief,
+            render_watchlist_markdown,
+        )
 
         item = WatchlistItemBrief(
             name="TSMC", item_type="company",

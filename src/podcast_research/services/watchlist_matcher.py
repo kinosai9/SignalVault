@@ -10,13 +10,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from podcast_research.workspace.watchlist import (
     COMPANY_ALIAS_MAP,
     THEME_TOPIC_MAP,
     WatchlistConfig,
-    load_watchlist,
 )
 
 

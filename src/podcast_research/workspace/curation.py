@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 from podcast_research.claim_signal.review import (
-    _parse_frontmatter,
     _ensure_frontmatter_field,
+    _parse_frontmatter,
 )
 from podcast_research.utils.file_io import read_text_safe
 

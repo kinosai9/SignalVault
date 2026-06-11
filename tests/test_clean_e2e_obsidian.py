@@ -10,12 +10,15 @@ All tests use tmp_path, no real vault, no real LLM, no real YouTube.
 
 from __future__ import annotations
 
-import json
-import tempfile
 from pathlib import Path
 
-import pytest
-
+from podcast_research.analysis.models import (
+    Entity,
+    ExtractionResult,
+    InvestmentView,
+    TechIndustryInsight,
+    TrackingSignal,
+)
 from podcast_research.db.repository import (
     save_entities,
     save_episode,
@@ -23,17 +26,12 @@ from podcast_research.db.repository import (
     save_report,
     save_tracking_signals,
 )
-from podcast_research.db.session import init_db, get_session, reset_engine
-from podcast_research.analysis.models import (
-    Entity,
-    ExtractionResult,
-    InvestmentView,
-    TrackingSignal,
-    TechIndustryInsight,
+from podcast_research.db.session import get_session, init_db, reset_engine
+from podcast_research.services.sync_service import (
+    SyncResult,
+    sync_report_to_knowledge_base,
 )
-from podcast_research.services.sync_service import sync_report_to_knowledge_base, SyncResult
-from podcast_research.workspace.scanner import VaultScanner, _extract_source_reports
-
+from podcast_research.workspace.scanner import VaultScanner
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -255,7 +253,7 @@ class TestChannelMetadataE2E:
             source_url="https://www.youtube.com/watch?v=nochan456",
         )
 
-        result = sync_report_to_knowledge_base(report_id, vault_path=vault)
+        sync_report_to_knowledge_base(report_id, vault_path=vault)
         # Should still succeed — fallback to YouTube_video_id pattern
         # Note: channel may be empty or "YouTube" depending on backfill logic
         reports_dir = vault / "01_Reports"

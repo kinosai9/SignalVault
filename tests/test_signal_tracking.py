@@ -1,6 +1,5 @@
 """P2-F.3: Signal Tracking Schema & Manual Update Workflow tests."""
 
-import pytest
 from pathlib import Path
 
 
@@ -38,7 +37,7 @@ updated_at: "2026-05-30T00:00:00"
 
 def test_update_tracking_status(tmp_path):
     """Test update_signal_tracking sets tracking_status."""
-    from podcast_research.claim_signal.review import update_signal_tracking, get_signal
+    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -52,7 +51,7 @@ def test_update_tracking_status(tmp_path):
 
 def test_update_tracking_method(tmp_path):
     """Test update_signal_tracking sets tracking_method."""
-    from podcast_research.claim_signal.review import update_signal_tracking, get_signal
+    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -65,7 +64,7 @@ def test_update_tracking_method(tmp_path):
 
 def test_update_tracking_query(tmp_path):
     """Test update_signal_tracking sets tracking_query."""
-    from podcast_research.claim_signal.review import update_signal_tracking, get_signal
+    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -149,7 +148,10 @@ def test_tracking_backlog_generated(tmp_path):
 
 def test_tracking_backlog_sorted(tmp_path):
     """Test tracking backlog sorts by tracking status priority."""
-    from podcast_research.claim_signal.review import update_signal_tracking, generate_signal_tracking_backlog
+    from podcast_research.claim_signal.review import (
+        generate_signal_tracking_backlog,
+        update_signal_tracking,
+    )
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_not_started")
@@ -200,6 +202,7 @@ def test_nonexistent_signal_tracking_error(tmp_path):
 def test_cli_signals_update_tracking(tmp_path):
     """Test CLI signals update-tracking."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -219,6 +222,7 @@ def test_cli_signals_update_tracking(tmp_path):
 def test_cli_signals_add_update(tmp_path):
     """Test CLI signals add-update."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"
@@ -237,6 +241,7 @@ def test_cli_signals_add_update(tmp_path):
 def test_cli_signals_tracking_backlog(tmp_path):
     """Test CLI signals tracking-backlog."""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     vault = tmp_path / "vault"

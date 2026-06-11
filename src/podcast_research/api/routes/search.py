@@ -1,6 +1,6 @@
 """GET /api/search"""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from podcast_research.api.schemas import SearchResponse
 from podcast_research.db.repository import search_reports

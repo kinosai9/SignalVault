@@ -1,7 +1,5 @@
 """P2-A2: 跨频道质量评估工具测试。"""
 
-import json
-import pytest
 
 
 # --- Generic target detection ---
@@ -30,16 +28,14 @@ def test_generic_target_list_complete():
         "Broad Market", "Economy", "Investors", "Consumers", "Society",
         "AI Industry", "Technology Sector", "Market", "Companies", "Startups",
     }
-    assert GENERIC_TARGETS == expected
+    assert expected == GENERIC_TARGETS
 
 
 # --- compute_report_stats ---
 
 def test_compute_basic_stats(seeded_db):
     """从 seeded reports 计算统计，验证关键字段非零。"""
-    from podcast_research.evaluation import eval_all_reports, compute_report_stats
-    from podcast_research.db.models import Report, Episode, InvestmentViewRecord
-    from podcast_research.db.session import get_session
+    from podcast_research.evaluation import eval_all_reports
 
     results = eval_all_reports()
     assert len(results) == 3  # seeded_db has 3 reports
@@ -89,8 +85,9 @@ def test_generic_target_count_zero_for_seeded(seeded_db):
 
 def test_generic_target_detection_in_stats():
     """当 target_name 包含泛化对象时计数。"""
-    from podcast_research.evaluation import compute_report_stats, is_generic_target
     from unittest.mock import MagicMock
+
+    from podcast_research.evaluation import compute_report_stats
 
     # Create mock view records with generic targets
     view1 = MagicMock()
@@ -147,6 +144,7 @@ def test_generic_target_detection_in_stats():
 def test_cli_eval_reports(seeded_db):
     """eval reports 读取 seeded reports 并输出表格。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -159,6 +157,7 @@ def test_cli_eval_reports(seeded_db):
 def test_cli_eval_reports_channel_filter(seeded_db):
     """eval reports --channel 过滤。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     runner = CliRunner()
@@ -173,6 +172,7 @@ def test_cli_eval_reports_channel_filter(seeded_db):
 def test_cli_eval_export_csv(seeded_db, tmp_path):
     """eval export 生成 CSV 到 tmp_path。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     csv_path = tmp_path / "eval.csv"
@@ -195,6 +195,7 @@ def test_cli_eval_export_csv(seeded_db, tmp_path):
 def test_cli_eval_summary_md(seeded_db, tmp_path):
     """eval summary 生成 Markdown 总结到 tmp_path。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     md_path = tmp_path / "summary.md"
@@ -213,6 +214,7 @@ def test_cli_eval_summary_md(seeded_db, tmp_path):
 def test_cli_eval_export_empty_graceful(tmp_path):
     """eval export 在无报告时不崩溃。"""
     from typer.testing import CliRunner
+
     from podcast_research.cli import app
 
     csv_path = tmp_path / "empty.csv"
