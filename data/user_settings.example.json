@@ -1,0 +1,4 @@
+{
+  "obsidian_vault_path": "/path/to/your/obsidian/vault",
+  "_comment": "Copy this file to user_settings.json and fill in your actual paths. user_settings.json is git-ignored."
+}

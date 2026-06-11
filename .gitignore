@@ -27,7 +27,9 @@ Thumbs.db
 .DS_Store
 
 # Runtime data (keep directory structure via .gitkeep, exclude all generated content)
+backup/
 data/podcast_analyst.db
+data/user_settings.json
 data/reports/*
 !data/reports/.gitkeep
 data/subtitles/*.srt
@@ -35,6 +37,7 @@ data/subtitles/*.txt
 !data/subtitles/sample.srt
 data/subtitle.srt
 data/transcripts/
+data/validation/
 logs/*
 !logs/.gitkeep
 
