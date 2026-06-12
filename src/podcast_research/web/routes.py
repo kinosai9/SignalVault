@@ -747,14 +747,22 @@ def action_content_analyze(
 
     auto_sync = flow_mode not in ("report_only", "analysis")
 
+    # Extract video ID for descriptive title
+    import re as _re
+    vid_match = _re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})", url)
+    short_vid = vid_match.group(1)[:11] if vid_match else ""
+
     # Create job and start background analysis
     from podcast_research.services.job_service import create_job, start_job
+    job_type_label = "整理" if auto_sync else "分析"
+    job_title = f"{job_type_label}: {short_vid}" if short_vid else ""
     job = create_job(
         youtube_url=url,
         focus_areas=focus_areas,
         depth=depth,
         mock=mock_mode,
         auto_sync=auto_sync,
+        title=job_title,
     )
     start_job(job)
     return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)
@@ -869,6 +877,8 @@ def page_tasks(request: Request):
     now = _now_epoch()
     jobs = []
     for j in raw_jobs:
+        if j.status == "cleaned":
+            continue  # P2-N.4.1: hide auto-cleaned failed jobs
         elapsed = _compute_elapsed(j, now)
         jobs.append({
             "job_id": j.job_id,
@@ -883,6 +893,7 @@ def page_tasks(request: Request):
             "report_id": j.report_id,
             "result_links": j.result_links,
             "created_at": j.created_at,
+            "video_id": j.video_id,
         })
 
     ctx = {"request": request, "jobs": jobs}
@@ -950,6 +961,14 @@ def page_task_logs(request: Request, job_id: str):
     }
     ctx.update(_flash(request))
     return _render("task_logs.html", ctx)
+
+
+@router.post("/tasks/{job_id}/delete")
+def action_task_delete(job_id: str):
+    """P2-N.4.1: Delete a task record manually."""
+    from podcast_research.services.job_service import delete_job
+    delete_job(job_id)
+    return RedirectResponse(url="/tasks?msg=info:已删除任务记录", status_code=303)
 
 
 def _format_elapsed(seconds: int) -> str:
@@ -1665,7 +1684,7 @@ def action_import_video(
         depth=depth,
         mock=False,
         auto_sync=(flow_mode == "full"),
-        title=video_title,
+        title=video_title or f"整理: {video_id}",
     )
 
     # Tag job with source context for status writeback

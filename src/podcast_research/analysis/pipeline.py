@@ -297,21 +297,36 @@ def _run_pipeline(
     finally:
         session.close()
 
-    # 5. 写出文件（v2+ 带版本后缀，避免覆盖旧版报告）
+    # 5. 写出文件（v2+ 带版本后缀，避免覆盖旧版报告；P2-N.4.1: sanitize filename）
     output_dir.mkdir(parents=True, exist_ok=True)
     version_suffix = ""
     pv = extraction.prompt_version
     if pv and pv not in ("v0.1", "v1"):
         version_suffix = f"_{pv}"
-    json_path = output_dir / f"{episode_title}{version_suffix}_extraction.json"
-    md_path = output_dir / f"{episode_title}{version_suffix}_report.md"
 
-    json_path.write_text(
-        json.dumps(extraction.model_dump(), ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    from podcast_research.exporters.markdown_utils import (
+        sanitize_filename,
+        unique_filename,
     )
-    md_path.write_text(report_md, encoding="utf-8")
-    logger.info("报告已写出: %s, %s", json_path, md_path)
+
+    safe_title = sanitize_filename(episode_title, fallback=episode_extra.get("video_id", f"report_{rep_id}" if 'rep_id' in dir() else "untitled"))
+    video_id_for_file = episode_extra.get("video_id", "")
+
+    json_name = unique_filename(output_dir, safe_title, f"{version_suffix}_extraction.json", video_id=video_id_for_file)
+    md_name = unique_filename(output_dir, safe_title, f"{version_suffix}_report.md", video_id=video_id_for_file)
+
+    json_path = output_dir / json_name
+    md_path = output_dir / md_name
+
+    try:
+        json_path.write_text(
+            json.dumps(extraction.model_dump(), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        md_path.write_text(report_md, encoding="utf-8")
+        logger.info("报告已写出: %s, %s", json_path, md_path)
+    except OSError as e:
+        logger.warning("报告文件写入失败（DB 已入库）: %s", e)
 
     return {
         "episode_id": ep_id,

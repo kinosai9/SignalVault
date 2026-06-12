@@ -197,16 +197,50 @@ def create_job(
 
 
 def create_sync_job(report_id: int) -> AnalysisJob:
-    """Create a new knowledge sync job."""
+    """Create a new knowledge sync job.
+
+    P2-N.4.1: Fetches report metadata to set a descriptive title
+    (e.g. '同步: OpenAI CFO Interview' instead of generic '同步到知识库').
+    """
     job_id = uuid.uuid4().hex[:12]
+    title = JOB_TYPE_TITLES.get("sync", "")
+    source_url = ""
+    video_id = ""
+
+    # Look up report context for descriptive title
+    try:
+        from podcast_research.db.repository import get_report_detail
+        from podcast_research.db.session import get_session
+        session = get_session()
+        try:
+            detail = get_report_detail(session, report_id)
+            if detail:
+                report_title = detail.get("episode_title", "") or detail.get("video_id", "")
+                vid = detail.get("video_id", "")
+                if report_title and report_title != vid:
+                    short_title = report_title[:50]
+                    title = f"同步: {short_title}"
+                elif vid:
+                    title = f"同步报告 #{report_id} ({vid})"
+                else:
+                    title = f"同步报告 #{report_id}"
+                source_url = detail.get("source_url", "")
+                video_id = vid
+        finally:
+            session.close()
+    except Exception:
+        title = f"同步报告 #{report_id}"
+
     job = AnalysisJob(
         job_id=job_id,
         job_type="sync",
         status="queued",
         stage="queued",
         message=_stage_message("queued"),
-        title=JOB_TYPE_TITLES.get("sync", ""),
+        title=title,
         report_id=report_id,
+        source_url=source_url,
+        video_id=video_id,
     )
     with _lock:
         _JOBS[job_id] = job
@@ -570,6 +604,59 @@ def _fmt_dt(dt: datetime | None) -> str:
     if dt is None:
         return ""
     return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def delete_job(job_id: str) -> None:
+    """P2-N.4.1: Delete a job from in-memory store and DB."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    with _lock:
+        _JOBS.pop(job_id, None)
+    try:
+        from podcast_research.db.models import Job as JobORM, JobEvent as JobEventORM
+        from podcast_research.db.session import get_session
+        session = get_session()
+        try:
+            session.query(JobEventORM).filter_by(job_id=job_id).delete()
+            session.query(JobORM).filter_by(job_id=job_id).delete()
+            session.commit()
+        finally:
+            session.close()
+    except Exception:
+        _log.warning("Failed to delete job %s from DB", job_id, exc_info=True)
+
+
+def _cleanup_old_failures(video_id: str, current_job_id: str) -> None:
+    """P2-N.4.1: When a job succeeds, auto-clean old failed jobs for same video_id.
+
+    Same task = same video_id. Old failures have no value once retry succeeds.
+    """
+    if not video_id:
+        return
+    with _lock:
+        for jid, job in list(_JOBS.items()):
+            if jid == current_job_id:
+                continue
+            if job.video_id == video_id and job.status == "failed":
+                job.status = "cleaned"
+    # Also mark in DB
+    try:
+        from podcast_research.db.models import Job as JobORM
+        from podcast_research.db.session import get_session
+        session = get_session()
+        try:
+            rows = session.query(JobORM).filter(
+                JobORM.video_id == video_id,
+                JobORM.job_id != current_job_id,
+                JobORM.status == "failed",
+            ).all()
+            for row in rows:
+                row.status = "cleaned"
+            session.commit()
+        finally:
+            session.close()
+    except Exception:
+        pass
 
 
 def _error_summary_for(job: AnalysisJob) -> str | None:
@@ -1190,6 +1277,10 @@ def _writeback_channel_video_status(
     For jobs WITHOUT source context (sync retry), delegates to
     _writeback_sync_result which does report_id-based reverse lookup.
     """
+    # P2-N.4.1: Auto-clean old failed jobs for same video_id on success
+    if status in ("analyzed", "synced"):
+        _cleanup_old_failures(job.video_id, job.job_id)
+
     # Path 1: Direct video_id lookup (full_flow from channel_videos page)
     if job.source_type == "channel_video" and job.video_id:
         try:

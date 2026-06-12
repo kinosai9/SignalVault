@@ -61,6 +61,11 @@
                 {% elif j.status == "success" and j.job_type == "channel_refresh" and j.result_links.get("videos") %}
                 <a href="{{ j.result_links.videos }}" style="font-size:0.78rem;margin-left:4px">查看视频</a>
                 {% endif %}
+                {% if j.status in ("success", "failed", "stale") %}
+                <form method="post" action="/tasks/{{ j.job_id }}/delete" style="display:inline;margin-left:4px" onsubmit="return confirm('删除这条任务记录？')">
+                    <button type="submit" style="font-size:0.72rem;padding:2px 6px;background:none;border:1px solid var(--muted);color:var(--muted);border-radius:3px;cursor:pointer" title="删除记录">✕</button>
+                </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

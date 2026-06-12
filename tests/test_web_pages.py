@@ -913,7 +913,7 @@ class TestKnowledgeSync:
         try:
             resp = api_client.get(f"/tasks/{job.job_id}")
             assert resp.status_code == 200
-            assert "同步到知识库" in resp.text or "sync" in job.job_type
+            assert "同步" in resp.text or "sync" in job.job_type
             assert job.job_id in resp.text
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
@@ -1222,7 +1222,7 @@ class TestUnifiedTasks:
         try:
             resp = api_client.get(f"/tasks/{job.job_id}")
             assert resp.status_code == 200
-            assert "同步到知识库" in resp.text or "sync" in job.job_type
+            assert "同步" in resp.text or "sync" in job.job_type
             assert job.job_id in resp.text
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
