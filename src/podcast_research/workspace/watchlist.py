@@ -351,7 +351,13 @@ def _build_item_brief(
     core_topic_names: set[str],
     active_topic_names: set[str],
 ) -> WatchlistItemBrief:
-    """Build brief for a single watchlist item."""
+    """Build brief for a single watchlist item.
+
+    P2-N.4.4.2: Uses canonical_view.build_watchlist_evidence() for unified
+    dedup across all sections (direct/indirect/reinforced/observations).
+    """
+    from podcast_research.workspace.canonical_view import build_watchlist_evidence
+
     item = WatchlistItemBrief(name=name, item_type=item_type)
 
     # Check card exists
@@ -360,110 +366,28 @@ def _build_item_brief(
     elif item_type == "topic":
         item.card_exists = name in topic_names
 
-    # Direct updates: claims/signals referencing this item
-    # P2-N.4.4.1: Canonical dedup + strip markdown/hashtags
-    from podcast_research.workspace.actionability import (
-        is_claim_fragment,
-        is_signal_fragment,
-    )
-    from podcast_research.workspace.canonicalize import (
-        normalize_claim_text,
-        normalize_signal_text,
-    )
-    direct_claims_texts: list[str] = []
-    direct_signals_texts: list[str] = []
-    seen_claim_fps: set[str] = set()
-    seen_signal_fps: set[str] = set()
+    # Build unified evidence view (all sections share one dedup set)
+    ev = build_watchlist_evidence(snapshot, name, item_type)
 
-    for c in snapshot.claims:
-        if name in c.related_companies or name in c.related_topics:
-            if is_claim_fragment(c):
-                continue
-            normalized = normalize_claim_text(c.claim)[:80]
-            fp = normalized[:60]
-            if fp not in seen_claim_fps:
-                seen_claim_fps.add(fp)
-                direct_claims_texts.append(normalized)
-    for s in snapshot.signals:
-        if name in s.related_companies or name in s.related_topics:
-            if is_signal_fragment(s):
-                continue
-            normalized = normalize_signal_text(s.signal)[:80]
-            fp = normalized[:60]
-            if fp not in seen_signal_fps and fp not in seen_claim_fps:
-                seen_signal_fps.add(fp)
-                direct_signals_texts.append(normalized)
-
-    item.direct_items = direct_claims_texts[:3] + direct_signals_texts[:3]
-    item.direct_count = len(direct_claims_texts) + len(direct_signals_texts)
-
-    # Indirect: check related topics / companies through the graph
-    # P2-N.4.4.1: Dedup against direct items, normalize text
-    indirect_claims_set: set[str] = set()
-    if item_type == "company":
-        for t in snapshot.topics:
-            if t.name == name:
-                continue
-            for c in snapshot.claims:
-                if name in c.related_companies and t.name in c.related_topics:
-                    if t.name in active_topic_names:
-                        norm = normalize_claim_text(c.claim)[:60]
-                        fp = norm[:40]
-                        if fp not in seen_claim_fps:
-                            indirect_claims_set.add(
-                                f"与升温主题「{t.name}」关联: {norm}")
-    elif item_type == "topic":
-        for co in snapshot.companies:
-            if co.name == name:
-                continue
-            claim_count = snapshot.claims_count_for(co.name)
-            if claim_count > 0:
-                for cl in snapshot.claims:
-                    if name in cl.related_topics and co.name in cl.related_companies:
-                        norm = normalize_claim_text(cl.claim)[:60]
-                        fp = norm[:40]
-                        if fp not in seen_claim_fps:
-                            indirect_claims_set.add(
-                                f"与活跃公司「{co.name}」关联: {norm}")
-                        break
-
-    item.indirect_items = sorted(indirect_claims_set)[:3]
-    item.indirect_count = len(item.indirect_items)
-
-    # Reinforced claims (P2-N.4.4.1: normalized + deduped)
-    reinforced_fps: set[str] = set()
-    reinforced = []
-    for c in snapshot.claims:
-        if name in c.related_companies or name in c.related_topics:
-            if len(c.source_reports) >= 2:
-                norm = normalize_claim_text(c.claim)[:80]
-                fp = norm[:40]
-                if fp not in reinforced_fps and fp not in seen_claim_fps:
-                    reinforced_fps.add(fp)
-                    reinforced.append(norm)
-    item.reinforced = reinforced[:3]
-    item.reinforced_count = len(reinforced)
-
-    # Open observations (P2-N.4.4.1: exclude fragments + normalize)
-    observations = []
-    obs_fps: set[str] = set()
-    for s in snapshot.signals:
-        if name in s.related_companies or name in s.related_topics:
-            if s.status in ("watching", "open") and not is_signal_fragment(s):
-                norm = normalize_signal_text(s.signal)[:80]
-                fp = norm[:40]
-                if fp not in obs_fps and fp not in seen_signal_fps:
-                    obs_fps.add(fp)
-                    observations.append(norm)
-    item.observations = observations[:5]
-    item.observation_count = len(observations)
+    # Populate item from evidence view
+    item.direct_items = ev.direct_claims[:3] + ev.direct_signals[:3]
+    item.direct_count = ev.direct_count
+    item.indirect_items = ev.indirect_items[:3]
+    item.indirect_count = ev.indirect_count
+    item.reinforced = ev.reinforced[:3]
+    item.reinforced_count = ev.reinforced_count
+    item.observations = ev.observations[:5]
+    item.observation_count = ev.observation_count
 
     # P2-N.4.3.2: Extract context topics for company items
     if item_type == "company":
+        from podcast_research.workspace.canonical_view import (
+            build_canonical_claim_views,
+        )
         context_topics_set: set[str] = set()
-        for c in snapshot.claims:
-            if name in c.related_companies:
-                for t in c.related_topics:
+        for cv in build_canonical_claim_views(snapshot):
+            if name in cv.related_companies:
+                for t in cv.related_topics:
                     context_topics_set.add(t)
         item.context_topics = sorted(context_topics_set)[:5]
 

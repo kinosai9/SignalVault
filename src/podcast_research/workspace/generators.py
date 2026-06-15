@@ -102,21 +102,13 @@ def generate_home_dashboard(
             lines.append("")
 
     # ── 4. 需要你确认 ──
-    needs_review_claims = claims_needing_review(snapshot, wl_companies, wl_topics)
-    needs_review_signals = signals_needing_review(snapshot, wl_companies, wl_topics)
+    # P2-N.4.4.2: Single canonical entry point for all surfaces
+    from podcast_research.workspace.canonical_view import build_review_item_views
 
-    # P2-N.4.4: Canonical dedup via shared module
-    from podcast_research.workspace.canonicalize import (
-        group_duplicate_claims,
-        group_duplicate_signals,
-    )
-    claim_groups = group_duplicate_claims(needs_review_claims)
-    signal_groups = group_duplicate_signals(needs_review_signals)
-    all_canonical = [g.canonical for g in claim_groups] + [g.canonical for g in signal_groups]
-    total_needs_review = sum(g.group_size for g in claim_groups) + sum(g.group_size for g in signal_groups)
-    deduped = all_canonical
+    review_items = build_review_item_views(snapshot, watchlist_config)
+    total_needs_review = len(review_items)
 
-    # Count priorities
+    # Count priorities for summary
     auto_accepted_claims = sum(
         1 for c in snapshot.claims
         if compute_claim_review_priority(c, snapshot, wl_companies, wl_topics) == PRIORITY_AUTO_ACCEPTED
@@ -139,25 +131,15 @@ def generate_home_dashboard(
         "## 需要你确认",
         "",
     ])
-    if deduped:
-        display_items = deduped[:MAX_NEEDS_REVIEW_ITEMS]
+    if review_items:
+        display_items = review_items[:MAX_NEEDS_REVIEW_ITEMS]
         lines.append(f"本轮共有 {total_needs_review} 条需审阅，以下是最重要的 {len(display_items)} 条：")
         lines.append("")
-        from podcast_research.workspace.scanner import ClaimInfo, SignalInfo
-        for item in display_items:
-            if isinstance(item, ClaimInfo):
-                priority = compute_claim_review_priority(item, snapshot, wl_companies, wl_topics)
-                icon = "🔴" if priority == PRIORITY_CRITICAL else "🟠"
-                text = clean_display_text(item.claim, 50)
-                card_type = "06_Claims"
-                card_id = item.card_id
-            else:
-                priority = compute_signal_review_priority(item, snapshot, wl_companies, wl_topics)
-                icon = "🔴" if priority == PRIORITY_CRITICAL else "🟠"
-                text = clean_display_text(item.signal, 50)
-                card_type = "07_Signals"
-                card_id = item.card_id
-            lines.append(f"- {icon} [[{card_type}/{card_id}|{text}]] `{priority}`")
+        for rv in display_items:
+            lines.append(
+                f"- {rv.icon} [[{rv.card_type}/{rv.card_id}|{rv.display_text}]] "
+                f"`{rv.status_label}`"
+            )
         lines.append("")
         lines.append("[[99_System/Review Queue|查看全部审阅队列 →]]")
     else:
@@ -499,44 +481,12 @@ def generate_review_queue(
         lines.append("*No pending patches.*")
     lines.append("")
 
-    # ── P2-N.4.4.1: 需要你确认 (actionability-gated, not just priority) ──
-    from podcast_research.workspace.actionability import (
-        get_claim_actionability,
-        get_signal_actionability,
-    )
-    from podcast_research.workspace.canonicalize import (
-        group_duplicate_claims,
-        group_duplicate_signals,
-    )
+    # ── P2-N.4.4.2: 需要你确认 (canonical/actionability-first) ──
+    from podcast_research.workspace.canonical_view import build_review_item_views
 
-    # Canonicalize + filter by actionability
-    # Use pre-computed review_priority if available, otherwise fall back to
-    # claims_needing_review / signals_needing_review
-    review_claims = [
-        c for c in snapshot.claims
-        if getattr(c, 'review_priority', '') in (PRIORITY_CRITICAL, PRIORITY_HIGH)
-    ] or claims_needing_review(snapshot, wl_companies, wl_topics)
-    review_signals = [
-        s for s in snapshot.signals
-        if getattr(s, 'review_priority', '') in (PRIORITY_CRITICAL, PRIORITY_HIGH)
-    ] or signals_needing_review(snapshot, wl_companies, wl_topics)
+    review_items = build_review_item_views(snapshot, watchlist_config)
+    total_needs = len(review_items)
 
-    claim_groups = group_duplicate_claims(review_claims)
-    signal_groups = group_duplicate_signals(review_signals)
-
-    needs_claims = []
-    for cg in claim_groups:
-        a = get_claim_actionability(cg.canonical, is_canonical=True)
-        if a.is_actionable and a.primary_action:
-            needs_claims.append((cg.canonical, a))
-
-    needs_signals = []
-    for sg in signal_groups:
-        a = get_signal_actionability(sg.canonical, is_canonical=True)
-        if a.is_actionable and a.primary_action:
-            needs_signals.append((sg.canonical, a))
-
-    total_needs = len(needs_claims) + len(needs_signals)
     lines.extend([
         "## 需要你确认",
         "",
@@ -544,18 +494,25 @@ def generate_review_queue(
     if total_needs > 0:
         lines.append("| 类型 | 内容 | 状态 |")
         lines.append("|------|------|------|")
-        for c, a in needs_claims[:MAX_CLAIMS_IN_REVIEW_QUEUE]:
+        claim_shown = 0
+        signal_shown = 0
+        for rv in review_items:
+            if rv.item_type == "claim" and claim_shown >= MAX_CLAIMS_IN_REVIEW_QUEUE:
+                continue
+            if rv.item_type == "signal" and signal_shown >= MAX_SIGNALS_IN_REVIEW_QUEUE:
+                continue
+            label = "Claim" if rv.item_type == "claim" else "Signal"
+            card_path = f"{rv.card_type}/{rv.card_id}"
             lines.append(
-                f"| {a.icon} Claim | [[06_Claims/{c.card_id}|{clean_display_text(c.claim, 40)}...]] "
-                f"| `{a.status_label}` |"
+                f"| {rv.icon} {label} | [[{card_path}|{rv.display_text}...]] "
+                f"| `{rv.status_label}` |"
             )
-        for s, a in needs_signals[:MAX_SIGNALS_IN_REVIEW_QUEUE]:
-            lines.append(
-                f"| {a.icon} Signal | [[07_Signals/{s.card_id}|{clean_display_text(s.signal, 40)}...]] "
-                f"| `{a.status_label}` |"
-            )
-        if total_needs > (MAX_CLAIMS_IN_REVIEW_QUEUE + MAX_SIGNALS_IN_REVIEW_QUEUE):
-            remaining = total_needs - MAX_CLAIMS_IN_REVIEW_QUEUE - MAX_SIGNALS_IN_REVIEW_QUEUE
+            if rv.item_type == "claim":
+                claim_shown += 1
+            else:
+                signal_shown += 1
+        remaining = (total_needs - claim_shown - signal_shown)
+        if remaining > 0:
             lines.append(f"| … | *{remaining} more items* ||")
     else:
         lines.append("*没有需要你确认的项目。*")
