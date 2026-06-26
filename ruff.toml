@@ -42,3 +42,4 @@ line-ending = "lf"
 "src/podcast_research/workspace/watchlist.py" = ["SIM102"]
 "tests/test_llm_wiki.py" = ["E741"]
 "tests/test_sources_channels.py" = ["E702", "I001"]
+"scripts/*" = ["E402"]

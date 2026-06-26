@@ -2038,3 +2038,133 @@ def action_rerun_video(request: Request, channel_id: int, video_id: str):
 
     start_job(job)
     return RedirectResponse(url=f"/tasks/{job.job_id}", status_code=303)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P2-S.3.1: Generic Web URL Import Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+# In-memory preview store (no writes in preview phase)
+_preview_store: dict[str, object] = {}  # ImportPreview instances
+
+
+@router.get("/sources/import")
+def page_source_import(request: Request):
+    """URL import form page."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vault_path_str,
+    }
+    ctx.update(_flash(request))
+    return _render("source_import.html", ctx)
+
+
+@router.post("/sources/import/preview")
+def action_source_import_preview(
+    request: Request,
+    url: str = Form(""),
+):
+    """Parse URL and generate import preview. NO writes happen here."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+
+    url = url.strip()
+    if not url:
+        return RedirectResponse(
+            url="/sources/import?msg=error:请输入 URL", status_code=303,
+        )
+
+    vp = Path(vault_path_str)
+    if not vp.exists():
+        return RedirectResponse(
+            url="/sources/import?msg=error:知识库目录不存在", status_code=303,
+        )
+
+    try:
+        from podcast_research.sources.import_preview import build_import_preview
+        preview = build_import_preview(url, vp)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/import?msg=error:预览生成失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    _preview_store[preview.preview_id] = preview
+
+    # Action descriptions for the template
+    from podcast_research.sources.models import ACTION_DESCRIPTIONS
+
+    ctx = {
+        "request": request,
+        "preview": preview,
+        "vault_path": vault_path_str,
+        "action_descriptions": {
+            a.value: d for a, d in ACTION_DESCRIPTIONS.items()
+        },
+    }
+    ctx.update(_flash(request))
+    return _render("source_import_preview.html", ctx)
+
+
+@router.post("/sources/import/confirm")
+def action_source_import_confirm(
+    request: Request,
+    preview_id: str = Form(...),
+    action: str = Form(...),
+):
+    """Execute the chosen import action. THIS is where writes happen."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+
+    vp = Path(vault_path_str)
+
+    preview = _preview_store.pop(preview_id, None)
+    if preview is None:
+        return RedirectResponse(
+            url="/sources/import?msg=error:预览已过期，请重新导入", status_code=303,
+        )
+
+    from podcast_research.sources.models import ActionEnum
+    try:
+        action_enum = ActionEnum(action)
+    except ValueError:
+        return RedirectResponse(
+            url=f"/sources/import?msg=error:无效的操作: {action}", status_code=303,
+        )
+
+    if action_enum == ActionEnum.skip:
+        return RedirectResponse(
+            url="/sources/import?msg=info:已取消导入", status_code=303,
+        )
+
+    try:
+        from podcast_research.sources.import_preview import execute_import_action
+        result = execute_import_action(preview, action_enum, vp)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/import?msg=error:导入失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    if result.get("success"):
+        return RedirectResponse(
+            url=f"/sources/import?msg=success:{result.get('message', '导入完成')}",
+            status_code=303,
+        )
+    else:
+        return RedirectResponse(
+            url=f"/sources/import?msg=error:{result.get('message', '导入失败')}",
+            status_code=303,
+        )

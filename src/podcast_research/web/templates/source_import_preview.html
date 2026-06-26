@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}导入预览 — {{ preview.title or preview.url }}{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<a href="/sources/import" class="back-link">&larr; 返回重新输入</a>
+
+<h2 class="page-title">导入预览</h2>
+
+<div class="section-card">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+        <div>
+            <h3 style="margin:0;font-size:1.1rem">{{ preview.title or preview.url }}</h3>
+            <p class="form-help" style="margin:4px 0 0">
+                <code>{{ preview.adapter_name }}</code>
+                &middot; {{ preview.source_type }}
+                &middot; 解析质量: <strong>{{ preview.parse_quality }}</strong>
+            </p>
+        </div>
+        <span class="count-badge" style="flex-shrink:0;background:var(--accent);color:#fff;padding:4px 10px;border-radius:12px;font-size:0.8rem;font-weight:700">{{ preview.content_blocks_count }} 块</span>
+    </div>
+
+    <table style="width:100%;font-size:0.82rem;border-collapse:collapse;margin-top:8px">
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top">URL</td>
+            <td style="padding:3px 0;word-break:break-all"><code style="font-size:0.75rem">{{ preview.url[:150] }}</code></td>
+        </tr>
+        {% if preview.canonical_url %}
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top">规范 URL</td>
+            <td style="padding:3px 0;word-break:break-all"><code style="font-size:0.75rem">{{ preview.canonical_url[:150] }}</code></td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">内容哈希</td>
+            <td style="padding:3px 0"><code style="font-size:0.75rem">{{ preview.content_hash[:20] }}{% if preview.content_hash %}...{% endif %}</code></td>
+        </tr>
+        {% if preview.detected_youtube_video_id %}
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">YouTube 视频</td>
+            <td style="padding:3px 0">
+                <code style="font-size:0.75rem">{{ preview.detected_youtube_video_id }}</code>
+                {% if preview.original_source_url %}
+                <a href="{{ preview.original_source_url }}" target="_blank" rel="noopener" style="font-size:0.75rem;margin-left:6px">查看 &nearr;</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% if preview.summary %}
+    <div style="margin-top:12px;padding:10px 12px;background:var(--surface-soft);border-radius:6px;border-left:3px solid var(--accent)">
+        <p style="font-size:0.85rem;color:var(--text-soft);margin:0;line-height:1.5">{{ preview.summary[:400] }}</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if preview.conflicts %}
+<div class="section-card" style="border-color:var(--warning,#d97706);border-width:2px">
+    <h2 style="color:var(--warning,#d97706);margin-top:0">⚠️ 冲突检测</h2>
+    {% for c in preview.conflicts %}
+    <div style="margin-bottom:10px;padding:10px;border-radius:6px;font-size:0.82rem;
+        {% if c.severity == 'blocker' %}
+        background:#fef2f2;border:1px solid #fca5a5;color:#991b1b
+        {% elif c.severity == 'warning' %}
+        background:#fffbeb;border:1px solid #fcd34d;color:#92400e
+        {% else %}
+        background:#f0f9ff;border:1px solid #bae6fd;color:#075985
+        {% endif %}
+    ">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+            <span style="font-weight:700;flex-shrink:0;margin-top:1px">
+                {% if c.severity == 'blocker' %}🚫{% elif c.severity == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+            </span>
+            <div>
+                <div><strong>{{ c.conflict_type }}</strong></div>
+                <div style="margin-top:2px">{{ c.description }}</div>
+                {% if c.existing_path %}
+                <div style="margin-top:4px"><code style="font-size:0.75rem">{{ c.existing_path }}</code></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if preview.warning_messages %}
+<div class="section-card">
+    <h2 style="margin-top:0">注意事项</h2>
+    {% for w in preview.warning_messages %}
+    <p class="form-help" style="color:var(--warning,#d97706);margin:4px 0">{{ w }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="section-card">
+    <h2 style="margin-top:0">选择导入操作</h2>
+    <form method="post" action="/sources/import/confirm" class="content-form">
+        <input type="hidden" name="preview_id" value="{{ preview.preview_id }}">
+
+        <div class="form-group">
+            <label class="form-label">操作</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                {% for act in preview.available_actions %}
+                {% set desc = action_descriptions.get(act.value, '') %}
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px;border-radius:6px;
+                    {% if act == preview.recommended_action %}
+                    background:var(--accent-wash,#e6f2f0);border:2px solid var(--accent)
+                    {% else %}
+                    border:1px solid var(--line-strong,#ddd)
+                    {% endif %}
+                ">
+                    <input type="radio" name="action" value="{{ act.value }}"
+                           {% if act == preview.recommended_action %}checked{% endif %}
+                           style="margin-top:3px;flex-shrink:0">
+                    <div>
+                        <strong style="font-size:0.9rem">{{ act.value }}</strong>
+                        {% if act == preview.recommended_action %}
+                        <span style="font-size:0.7rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:4px">推荐</span>
+                        {% endif %}
+                        {% if desc %}
+                        <p class="form-help" style="margin:4px 0 0;font-size:0.8rem">{{ desc }}</p>
+                        {% endif %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px">
+            <button type="submit" class="btn-action">确认导入</button>
+            <a href="/sources/import" class="btn-action btn-secondary">取消</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
