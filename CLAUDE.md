@@ -7,7 +7,7 @@
 
 ## 当前阶段
 
-**P2-O.2.1 Task Failure UX Acceptance。** P0–P2 (A–N) + P2-O.1/O.2/O.2.1 已交付，930 tests（含 26 job persistence + 7 Playwright UI smoke），50 个 Python 模块，7 个 CLI 命令组。
+**P2-S External Sources + Deep Notes Export。** P0–P2 (A–S) 已交付，1261 tests（含 26 job persistence + 7 Playwright UI smoke），58 个 Python 模块，9 个 CLI 命令组。
 
 CI：GitHub Actions 自动 pytest + ruff lint。详细路线见 `docs/ROADMAP.md`，变更记录见 `CHANGELOG.md`。
 
@@ -39,7 +39,7 @@ workspace/ → Vault 管理（dashboard/curation/backfill）
 ## 测试规则
 
 ```bash
-python -m pytest tests/ -v    # 911 tests（含 7 UI smoke），全部使用 mock provider
+python -m pytest tests/ -v    # 1261 tests（含 7 UI smoke），全部使用 mock provider
 python -m pytest tests/ -q    # 快速模式
 python -m pytest tests/test_ui_smoke.py -v  # UI smoke tests（需要 playwright）
 ```

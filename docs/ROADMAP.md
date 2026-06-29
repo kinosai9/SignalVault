@@ -23,8 +23,12 @@
 | P2-L | First-run vault setup + repair | ✅ |
 | P2-M | Channel filters + source pages + visual polish | ✅ |
 | P2-N | Research brief quality tuning + content accumulation | ✅ |
+| P2-O | Engineering stabilization (CI, lint, docs, UI smoke tests) | ✅ |
+| P2-S.1 | External Derived Source Adapter (allin_zh_notes, generic web) | ✅ |
+| P2-S.2 | Deep Notes Export & Episode Linking + fetch reliability | ✅ |
+| P2-S.3.1 | Generic Web URL Import Preview (adapter, conflict detector, UI) | ✅ |
 
-**Current: 904 tests, 50 Python modules, 9 CLI command groups.**
+**Current: 1261 tests, 58 Python modules, 9 CLI command groups.**
 
 ## Planned
 

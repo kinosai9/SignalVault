@@ -1,5 +1,22 @@
 # Changelog
 
+## P2-S — External Sources & Deep Notes Export (2026-06-26)
+- **P2-S.1**: External Derived Source Adapter (`external_html_notes`, `allin_zh_notes`) with retry engine
+- **P2-S.2**: Deep Notes markdown export, health check, report linking, episode linking
+- **P2-S.2.2**: External fetch reliability — retry with backoff (0.5/1.5/3.0s), error classification
+- **P2-S.3.1**: Generic Web URL Import Preview — `GenericWebPageAdapter`, `ImportPreview`, `ConflictDetector`
+- Web routes: GET `/sources/import`, POST preview/confirm; Source archive output
+- 1261 tests, ruff clean
+
+## P2-O — Engineering Stabilization (2026-06-05)
+- GitHub Actions CI (push/PR auto pytest + ruff)
+- ruff lint config (76 per-file-ignores)
+- CSS cache busting (content hash)
+- 7 Playwright UI smoke tests
+- docs/ARCHITECTURE.md, docs/RELEASE_CHECKLIST.md
+- Runtime observability & task failure UX (P2-O.2/O.2.1)
+- 930 tests
+
 ## P2-N — Research Brief Quality Tuning (2026-06-05)
 - Dashboard markdown artifact cleanup
 - Entity/topic classification noise fix

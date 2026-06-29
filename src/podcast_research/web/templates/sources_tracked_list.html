@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}信息源跟踪{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<a href="/sources/channels" class="back-link">&larr; 返回信息源管理</a>
+
+<!-- ── Header ── -->
+<section class="source-card">
+    <div class="card-body">
+        <h1>信息源跟踪</h1>
+        <p class="form-help">持续跟踪外部结构化信息源，发现新内容并选择导入。</p>
+        <a href="/sources/tracked/add" class="btn btn-primary">添加跟踪源</a>
+    </div>
+</section>
+
+<!-- ── Tracked Sources List ── -->
+{% if sources %}
+<section class="source-card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>提供方</th>
+                    <th>状态</th>
+                    <th>已发现</th>
+                    <th>已导入</th>
+                    <th>最近检查</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for src in sources %}
+                <tr>
+                    <td>
+                        <a href="/sources/tracked/{{ src.id }}"
+                           style="font-weight:600">{{ src.name or src.provider }}</a>
+                    </td>
+                    <td>{{ src.provider }}</td>
+                    <td>
+                        <span class="status-badge status-{{ src.status }}">
+                            {{ status_labels.get(src.status, src.status) }}
+                        </span>
+                    </td>
+                    <td>{{ src.entries_discovered_count }}</td>
+                    <td>{{ src.entries_imported_count }}</td>
+                    <td>
+                        {% if src.last_checked_at %}
+                        {{ src.last_checked_at.strftime('%Y-%m-%d %H:%M') if src.last_checked_at else '—' }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <a href="/sources/tracked/{{ src.id }}"
+                               class="btn btn-secondary btn-sm">查看</a>
+                            <a href="/sources/tracked/{{ src.id }}/entries"
+                               class="btn btn-primary btn-sm">条目</a>
+                            <form method="post"
+                                  action="/sources/tracked/{{ src.id }}/refresh"
+                                  style="display:inline">
+                                <button type="submit" class="btn btn-secondary btn-sm">刷新</button>
+                            </form>
+                            <form method="post"
+                                  action="/sources/tracked/{{ src.id }}/delete"
+                                  style="display:inline"
+                                  onsubmit="return confirm('确定删除该信息源及所有条目？')">
+                                <button type="submit" class="btn btn-ghost-danger btn-sm">删除</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<div class="empty-state">
+    <p>还没有添加任何跟踪信息源。</p>
+    <p><a href="/sources/tracked/add">添加第一个跟踪源 &rarr;</a></p>
+</div>
+{% endif %}
+
+<nav style="margin-top:16px">
+    <a href="/sources/channels">&larr; 返回信息源管理</a>
+    &nbsp;·&nbsp;
+    <a href="/sources/import">单网页导入 &rarr;</a>
+</nav>
+
+{% endblock %}

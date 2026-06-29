@@ -1519,6 +1519,23 @@ _PRIORITY_LABELS = {
     "archive": "归档",
 }
 
+# P2-S.3.2: Tracked source status labels
+_TRACKED_SOURCE_STATUS_LABELS = {
+    "active": "正常",
+    "degraded": "部分失败",
+    "failed": "异常",
+    "disabled": "已禁用",
+}
+
+_TRACKED_ENTRY_STATUS_LABELS = {
+    "new": "新发现",
+    "existing": "已存在",
+    "preview_ready": "待导入",
+    "imported": "已导入",
+    "skipped": "已跳过",
+    "failed": "解析失败",
+}
+
 
 @router.get("/sources/channels")
 def page_sources_channels(request: Request):
@@ -2047,6 +2064,12 @@ def action_rerun_video(request: Request, channel_id: int, video_id: str):
 # In-memory preview store (no writes in preview phase)
 _preview_store: dict[str, object] = {}  # ImportPreview instances
 
+# P2-S.3.2: In-memory import results store (survives redirect, cleared on display)
+_import_results_store: dict[int, list[dict]] = {}  # tracked_source_id → per-entry results
+
+# P2-S.3.2.1: In-memory profile store (survives redirect to create step)
+_profile_store: dict[str, object] = {}  # profile_id → SourceProfile instance
+
 
 @router.get("/sources/import")
 def page_source_import(request: Request):
@@ -2168,3 +2191,396 @@ def action_source_import_confirm(
             url=f"/sources/import?msg=error:{result.get('message', '导入失败')}",
             status_code=303,
         )
+
+
+# ── P2-S.3.2: Tracked External Sources ────────────────────────────────────
+
+
+@router.get("/sources/tracked")
+def page_sources_tracked(request: Request):
+    """List all tracked external sources."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    from podcast_research.db.repository import list_tracked_sources
+
+    session = _get_session()
+    try:
+        sources = list_tracked_sources(session)
+    finally:
+        session.close()
+
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vp_str,
+        "sources": sources,
+        "status_labels": _TRACKED_SOURCE_STATUS_LABELS,
+        "entry_status_labels": _TRACKED_ENTRY_STATUS_LABELS,
+    }
+    ctx.update(_flash(request))
+    return _render("sources_tracked_list.html", ctx)
+
+
+@router.get("/sources/tracked/add")
+def page_sources_tracked_add(request: Request):
+    """Form to add a new tracked source."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vp_str,
+    }
+    ctx.update(_flash(request))
+    return _render("sources_tracked_add.html", ctx)
+
+
+@router.post("/sources/tracked/profile")
+def action_sources_tracked_profile(
+    request: Request,
+    homepage_url: str = Form(...),
+    name: str = Form(""),
+):
+    """P2-S.3.2.1: Profile a URL and show tracking eligibility preview."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    url = homepage_url.strip()
+    if not url:
+        return RedirectResponse(
+            url="/sources/tracked/add?msg=error:请输入首页 URL", status_code=303)
+
+    from podcast_research.sources.source_profiler import profile_source_url
+
+    profile = profile_source_url(url)
+
+    # Store profile for create step
+    import uuid
+    profile_id = uuid.uuid4().hex[:12]
+    _profile_store[profile_id] = profile
+
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vp_str,
+        "profile": profile,
+        "profile_id": profile_id,
+        "source_name": name.strip() or profile.provider or profile.domain,
+    }
+    ctx.update(_flash(request))
+    return _render("sources_track_profile.html", ctx)
+
+
+@router.post("/sources/tracked/create")
+def action_sources_tracked_create(
+    request: Request,
+    profile_id: str = Form(""),
+    source_name: str = Form(""),
+):
+    """P2-S.3.2.1: Create a tracked source from a validated profile."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    profile = _profile_store.pop(profile_id, None)
+    if profile is None:
+        return RedirectResponse(
+            url="/sources/tracked/add?msg=error:预览已过期，请重新输入 URL", status_code=303)
+
+    if not profile.tracking_supported:
+        return RedirectResponse(
+            url=f"/sources/tracked/add?msg=error:该来源不支持持续跟踪 — {profile.unsupported_reason or '请使用单网页导入'}",
+            status_code=303,
+        )
+
+    from podcast_research.db.repository import create_tracked_source
+
+    session = _get_session()
+    try:
+        ts_id = create_tracked_source(
+            session,
+            name=source_name or profile.provider or profile.domain,
+            provider=profile.provider,
+            homepage_url=profile.url,
+            adapter_name=profile.recommended_adapter or "",
+            source_kind=profile.source_kind.value,
+            discovery_strategy=profile.discovery_strategy or "",
+            identity_strategy=profile.identity_strategy or "",
+            change_detection_strategy=profile.change_detection_strategy or "",
+            profile_confidence=profile.confidence,
+            profile_warnings="\n".join(profile.risk_warnings),
+        )
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        return RedirectResponse(
+            url=f"/sources/tracked/add?msg=error:创建失败 — {e}", status_code=303)
+    finally:
+        session.close()
+
+    return RedirectResponse(
+        url=f"/sources/tracked/{ts_id}?msg=success:信息源已添加，可刷新获取内容",
+        status_code=303,
+    )
+
+
+@router.get("/sources/tracked/{tracked_source_id}")
+def page_sources_tracked_detail(request: Request, tracked_source_id: int):
+    """Detail page for a single tracked source."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    from podcast_research.db.repository import get_tracked_source
+
+    session = _get_session()
+    try:
+        ts = get_tracked_source(session, tracked_source_id)
+        if not ts:
+            return RedirectResponse(
+                url="/sources/tracked?msg=error:信息源不存在", status_code=303)
+    finally:
+        session.close()
+
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vp_str,
+        "source": ts,
+        "status_labels": _TRACKED_SOURCE_STATUS_LABELS,
+    }
+    ctx.update(_flash(request))
+    return _render("sources_tracked_detail.html", ctx)
+
+
+@router.post("/sources/tracked/{tracked_source_id}/refresh")
+def action_sources_tracked_refresh(request: Request, tracked_source_id: int):
+    """Refresh a tracked source — discover new entries and generate previews."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    vp = Path(vp_str)
+    if not vp.exists():
+        return RedirectResponse(
+            url="/setup/vault?msg=error:知识库目录不存在", status_code=303)
+
+    from podcast_research.sources.tracked_source_service import refresh_tracked_source
+
+    try:
+        result = refresh_tracked_source(tracked_source_id, vp, _preview_store)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}?msg=error:刷新失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    if result["success"]:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}/entries?msg=success:{result['message']}",
+            status_code=303,
+        )
+    else:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}?msg=error:{result['message']}",
+            status_code=303,
+        )
+
+
+@router.get("/sources/tracked/{tracked_source_id}/entries")
+def page_sources_tracked_entries(
+    request: Request,
+    tracked_source_id: int,
+    status: str | None = None,
+):
+    """List entries for a tracked source with optional status filter."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    from podcast_research.db.repository import (
+        get_tracked_source,
+        list_tracked_source_entries,
+    )
+
+    session = _get_session()
+    try:
+        ts = get_tracked_source(session, tracked_source_id)
+        if not ts:
+            return RedirectResponse(
+                url="/sources/tracked?msg=error:信息源不存在", status_code=303)
+        entries = list_tracked_source_entries(session, tracked_source_id, status_filter=status)
+    finally:
+        session.close()
+
+    # Enrich preview_ready entries with preview data from _preview_store
+    for entry in entries:
+        if entry["status"] == "preview_ready" and entry.get("preview_id"):
+            preview = _preview_store.get(entry["preview_id"])
+            if preview:
+                entry["recommended_action"] = preview.recommended_action.value
+                entry["available_actions"] = [a.value for a in preview.available_actions]
+                entry["parse_quality"] = preview.parse_quality
+                entry["summary"] = preview.summary
+
+    # Pop import results if present (one-shot display, cleared after rendering)
+    import_results = _import_results_store.pop(tracked_source_id, None)
+
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vp_str,
+        "source": ts,
+        "entries": entries,
+        "current_status": status or "",
+        "status_labels": _TRACKED_SOURCE_STATUS_LABELS,
+        "entry_status_labels": _TRACKED_ENTRY_STATUS_LABELS,
+        "import_results": import_results or [],
+    }
+    ctx.update(_flash(request))
+    return _render("sources_tracked_entries.html", ctx)
+
+
+@router.post("/sources/tracked/{tracked_source_id}/import")
+def action_sources_tracked_import(
+    request: Request,
+    tracked_source_id: int,
+    entry_ids: str = Form(""),
+    action: str = Form(""),
+):
+    """Batch import selected tracked source entries."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+
+    vp = Path(vp_str)
+
+    ids = [int(i.strip()) for i in entry_ids.split(",") if i.strip()]
+    if not ids:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}/entries?msg=error:未选择任何条目",
+            status_code=303,
+        )
+
+    from podcast_research.sources.models import ActionEnum
+    try:
+        action_enum = ActionEnum(action) if action else ActionEnum.import_as_deep_notes_derived_only
+    except ValueError:
+        action_enum = ActionEnum.import_as_deep_notes_derived_only
+
+    from podcast_research.sources.tracked_source_service import (
+        import_tracked_source_entries,
+    )
+
+    try:
+        result = import_tracked_source_entries(
+            tracked_source_id, ids, action_enum, vp, _preview_store,
+        )
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}/entries?msg=error:导入失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    # Store per-entry results for display on entries page
+    _import_results_store[tracked_source_id] = result["results"]
+
+    # Show summary in flash, details in results section
+    msg = f"已导入 {result['imported']}/{result['total']} 条"
+    if result["failed"] > 0:
+        msg += f"，{result['failed']} 条失败（详见下方结果）"
+    return RedirectResponse(
+        url=f"/sources/tracked/{tracked_source_id}/entries?msg=success:{msg}",
+        status_code=303,
+    )
+
+
+@router.post("/sources/tracked/{tracked_source_id}/entries/{entry_id}/skip")
+def action_tracked_entry_skip(
+    request: Request,
+    tracked_source_id: int,
+    entry_id: int,
+):
+    """Skip a single tracked source entry."""
+    from podcast_research.db.repository import update_tracked_source_entry_status
+
+    session = _get_session()
+    try:
+        update_tracked_source_entry_status(session, entry_id, "skipped")
+        session.commit()
+    finally:
+        session.close()
+
+    return RedirectResponse(
+        url=f"/sources/tracked/{tracked_source_id}/entries?msg=info:已跳过",
+        status_code=303,
+    )
+
+
+@router.post("/sources/tracked/{tracked_source_id}/entries/{entry_id}/import")
+def action_tracked_entry_import_single(
+    request: Request,
+    tracked_source_id: int,
+    entry_id: int,
+    action: str = Form(""),
+):
+    """Import a single tracked source entry using its stored preview."""
+    vp_str = _get_vault_path()
+    if not vp_str:
+        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+    vp = Path(vp_str)
+
+    from podcast_research.sources.models import ActionEnum
+    try:
+        action_enum = ActionEnum(action) if action else ActionEnum.import_as_deep_notes_derived_only
+    except ValueError:
+        action_enum = ActionEnum.import_as_deep_notes_derived_only
+
+    from podcast_research.sources.tracked_source_service import (
+        import_tracked_source_entries,
+    )
+    result = import_tracked_source_entries(
+        tracked_source_id, [entry_id], action_enum, vp, _preview_store,
+    )
+    # Store per-entry results for display on entries page
+    _import_results_store[tracked_source_id] = result["results"]
+    first = result["results"][0] if result["results"] else {}
+    if first.get("success"):
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}/entries?msg=success:{first.get('message', '导入完成')}",
+            status_code=303,
+        )
+    else:
+        return RedirectResponse(
+            url=f"/sources/tracked/{tracked_source_id}/entries?msg=error:{first.get('message', '导入失败')}",
+            status_code=303,
+        )
+
+
+@router.post("/sources/tracked/{tracked_source_id}/delete")
+def action_tracked_source_delete(request: Request, tracked_source_id: int):
+    """Delete a tracked source and all its entries."""
+    from podcast_research.db.repository import delete_tracked_source
+
+    session = _get_session()
+    try:
+        ok = delete_tracked_source(session, tracked_source_id)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        return RedirectResponse(
+            url=f"/sources/tracked?msg=error:删除失败 — {e}", status_code=303)
+    finally:
+        session.close()
+
+    if not ok:
+        return RedirectResponse(
+            url="/sources/tracked?msg=error:信息源不存在", status_code=303)
+
+    return RedirectResponse(
+        url="/sources/tracked?msg=info:已删除信息源及所有条目", status_code=303)

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ source.name or source.provider }} · 条目列表{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<!-- ── Import Results (per-entry, one-shot display) ── -->
+{% if import_results %}
+<section class="source-card" style="border-left:3px solid var(--accent);margin-bottom:16px">
+    <div class="card-body">
+        <h3 style="margin-top:0">导入结果</h3>
+        <div style="max-height:300px;overflow-y:auto">
+        {% for r in import_results %}
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light);
+                    {% if r.success %}color:var(--success){% else %}color:var(--error){% endif %}">
+            <span style="font-weight:600;min-width:20px">
+                {% if r.success %}✓{% else %}✗{% endif %}
+            </span>
+            <div>
+                <span style="font-weight:600">{{ r.title or '#' + r.entry_id|string }}</span>
+                <span style="font-size:0.78rem;margin-left:8px">{{ r.message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<a href="/sources/tracked/{{ source.id }}" class="back-link">&larr; 返回信息源详情</a>
+
+<!-- ── Header ── -->
+<section class="source-card channel-hero">
+    <div class="card-body">
+        <div class="channel-hero-main">
+            <div class="channel-hero-text">
+                <h1>{{ source.name or source.provider }} · 条目</h1>
+                <div class="channel-meta-row">
+                    <span class="status-badge status-{{ source.status }}">
+                        {{ status_labels.get(source.status, source.status) }}
+                    </span>
+                    <span>发现 {{ source.entries_discovered_count }} · 导入 {{ source.entries_imported_count }}</span>
+                </div>
+            </div>
+            <div class="channel-actions">
+                <form method="post" action="/sources/tracked/{{ source.id }}/refresh">
+                    <button type="submit" class="btn btn-primary">刷新</button>
+                </form>
+                <a href="/sources/tracked/{{ source.id }}" class="btn btn-secondary">详情</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Filter Pills ── -->
+<section class="source-card filter-card">
+    <div class="card-body">
+        <div class="filter-bar">
+            <div class="filter-pills">
+                <a href="?" class="filter-pill {% if not current_status %}active{% endif %}">全部</a>
+                <a href="?status=preview_ready"
+                   class="filter-pill {% if current_status == 'preview_ready' %}active{% endif %}">待导入</a>
+                <a href="?status=imported"
+                   class="filter-pill {% if current_status == 'imported' %}active{% endif %}">已导入</a>
+                <a href="?status=new"
+                   class="filter-pill {% if current_status == 'new' %}active{% endif %}">新发现</a>
+                <a href="?status=failed"
+                   class="filter-pill {% if current_status == 'failed' %}active{% endif %}">解析失败</a>
+                <a href="?status=existing"
+                   class="filter-pill {% if current_status == 'existing' %}active{% endif %}">已存在</a>
+                <a href="?status=skipped"
+                   class="filter-pill {% if current_status == 'skipped' %}active{% endif %}">已跳过</a>
+            </div>
+            <div class="filter-summary">
+                共 <strong>{{ entries|length }}</strong> 条
+                {% set ns = namespace(npr=0, ni=0, nf=0) %}
+                {% for e in entries %}
+                    {% if e.status == 'preview_ready' %}{% set ns.npr = ns.npr + 1 %}{% endif %}
+                    {% if e.status == 'imported' %}{% set ns.ni = ns.ni + 1 %}{% endif %}
+                    {% if e.status == 'failed' %}{% set ns.nf = ns.nf + 1 %}{% endif %}
+                {% endfor %}
+                {% if ns.npr %}<span> · 待导入 <strong>{{ ns.npr }}</strong></span>{% endif %}
+                {% if ns.ni %}<span> · 已导入 <strong>{{ ns.ni }}</strong></span>{% endif %}
+                {% if ns.nf %}<span> · 失败 <strong>{{ ns.nf }}</strong></span>{% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Batch Import Form ── -->
+{% set preview_ready_entries = entries | selectattr('status', 'equalto', 'preview_ready') | list %}
+{% if preview_ready_entries %}
+<section class="source-card" style="border-left:3px solid var(--accent)">
+    <div class="card-body">
+        <form method="post" action="/sources/tracked/{{ source.id }}/import"
+              id="batch-import-form">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span style="font-weight:600">{{ preview_ready_entries|length }} 条待导入</span>
+                <input type="hidden" name="entry_ids" id="batch-entry-ids" value="">
+                <select name="action" style="width:auto">
+                    <option value="import_as_deep_notes_derived_only">导入为独立 Deep Notes</option>
+                    <option value="import_as_deep_notes">导入为 Deep Notes</option>
+                    <option value="import_as_deep_notes_linked">导入为 Deep Notes 并关联报告</option>
+                    <option value="import_as_source_archive">保存为来源归档</option>
+                </select>
+                <button type="submit" class="btn btn-primary"
+                        onclick="collectSelectedEntries(event)">
+                    导入选中
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+<!-- ── Entries List ── -->
+{% if entries %}
+<div class="video-list">
+{% for e in entries %}
+<article class="video-card">
+    <div class="video-main">
+        <div style="display:flex;align-items:center;gap:8px">
+            {% if e.status == 'preview_ready' %}
+            <input type="checkbox" class="batch-select" value="{{ e.id }}"
+                   style="width:16px;height:16px;cursor:pointer"
+                   onchange="updateBatchSelection()">
+            {% endif %}
+            <h3 class="video-title">{{ e.title or '无标题' }}</h3>
+        </div>
+        <div class="video-meta">
+            {% if e.published_at %}<span>{{ e.published_at }}</span>{% endif %}
+            {% if e.slug %}<span class="meta-vid">{{ e.slug }}</span>{% endif %}
+            {% if e.detected_youtube_video_id %}
+            <a href="https://www.youtube.com/watch?v={{ e.detected_youtube_video_id }}"
+               target="_blank" rel="noopener"
+               style="font-size:0.7rem;color:var(--accent)">YT</a>
+            {% endif %}
+            {% if e.url %}
+            <a href="{{ e.url }}" target="_blank" rel="noopener"
+               style="font-size:0.7rem">源</a>
+            {% endif %}
+        </div>
+        {% if e.status == 'preview_ready' and e.summary %}
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">
+            {{ e.summary[:200] }}{% if e.summary|length > 200 %}…{% endif %}
+        </p>
+        {% endif %}
+    </div>
+    <div class="video-side">
+        <span class="status-badge status-{{ e.status }}">
+            {{ entry_status_labels.get(e.status, e.status) }}
+        </span>
+        <div class="video-actions">
+            {% if e.status == 'preview_ready' %}
+            <form method="post"
+                  action="/sources/tracked/{{ source.id }}/entries/{{ e.id }}/import"
+                  style="display:inline">
+                <input type="hidden" name="action" value="import_as_deep_notes_derived_only">
+                <button type="submit" class="btn btn-primary btn-sm">导入</button>
+            </form>
+            <form method="post"
+                  action="/sources/tracked/{{ source.id }}/entries/{{ e.id }}/skip"
+                  style="display:inline">
+                <button type="submit" class="btn btn-ghost btn-sm">跳过</button>
+            </form>
+            {% elif e.status == 'imported' %}
+            <span style="font-size:0.74rem;color:var(--muted)">✓ 已导入</span>
+            {% elif e.status == 'failed' %}
+            {% if e.error_message %}
+            <div class="video-fail-reason" title="{{ e.error_message }}">
+                {{ e.error_message[:60] }}
+            </div>
+            {% endif %}
+            <form method="post"
+                  action="/sources/tracked/{{ source.id }}/entries/{{ e.id }}/skip"
+                  style="display:inline">
+                <button type="submit" class="btn btn-ghost btn-sm">忽略</button>
+            </form>
+            {% elif e.status == 'existing' %}
+            <span style="font-size:0.74rem;color:var(--muted)">已存在</span>
+            {% elif e.status == 'skipped' %}
+            <span style="font-size:0.74rem;color:var(--muted)">已跳过</span>
+            {% endif %}
+        </div>
+    </div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>
+        {% if current_status %}
+        当前筛选条件下没有匹配的条目。
+        {% else %}
+        还没有条目。点击"刷新"发现新内容。
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+<script>
+function collectSelectedEntries(event) {
+    var boxes = document.querySelectorAll('.batch-select:checked');
+    var ids = [];
+    boxes.forEach(function(b) { ids.push(b.value); });
+    if (ids.length === 0) {
+        event.preventDefault();
+        alert('请至少选择一条待导入条目');
+        return;
+    }
+    document.getElementById('batch-entry-ids').value = ids.join(',');
+}
+
+function updateBatchSelection() {
+    var boxes = document.querySelectorAll('.batch-select:checked');
+    // visual feedback only — actual collection happens on submit
+}
+</script>
+
+{% endblock %}

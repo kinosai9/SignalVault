@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -184,3 +184,51 @@ class JobEvent(Base):
     stage: Mapped[str] = mapped_column(String(50), default="")
     message: Mapped[str] = mapped_column(String(500), default="")
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class TrackedSource(Base):
+    """P2-S.3.2 / P2-S.3.2.1: Persistent tracked external source (e.g. allin-podcast-zh-notes)."""
+
+    __tablename__ = "tracked_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(500), default="")
+    provider: Mapped[str] = mapped_column(String(100), default="")
+    source_kind: Mapped[str] = mapped_column(String(50), default="external_html")
+    homepage_url: Mapped[str] = mapped_column(String(500), default="")
+    adapter_name: Mapped[str] = mapped_column(String(100), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active/degraded/failed/disabled
+    default_import_policy: Mapped[str] = mapped_column(String(20), default="")
+    # P2-S.3.2.1: Profiling metadata
+    discovery_strategy: Mapped[str] = mapped_column(String(50), default="")
+    identity_strategy: Mapped[str] = mapped_column(String(50), default="")
+    change_detection_strategy: Mapped[str] = mapped_column(String(50), default="")
+    profile_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    profiled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    profile_warnings: Mapped[str] = mapped_column(Text, default="")
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    entries_discovered_count: Mapped[int] = mapped_column(Integer, default=0)
+    entries_imported_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class TrackedSourceEntry(Base):
+    """P2-S.3.2: Individual entry discovered from a tracked source."""
+
+    __tablename__ = "tracked_source_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tracked_source_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(500), default="")
+    url: Mapped[str] = mapped_column(String(500), default="")
+    slug: Mapped[str] = mapped_column(String(200), default="")
+    published_at: Mapped[str] = mapped_column(String(30), default="")
+    detected_youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new/existing/preview_ready/imported/skipped/failed
+    preview_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    error_message: Mapped[str] = mapped_column(Text, default="")

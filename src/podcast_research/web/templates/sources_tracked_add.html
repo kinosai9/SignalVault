@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}添加跟踪信息源{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<a href="/sources/tracked" class="back-link">&larr; 返回信息源跟踪</a>
+
+<section class="source-card">
+    <div class="card-body">
+        <h1>添加跟踪信息源</h1>
+        <p class="form-help">
+            添加外部站点的首页 URL，系统会定期扫描发现新内容。
+            目前仅支持 All-In Podcast 中文笔记。
+        </p>
+
+        <form method="post" action="/sources/tracked/profile" style="margin-top:20px">
+            <div class="form-group">
+                <label for="homepage_url">首页 URL</label>
+                <input type="url" id="homepage_url" name="homepage_url"
+                       required autofocus
+                       placeholder="https://chirs-ma.github.io/allin-podcast-zh-notes/"
+                       style="width:100%;max-width:600px">
+                <p class="form-help">
+                    目前支持：
+                    <code>allin-podcast-zh-notes</code>（All-In Podcast 中文笔记）。
+                    其他站点请使用 <a href="/sources/import">单网页导入</a>。
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label for="name">名称（可选）</label>
+                <input type="text" id="name" name="name"
+                       placeholder="留空则自动使用提供方名称"
+                       style="width:100%;max-width:400px">
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:24px">
+                <button type="submit" class="btn btn-primary">添加跟踪</button>
+                <a href="/sources/tracked" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}

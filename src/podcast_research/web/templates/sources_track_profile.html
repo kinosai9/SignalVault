@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}来源识别结果 · {{ profile.provider or profile.domain or profile.url[:40] }}{% endblock %}
+{% block content %}
+
+<a href="/sources/tracked/add" class="back-link">&larr; 返回修改 URL</a>
+
+<!-- ── Profile Result Card ── -->
+<section class="source-card">
+    <div class="card-body">
+        <h1>来源识别结果</h1>
+
+        <table class="data-table" style="max-width:700px">
+            <tr>
+                <td>URL</td>
+                <td style="word-break:break-all"><code>{{ profile.url[:120] }}</code></td>
+            </tr>
+            <tr>
+                <td>域名</td>
+                <td>{{ profile.domain }}</td>
+            </tr>
+            {% if profile.provider %}
+            <tr>
+                <td>提供方</td>
+                <td>{{ profile.provider }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td>页面类型</td>
+                <td><code>{{ profile.source_kind.value }}</code></td>
+            </tr>
+            <tr>
+                <td>跟踪资格</td>
+                <td>
+                    <span class="status-badge {% if profile.tracking_supported %}status-synced{% elif profile.tracking_eligibility.value == 'needs_adapter' %}status-processing{% else %}status-failed{% endif %}">
+                        {{ profile.tracking_eligibility.value }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td>置信度</td>
+                <td>
+                    <progress value="{{ (profile.confidence * 100)|int }}" max="100"
+                              style="width:120px;height:16px"></progress>
+                    {{ (profile.confidence * 100)|int }}%
+                </td>
+            </tr>
+            {% if profile.recommended_adapter %}
+            <tr>
+                <td>推荐 Adapter</td>
+                <td><code>{{ profile.recommended_adapter }}</code></td>
+            </tr>
+            {% endif %}
+            {% if profile.discovery_strategy %}
+            <tr>
+                <td>发现策略</td>
+                <td><code>{{ profile.discovery_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if profile.identity_strategy %}
+            <tr>
+                <td>去重策略</td>
+                <td><code>{{ profile.identity_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if profile.change_detection_strategy %}
+            <tr>
+                <td>变更检测</td>
+                <td><code>{{ profile.change_detection_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if profile.detected_title %}
+            <tr>
+                <td>页面标题</td>
+                <td>{{ profile.detected_title[:200] }}</td>
+            </tr>
+            {% endif %}
+            {% if profile.detected_feed_url %}
+            <tr>
+                <td>Feed URL</td>
+                <td><code>{{ profile.detected_feed_url[:200] }}</code></td>
+            </tr>
+            {% endif %}
+            {% if profile.detected_entry_candidates_count > 0 %}
+            <tr>
+                <td>候选条目</td>
+                <td>{{ profile.detected_entry_candidates_count }} 条</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</section>
+
+<!-- ── Warnings & Reason ── -->
+{% if profile.risk_warnings or profile.unsupported_reason %}
+<section class="source-card" style="border-left:3px solid var(--warning, #e6a817)">
+    <div class="card-body">
+        {% if profile.unsupported_reason %}
+        <p style="color:var(--error);font-weight:600;margin-top:0">
+            ⚠ {{ profile.unsupported_reason }}
+        </p>
+        {% endif %}
+        {% for w in profile.risk_warnings %}
+        <p class="form-help" style="margin:2px 0">⚠ {{ w }}</p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- ── Action ── -->
+<section class="source-card">
+    <div class="card-body">
+        <h2 style="margin-top:0">建议操作: {{ profile.suggested_action.value }}</h2>
+
+        {% if profile.tracking_supported %}
+        <p>该来源支持持续跟踪。创建跟踪源后，可通过"刷新"发现新内容并选择导入。</p>
+        <form method="post" action="/sources/tracked/create"
+              style="display:flex;gap:12px;align-items:center;margin-top:16px">
+            <input type="hidden" name="profile_id" value="{{ profile_id }}">
+            <input type="hidden" name="source_name" value="{{ source_name }}">
+            <button type="submit" class="btn btn-primary">创建跟踪源</button>
+            <a href="/sources/tracked/add" class="btn btn-secondary">返回修改</a>
+        </form>
+
+        {% else %}
+        <p>该来源当前不支持持续跟踪。</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+            <button type="button" class="btn btn-primary" disabled
+                    title="{{ profile.unsupported_reason or '不支持持续跟踪' }}">创建跟踪源（不可用）</button>
+            <a href="/sources/import" class="btn btn-secondary">改用单网页导入</a>
+            <a href="/sources/tracked/add" class="btn btn-ghost">返回修改 URL</a>
+        </div>
+        <!-- Hidden profile_id so tests can verify storage; create route will reject this profile -->
+        <input type="hidden" name="profile_id" value="{{ profile_id }}">
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

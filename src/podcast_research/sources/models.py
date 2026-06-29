@@ -1,4 +1,4 @@
-"""P2-S.3.1: Import data models — ActionEnum, ImportPreview, ConflictInfo."""
+"""P2-S.3.x: Data models — ActionEnum, ImportPreview, ConflictInfo, SourceProfile."""
 
 from __future__ import annotations
 
@@ -70,3 +70,70 @@ class ImportPreview:
     # Internal: the raw adapter output, stored for confirm execution
     # Not serialized — lives only in _preview_store memory
     _parsed_data: object = field(default=None, repr=False, compare=False)
+
+
+# ── P2-S.3.2.1: Source Profiling ────────────────────────────────────────────
+
+
+class SourceKind(str, Enum):
+    """Classification of a remote URL's page type."""
+    allin_notes_index = "allin_notes_index"
+    rss_feed = "rss_feed"
+    atom_feed = "atom_feed"
+    generic_list_page = "generic_list_page"
+    single_article = "single_article"
+    single_page_monitor = "single_page_monitor"
+    youtube_channel = "youtube_channel"
+    unknown = "unknown"
+
+
+class TrackingEligibility(str, Enum):
+    """Whether a source can be persistently tracked."""
+    supported = "supported"
+    unsupported = "unsupported"
+    needs_adapter = "needs_adapter"
+    low_confidence = "low_confidence"
+    manual_only = "manual_only"
+
+
+class SuggestedAction(str, Enum):
+    """Recommended next step after profiling."""
+    create_tracked_source = "create_tracked_source"
+    use_single_url_import = "use_single_url_import"
+    use_rss_import_future = "use_rss_import_future"
+    create_adapter_first = "create_adapter_first"
+    unsupported = "unsupported"
+
+
+@dataclass
+class SourceProfile:
+    """Result of profiling a URL for tracking eligibility.
+
+    Built by profile_source_url(). Read-only — profiling must not write to
+    any Report, Deep Notes, Source Archive, Claim, or Signal store.
+    """
+
+    url: str = ""
+    normalized_url: str = ""
+    provider: str = ""
+    domain: str = ""
+
+    source_kind: SourceKind = SourceKind.unknown
+    tracking_supported: bool = False
+    tracking_eligibility: TrackingEligibility = TrackingEligibility.low_confidence
+    confidence: float = 0.0
+
+    recommended_adapter: str | None = None
+    discovery_strategy: str | None = None
+    identity_strategy: str | None = None
+    change_detection_strategy: str | None = None
+
+    detected_title: str | None = None
+    detected_description: str | None = None
+    detected_feed_url: str | None = None
+    detected_youtube_channel_id: str | None = None
+    detected_entry_candidates_count: int = 0
+
+    risk_warnings: list[str] = field(default_factory=list)
+    unsupported_reason: str | None = None
+    suggested_action: SuggestedAction = SuggestedAction.unsupported

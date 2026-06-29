@@ -1,15 +1,14 @@
 # TODO
 
-## P2-O.1 Engineering Stabilization
+## 已完成（P2-O · P2-S）
 
-- [x] CLAUDE.md / README / TODO 阶段一致性
-- [x] GitHub Actions CI（push/PR 自动 pytest + ruff）
-- [x] ruff 配置 + 基础 lint（76 项例外 via per-file-ignores）
-- [x] data/logs/.env 安全检查（无敏感数据进入 git）
-- [x] CSS cache busting（content hash: 2d2ef5f5）
-- [x] UI smoke test（7 Playwright tests for source pages + dashboard/reports/search）
-- [x] docs/ARCHITECTURE.md
-- [x] docs/RELEASE_CHECKLIST.md
+- [x] P2-O.1: Engineering Stabilization（CI, lint, docs, UI smoke tests）
+- [x] P2-O.2/O.2.1: Runtime Observability & Task Failure UX
+- [x] P2-S.1: External Derived Source Adapter（allin_zh_notes, generic web）
+- [x] P2-S.2: Deep Notes Export & Episode Linking
+- [x] P2-S.2.2: External Fetch Reliability（retry engine + error classification）
+- [x] P2-S.3.1: Generic Web URL Import Preview（adapter, conflict detector, UI）
+- [x] 1261 tests, ruff clean
 
 ## 待完成
 
@@ -25,6 +24,13 @@
 - [ ] Semantic deduplication（embedding 去重，替代 key-based）
 - [ ] Chunk-level evaluation（eval 支持 per-chunk 统计）
 
+### P2-S 遗留
+
+- [ ] P2-S.2.1: validate_deep_notes_import 第 5 个 episode 导入失败的跟进（4/5 成功）
+- [ ] External adapter 扩展（除 All-In Podcast 外的其他中文资讯站点）
+- [ ] GenericWebPageAdapter 正文提取精度优化（当前 best-effort）
+- [ ] Source Import 预测览页面错误状态覆盖（network failure, parse error 等）
+
 ### 手动验证项
 
 - [ ] P2-C: cleanup-unknown --dry-run + --apply 真实 Vault
@@ -32,6 +38,7 @@
 - [ ] P2-D: generate-cards --dry-run + 真实 Vault
 - [ ] P2-D.1: cleanup-cards --dry-run + --apply
 - [ ] P2-D.2: consolidate-topics --dry-run + --apply
+- [ ] P2-S.2: Deep Notes 真实 export 验证
 
 ### P3：小宇宙 + 其他增强
 

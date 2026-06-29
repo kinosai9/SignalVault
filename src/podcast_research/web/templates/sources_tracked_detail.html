@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}{{ source.name or source.provider }} · 信息源详情{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<a href="/sources/tracked" class="back-link">&larr; 返回信息源跟踪</a>
+
+<!-- ── Source Info Card ── -->
+<section class="source-card channel-hero">
+    <div class="card-body">
+        <div class="channel-hero-main">
+            <div class="channel-hero-text">
+                <h1>{{ source.name or source.provider }}</h1>
+                <div class="channel-meta-row">
+                    <span class="status-badge status-{{ source.status }}">
+                        {{ status_labels.get(source.status, source.status) }}
+                    </span>
+                    <span>{{ source.provider }}</span>
+                    {% if source.homepage_url %}
+                    <a href="{{ source.homepage_url }}" target="_blank" rel="noopener">首页 →</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="channel-actions">
+                <form method="post" action="/sources/tracked/{{ source.id }}/refresh">
+                    <button type="submit" class="btn btn-primary">刷新</button>
+                </form>
+                <a href="/sources/tracked/{{ source.id }}/entries"
+                   class="btn btn-secondary">查看条目</a>
+                <form method="post"
+                      action="/sources/tracked/{{ source.id }}/delete"
+                      onsubmit="return confirm('确定删除该信息源及所有条目？')">
+                    <button type="submit" class="btn btn-ghost-danger">删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Stats ── -->
+<section class="source-card">
+    <div class="card-body">
+        <h2>统计</h2>
+        <table class="data-table" style="max-width:500px">
+            <tr>
+                <td>Adapter</td>
+                <td><code>{{ source.adapter_name }}</code></td>
+            </tr>
+            <tr>
+                <td>发现条目</td>
+                <td><strong>{{ source.entries_discovered_count }}</strong></td>
+            </tr>
+            <tr>
+                <td>已导入</td>
+                <td><strong>{{ source.entries_imported_count }}</strong></td>
+            </tr>
+            <tr>
+                <td>最近检查</td>
+                <td>
+                    {% if source.last_checked_at %}
+                    {{ source.last_checked_at.strftime('%Y-%m-%d %H:%M') if source.last_checked_at else '—' }}
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>最近成功</td>
+                <td>
+                    {% if source.last_success_at %}
+                    {{ source.last_success_at.strftime('%Y-%m-%d %H:%M') if source.last_success_at else '—' }}
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% if source.last_error %}
+            <tr>
+                <td>最近错误</td>
+                <td style="color:var(--error);font-size:0.8rem;max-width:400px">
+                    {{ source.last_error[:200] }}
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td>创建时间</td>
+                <td>{{ source.created_at.strftime('%Y-%m-%d %H:%M') if source.created_at else '—' }}</td>
+            </tr>
+        </table>
+    </div>
+</section>
+
+<!-- ── Profiling Metadata ── -->
+{% if source.discovery_strategy or source.source_kind != 'external_html' %}
+<section class="source-card">
+    <div class="card-body">
+        <h2>跟踪策略</h2>
+        <table class="data-table" style="max-width:600px">
+            <tr>
+                <td>来源类型</td>
+                <td><code>{{ source.source_kind }}</code></td>
+            </tr>
+            {% if source.discovery_strategy %}
+            <tr>
+                <td>发现策略</td>
+                <td><code>{{ source.discovery_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if source.identity_strategy %}
+            <tr>
+                <td>去重策略</td>
+                <td><code>{{ source.identity_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if source.change_detection_strategy %}
+            <tr>
+                <td>变更检测</td>
+                <td><code>{{ source.change_detection_strategy }}</code></td>
+            </tr>
+            {% endif %}
+            {% if source.profile_confidence is not none %}
+            <tr>
+                <td>置信度</td>
+                <td>
+                    <progress value="{{ (source.profile_confidence * 100)|int if source.profile_confidence else 0 }}" max="100"
+                              style="width:100px;height:14px"></progress>
+                    {{ (source.profile_confidence * 100)|int if source.profile_confidence else 0 }}%
+                </td>
+            </tr>
+            {% endif %}
+            {% if source.profiled_at %}
+            <tr>
+                <td>分析时间</td>
+                <td>{{ source.profiled_at.strftime('%Y-%m-%d %H:%M') if source.profiled_at else '—' }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        {% if source.profile_warnings %}
+        <div style="margin-top:8px">
+            {% for line in source.profile_warnings.split('\n') %}
+            {% if line.strip() %}
+            <p class="form-help" style="margin:2px 0;color:var(--warning, #e6a817)">⚠ {{ line.strip() }}</p>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

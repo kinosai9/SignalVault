@@ -534,7 +534,12 @@ def list_sources(session: Session) -> list[dict]:
 # P2-M.1: Channel & ChannelVideo CRUD
 # ═════════════════════════════════════════════════════════════════════════════
 
-from podcast_research.db.models import Channel, ChannelVideo
+from podcast_research.db.models import (
+    Channel,
+    ChannelVideo,
+    TrackedSource,
+    TrackedSourceEntry,
+)
 
 
 def upsert_channel(
@@ -867,3 +872,255 @@ def detect_video_import_status(
                     pass
 
     return "new"
+
+
+# ── P2-S.3.2: TrackedSource & TrackedSourceEntry CRUD ────────────────────
+
+
+def create_tracked_source(
+    session: Session,
+    name: str,
+    provider: str,
+    homepage_url: str,
+    adapter_name: str,
+    source_kind: str = "external_html",
+    default_import_policy: str = "",
+    discovery_strategy: str = "",
+    identity_strategy: str = "",
+    change_detection_strategy: str = "",
+    profile_confidence: float | None = None,
+    profile_warnings: str = "",
+) -> int:
+    """Create a new TrackedSource. Returns its id."""
+    ts = TrackedSource(
+        name=name,
+        provider=provider,
+        source_kind=source_kind,
+        homepage_url=homepage_url,
+        adapter_name=adapter_name,
+        default_import_policy=default_import_policy,
+        discovery_strategy=discovery_strategy,
+        identity_strategy=identity_strategy,
+        change_detection_strategy=change_detection_strategy,
+        profile_confidence=profile_confidence,
+        profiled_at=datetime.now() if profile_confidence is not None else None,
+        profile_warnings=profile_warnings,
+    )
+    session.add(ts)
+    session.flush()
+    return ts.id
+
+
+def list_tracked_sources(session: Session, enabled_only: bool = False) -> list[dict]:
+    """List all tracked sources with per-status entry counts."""
+    q = session.query(TrackedSource).order_by(TrackedSource.created_at.desc())
+    if enabled_only:
+        q = q.filter_by(enabled=True)
+    results = []
+    for ts in q.all():
+        entry_counts = {}
+        for row in session.query(
+            TrackedSourceEntry.status, func.count(TrackedSourceEntry.id)
+        ).filter_by(tracked_source_id=ts.id).group_by(TrackedSourceEntry.status).all():
+            entry_counts[row[0]] = row[1]
+        results.append({
+            "id": ts.id,
+            "name": ts.name,
+            "provider": ts.provider,
+            "source_kind": ts.source_kind,
+            "homepage_url": ts.homepage_url,
+            "adapter_name": ts.adapter_name,
+            "enabled": ts.enabled,
+            "status": ts.status,
+            "default_import_policy": ts.default_import_policy,
+            "discovery_strategy": ts.discovery_strategy,
+            "identity_strategy": ts.identity_strategy,
+            "change_detection_strategy": ts.change_detection_strategy,
+            "profile_confidence": ts.profile_confidence,
+            "profiled_at": ts.profiled_at,
+            "profile_warnings": ts.profile_warnings,
+            "last_checked_at": ts.last_checked_at,
+            "last_success_at": ts.last_success_at,
+            "last_error": ts.last_error,
+            "entries_discovered_count": ts.entries_discovered_count,
+            "entries_imported_count": ts.entries_imported_count,
+            "created_at": ts.created_at,
+            "entry_counts": entry_counts,
+        })
+    return results
+
+
+def get_tracked_source(session: Session, ts_id: int) -> dict | None:
+    """Get a single tracked source by id."""
+    ts = session.query(TrackedSource).filter_by(id=ts_id).first()
+    if not ts:
+        return None
+    return {
+        "id": ts.id,
+        "name": ts.name,
+        "provider": ts.provider,
+        "source_kind": ts.source_kind,
+        "homepage_url": ts.homepage_url,
+        "adapter_name": ts.adapter_name,
+        "enabled": ts.enabled,
+        "status": ts.status,
+        "default_import_policy": ts.default_import_policy,
+        "discovery_strategy": ts.discovery_strategy,
+        "identity_strategy": ts.identity_strategy,
+        "change_detection_strategy": ts.change_detection_strategy,
+        "profile_confidence": ts.profile_confidence,
+        "profiled_at": ts.profiled_at,
+        "profile_warnings": ts.profile_warnings,
+        "last_checked_at": ts.last_checked_at,
+        "last_success_at": ts.last_success_at,
+        "last_error": ts.last_error,
+        "entries_discovered_count": ts.entries_discovered_count,
+        "entries_imported_count": ts.entries_imported_count,
+        "created_at": ts.created_at,
+    }
+
+
+def update_tracked_source_status(
+    session: Session,
+    ts_id: int,
+    status: str,
+    last_error: str = "",
+) -> bool:
+    """Update the status of a tracked source. Returns True if found."""
+    ts = session.query(TrackedSource).filter_by(id=ts_id).first()
+    if not ts:
+        return False
+    ts.status = status
+    ts.last_checked_at = datetime.now()
+    if status == "active":
+        ts.last_success_at = datetime.now()
+        ts.last_error = ""
+    elif last_error:
+        ts.last_error = last_error
+    session.flush()
+    return True
+
+
+def delete_tracked_source(session: Session, ts_id: int) -> bool:
+    """Delete a tracked source and all its entries. Returns True if found."""
+    ts = session.query(TrackedSource).filter_by(id=ts_id).first()
+    if not ts:
+        return False
+    session.query(TrackedSourceEntry).filter_by(tracked_source_id=ts_id).delete()
+    session.delete(ts)
+    session.flush()
+    return True
+
+
+# ── TrackedSourceEntry CRUD ──────────────────────────────────────────────
+
+
+def upsert_tracked_source_entry(
+    session: Session,
+    tracked_source_id: int,
+    url: str,
+    title: str = "",
+    slug: str = "",
+    published_at: str = "",
+) -> tuple[int, bool]:
+    """Insert or update a tracked source entry by URL. Returns (entry_id, is_new)."""
+    entry = session.query(TrackedSourceEntry).filter_by(
+        tracked_source_id=tracked_source_id, url=url,
+    ).first()
+    if entry:
+        entry.title = title or entry.title
+        entry.slug = slug or entry.slug
+        entry.published_at = published_at or entry.published_at
+        entry.last_seen_at = datetime.now()
+        session.flush()
+        return entry.id, False
+    else:
+        entry = TrackedSourceEntry(
+            tracked_source_id=tracked_source_id,
+            url=url,
+            title=title,
+            slug=slug,
+            published_at=published_at,
+            status="new",
+            last_seen_at=datetime.now(),
+        )
+        session.add(entry)
+        session.flush()
+        return entry.id, True
+
+
+def list_tracked_source_entries(
+    session: Session,
+    tracked_source_id: int,
+    status_filter: str | None = None,
+) -> list[dict]:
+    """List entries for a tracked source, optionally filtered by status."""
+    q = session.query(TrackedSourceEntry).filter_by(
+        tracked_source_id=tracked_source_id,
+    )
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    q = q.order_by(TrackedSourceEntry.published_at.desc())
+    return [
+        {
+            "id": e.id,
+            "tracked_source_id": e.tracked_source_id,
+            "title": e.title,
+            "url": e.url,
+            "slug": e.slug,
+            "published_at": e.published_at,
+            "detected_youtube_video_id": e.detected_youtube_video_id,
+            "content_hash": e.content_hash,
+            "status": e.status,
+            "preview_id": e.preview_id,
+            "last_seen_at": e.last_seen_at,
+            "error_message": e.error_message,
+        }
+        for e in q.all()
+    ]
+
+
+def get_tracked_source_entry(session: Session, entry_id: int) -> dict | None:
+    """Get a single entry by id."""
+    e = session.query(TrackedSourceEntry).filter_by(id=entry_id).first()
+    if not e:
+        return None
+    return {
+        "id": e.id,
+        "tracked_source_id": e.tracked_source_id,
+        "title": e.title,
+        "url": e.url,
+        "slug": e.slug,
+        "published_at": e.published_at,
+        "detected_youtube_video_id": e.detected_youtube_video_id,
+        "content_hash": e.content_hash,
+        "status": e.status,
+        "preview_id": e.preview_id,
+        "last_seen_at": e.last_seen_at,
+        "error_message": e.error_message,
+    }
+
+
+def update_tracked_source_entry_status(
+    session: Session,
+    entry_id: int,
+    status: str,
+    preview_id: str | None = None,
+    detected_youtube_video_id: str = "",
+    content_hash: str | None = None,
+    error_message: str = "",
+) -> None:
+    """Update status and optional metadata for a tracked source entry."""
+    e = session.query(TrackedSourceEntry).filter_by(id=entry_id).first()
+    if not e:
+        return
+    e.status = status
+    if preview_id is not None:
+        e.preview_id = preview_id if preview_id else None
+    if detected_youtube_video_id:
+        e.detected_youtube_video_id = detected_youtube_video_id
+    if content_hash is not None:
+        e.content_hash = content_hash
+    if error_message:
+        e.error_message = error_message
+    session.flush()

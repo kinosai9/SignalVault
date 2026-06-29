@@ -603,29 +603,24 @@ class TestVideoStatusSync:
         """Processing video should show '整理中' and not show import button."""
         ch_id = _seed_channel(api_client)
 
-        # Add video via mock refresh
-        mock_adapter = MockChannelAdapter([
-            {"video_id": "procVid", "title": "Processing Video",
-             "url": "https://www.youtube.com/watch?v=procVid",
-             "published_at": "20260601", "duration_seconds": 1200},
-        ])
-        monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
-            lambda: mock_adapter,
-        )
-        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
-        import time
-        time.sleep(0.5)
-
-        # Manually set status to processing
+        # Directly insert a processing video into DB (bypass background refresh to avoid race)
         from podcast_research.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
+            upsert_channel_video,
         )
         from podcast_research.db.session import get_session
         session = get_session()
         try:
+            upsert_channel_video(
+                session, ch_id, "procVid",
+                title="Processing Video",
+                url="https://www.youtube.com/watch?v=procVid",
+                published_at="20260601",
+                duration_seconds=1200,
+            )
             cv = get_channel_video_by_video_id(session, "procVid")
+            assert cv is not None, "Video should be created"
             update_channel_video_status(session, cv["id"], "processing")
             session.commit()
         finally:
@@ -636,7 +631,7 @@ class TestVideoStatusSync:
         html = resp.text
         assert "整理中" in html
         # Should NOT have "整理进知识库" button for this video
-        assert "整理进知识库" not in html or html.count("整理进知识库") == 0
+        assert "整理进知识库" not in html
 
     def test_synced_video_shows_view_report(self, api_client, monkeypatch):
         """Synced video should show '查看报告' instead of import button."""
@@ -901,30 +896,28 @@ class _SeedChannelWithVideosMixin:
     def _seed_channel_with_video(api_client, monkeypatch, status="new",
                                  video_id="guardVid001", report_id=None,
                                  failure_reason="", active_job_id=None):
-        """Seed channel + video with specific state, return (channel_id, video_id)."""
-        ch_id = _seed_channel(api_client)
-        mock_adapter = MockChannelAdapter([
-            {
-                "video_id": video_id, "title": "Guard Test Video",
-                "url": f"https://www.youtube.com/watch?v={video_id}",
-                "published_at": "20260601", "duration_seconds": 1200,
-            },
-        ])
-        monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
-            lambda: mock_adapter,
-        )
-        api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
-        import time; time.sleep(0.3)
+        """Seed channel + video with specific state, return (channel_id, video_id).
 
-        if status != "new":
-            from podcast_research.db.repository import (
-                get_channel_video_by_video_id,
-                update_channel_video_status,
+        Uses direct DB insertion to avoid background-thread race conditions.
+        """
+        ch_id = _seed_channel(api_client)
+
+        from podcast_research.db.repository import (
+            get_channel_video_by_video_id,
+            update_channel_video_status,
+            upsert_channel_video,
+        )
+        from podcast_research.db.session import get_session
+        session = get_session()
+        try:
+            upsert_channel_video(
+                session, ch_id, video_id,
+                title="Guard Test Video",
+                url=f"https://www.youtube.com/watch?v={video_id}",
+                published_at="20260601",
+                duration_seconds=1200,
             )
-            from podcast_research.db.session import get_session
-            session = get_session()
-            try:
+            if status != "new":
                 cv = get_channel_video_by_video_id(session, video_id)
                 if cv:
                     update_channel_video_status(
@@ -933,9 +926,9 @@ class _SeedChannelWithVideosMixin:
                         failure_reason=failure_reason,
                         active_job_id=active_job_id,
                     )
-                    session.commit()
-            finally:
-                session.close()
+            session.commit()
+        finally:
+            session.close()
 
         return ch_id, video_id
 

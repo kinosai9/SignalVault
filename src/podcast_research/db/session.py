@@ -88,6 +88,71 @@ def _migrate_investment_views_table(engine) -> None:
                 conn.execute(text(f"ALTER TABLE investment_views ADD COLUMN {col_name} {col_type}"))
 
 
+def _migrate_tracked_sources_tables(engine) -> None:
+    """P2-S.3.2: Create tracked_sources and tracked_source_entries tables if needed."""
+    insp = inspect(engine)
+    existing_tables = insp.get_table_names()
+
+    if "tracked_sources" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE tracked_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(500) DEFAULT '',
+                    provider VARCHAR(100) DEFAULT '',
+                    source_kind VARCHAR(50) DEFAULT 'external_html',
+                    homepage_url VARCHAR(500) DEFAULT '',
+                    adapter_name VARCHAR(100) DEFAULT '',
+                    enabled BOOLEAN DEFAULT 1,
+                    status VARCHAR(20) DEFAULT 'active',
+                    default_import_policy VARCHAR(20) DEFAULT '',
+                    last_checked_at DATETIME,
+                    last_success_at DATETIME,
+                    last_error TEXT DEFAULT '',
+                    entries_discovered_count INTEGER DEFAULT 0,
+                    entries_imported_count INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
+    # P2-S.3.2.1: Add profiling columns to existing tracked_sources table
+    if "tracked_sources" in existing_tables:
+        existing_cols = {c["name"] for c in insp.get_columns("tracked_sources")}
+        profiling_migrations = [
+            ("discovery_strategy", "VARCHAR(50) DEFAULT ''"),
+            ("identity_strategy", "VARCHAR(50) DEFAULT ''"),
+            ("change_detection_strategy", "VARCHAR(50) DEFAULT ''"),
+            ("profile_confidence", "FLOAT"),
+            ("profiled_at", "DATETIME"),
+            ("profile_warnings", "TEXT DEFAULT ''"),
+        ]
+        with engine.begin() as conn:
+            for col_name, col_type in profiling_migrations:
+                if col_name not in existing_cols:
+                    conn.execute(text(
+                        f"ALTER TABLE tracked_sources ADD COLUMN {col_name} {col_type}"
+                    ))
+
+    if "tracked_source_entries" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE tracked_source_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tracked_source_id INTEGER NOT NULL,
+                    title VARCHAR(500) DEFAULT '',
+                    url VARCHAR(500) DEFAULT '',
+                    slug VARCHAR(200) DEFAULT '',
+                    published_at VARCHAR(30) DEFAULT '',
+                    detected_youtube_video_id VARCHAR(50) DEFAULT '',
+                    content_hash VARCHAR(64),
+                    status VARCHAR(20) DEFAULT 'new',
+                    preview_id VARCHAR(20),
+                    last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    error_message TEXT DEFAULT ''
+                )
+            """))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
@@ -96,6 +161,7 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_channels_table(_engine)
     _migrate_channel_videos_table(_engine)
     _migrate_investment_views_table(_engine)
+    _migrate_tracked_sources_tables(_engine)
 
 
 def get_session() -> Session:
