@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}信息源 — 投资音视频研究助手{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<div class="page-header">
+    <h1 style="font-size:1.3rem;font-weight:700;margin:0 0 4px">信息源工作台</h1>
+    <p class="page-desc" style="margin:0">统一管理所有外部信息摄入：YouTube 频道、网页导入、固定跟踪源、文件上传。</p>
+</div>
+
+<!-- ── Stats Bar ── -->
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;font-size:0.82rem">
+    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
+        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ channel_count }}</div>
+        <div style="color:var(--text-soft)">频道</div>
+    </div>
+    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
+        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ tracked_count }}</div>
+        <div style="color:var(--text-soft)">跟踪源</div>
+    </div>
+    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
+        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ archive_file_count }}</div>
+        <div style="color:var(--text-soft)">已归档</div>
+    </div>
+    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
+        <div style="font-size:1.3rem;font-weight:700;color:{% if pending_total > 0 %}var(--warning,#d97706){% else %}var(--accent){% endif %}">{{ pending_total }}</div>
+        <div style="color:var(--text-soft)">待处理</div>
+    </div>
+</div>
+
+<!-- ── Entry Cards ── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px">
+    {% for card in entry_cards %}
+    <div style="background:var(--bg-card);border:1px solid
+        {% if card.status == 'warning' %}var(--warning,#d97706)
+        {% elif card.status == 'empty' %}var(--line-soft,#e5e5e5)
+        {% else %}var(--line-strong,#ddd){% endif %};
+        border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:1.4rem">{{ card.icon }}</span>
+            <h2 style="margin:0;font-size:1rem;font-weight:700">{{ card.title }}</h2>
+        </div>
+        <p style="margin:0;font-size:0.8rem;color:var(--text-soft);line-height:1.4;min-height:2.8em">{{ card.description }}</p>
+        <div style="font-size:0.8rem;color:var(--text-soft)">
+            <span style="font-weight:600;color:var(--text)">{{ card.count_label }}</span>
+            {% if card.count_detail %}
+            <span style="margin-left:8px;color:var(--warning,#d97706)">{{ card.count_detail }}</span>
+            {% endif %}
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted);min-height:1.2em">{{ card.status_text }}</div>
+        <a href="{{ card.action_url }}" style="display:inline-block;margin-top:auto;padding:8px 16px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-size:0.82rem;font-weight:600;text-align:center">
+            {{ card.action_label }}
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ── Pending Items ── -->
+{% if pending_items %}
+<div class="section-card" style="border-color:var(--warning,#d97706);border-width:2px;margin-bottom:24px">
+    <h2 style="margin:0 0 12px;color:var(--warning,#d97706);font-size:1rem">⚠️ 待处理 ({{ pending_total }})</h2>
+    <div style="display:flex;flex-direction:column;gap:6px">
+        {% for item in pending_items %}
+        <a href="{{ item.url }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-soft);border-radius:6px;text-decoration:none;color:var(--text);font-size:0.85rem">
+            <span>{% if item.type == 'failed' %}❌{% else %}📌{% endif %}</span>
+            <span>{{ item.label }}</span>
+            <span style="margin-left:auto;color:var(--muted)">→</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Quick Add Section ── -->
+<div class="section-card">
+    <h2 style="margin:0 0 12px;font-size:1rem">快速添加</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+        <a href="/sources/channels" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
+            <span style="font-size:1.1rem">📺</span>
+            <span>添加 YouTube 频道</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
+        </a>
+        <a href="/sources/import" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
+            <span style="font-size:1.1rem">🌐</span>
+            <span>粘贴网页链接</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
+        </a>
+        <a href="/sources/tracked/add" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
+            <span style="font-size:1.1rem">📡</span>
+            <span>添加固定跟踪源</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
+        </a>
+        <a href="/sources/files/import" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
+            <span style="font-size:1.1rem">📄</span>
+            <span>上传文本文件</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

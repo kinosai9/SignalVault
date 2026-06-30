@@ -263,6 +263,8 @@ def build_watchlist_evidence(
     snapshot: "WorkspaceSnapshot",
     watchlist_item_name: str,
     item_type: str,
+    claim_views: list | None = None,
+    signal_views: list | None = None,
 ) -> EvidenceView:
     """Build deduped evidence for a single watchlist item.
 
@@ -270,6 +272,10 @@ def build_watchlist_evidence(
     one canonical fingerprint set — same claim/signal never appears twice.
     Direct claims/signals take priority over indirect/reinforced.
     Target-only fragments and already_followed signals are excluded.
+
+    claim_views / signal_views: Pre-computed from build_canonical_claim_views()
+        and build_canonical_signal_views(). Pass from the caller to avoid
+        recomputing per watchlist item (0.4s each × N items).
     """
     from podcast_research.workspace.actionability import (
         is_claim_fragment,
@@ -280,8 +286,10 @@ def build_watchlist_evidence(
         normalize_signal_text,
     )
 
-    claim_views = build_canonical_claim_views(snapshot)
-    signal_views = build_canonical_signal_views(snapshot)
+    if claim_views is None:
+        claim_views = build_canonical_claim_views(snapshot)
+    if signal_views is None:
+        signal_views = build_canonical_signal_views(snapshot)
 
     ev = EvidenceView()
 

@@ -18,13 +18,33 @@
                 <a href="/dashboard"{% if current == '/dashboard' %} class="active"{% endif %}>控制台</a>
                 <a href="/reports"{% if current.startswith('/reports') %} class="active"{% endif %}>报告库</a>
                 <a href="/search"{% if current == '/search' %} class="active"{% endif %}>搜索</a>
-                <a href="/sources/channels"{% if current.startswith('/sources') %} class="active"{% endif %}>信息源</a>
+                <a href="/sources"{% if current.startswith('/sources') %} class="active"{% endif %}>信息源</a>
                 <a href="/docs">API</a>
             </nav>
         </div>
     </header>
 
     <main class="container">
+        {% set current = request.url.path %}
+        {% if current.startswith('/sources') %}
+        <nav class="sub-nav" style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;font-size:0.82rem">
+            <a href="/sources"{% if current == '/sources' %} class="sub-nav-active"{% endif %}
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;color:var(--text-soft);border:1px solid var(--line-strong,#ddd);
+               {% if current == '/sources' %}background:var(--accent);color:#fff;border-color:var(--accent){% endif %}">📋 总览</a>
+            <a href="/sources/channels"{% if current == '/sources/channels' or current.startswith('/sources/channels/') %} class="sub-nav-active"{% endif %}
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;color:var(--text-soft);border:1px solid var(--line-strong,#ddd);
+               {% if current == '/sources/channels' or current.startswith('/sources/channels/') %}background:var(--accent);color:#fff;border-color:var(--accent){% endif %}">YouTube 频道</a>
+            <a href="/sources/tracked"{% if current.startswith('/sources/tracked') %} class="sub-nav-active"{% endif %}
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;color:var(--text-soft);border:1px solid var(--line-strong,#ddd);
+               {% if current.startswith('/sources/tracked') %}background:var(--accent);color:#fff;border-color:var(--accent){% endif %}">外部信息源</a>
+            <a href="/sources/import"{% if current == '/sources/import' %} class="sub-nav-active"{% endif %}
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;color:var(--text-soft);border:1px solid var(--line-strong,#ddd);
+               {% if current == '/sources/import' %}background:var(--accent);color:#fff;border-color:var(--accent){% endif %}">网页导入</a>
+            <a href="/sources/files/import"{% if current.startswith('/sources/files') %} class="sub-nav-active"{% endif %}
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;color:var(--text-soft);border:1px solid var(--line-strong,#ddd);
+               {% if current.startswith('/sources/files') %}background:var(--accent);color:#fff;border-color:var(--accent){% endif %}">📄 上传文件</a>
+        </nav>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 

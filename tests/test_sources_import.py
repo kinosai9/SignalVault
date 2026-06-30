@@ -216,7 +216,7 @@ class TestImportPreviewModel:
     def test_action_enum_values(self) -> None:
         assert ActionEnum.import_as_deep_notes.value == "import_as_deep_notes"
         assert ActionEnum.skip.value == "skip"
-        assert len(list(ActionEnum)) == 8
+        assert len(list(ActionEnum)) == 9  # +1 for confirm_archive (P2-S.3.3)
 
     def test_import_preview_with_data(self) -> None:
         preview = ImportPreview(

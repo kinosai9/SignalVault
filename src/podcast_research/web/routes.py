@@ -1,9 +1,10 @@
 """P1-C / P2-I.2 / P2-K.2.1: HTML pages + actions — /dashboard /reports /tasks /patches /search + POST actions"""
 
 import re
+import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 
@@ -1422,6 +1423,247 @@ def action_signal_status(request: Request, signal_id: str, status: str = Form(..
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# P2-S.3.4: Unified Source Ingestion Dashboard
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+def _build_sources_dashboard_context(vault_path_str: str) -> dict:
+    """Build context for the /sources unified dashboard.
+
+    Gathers counts and status for all four source ingestion entry points.
+    Returns a dict suitable for template rendering — no writes.
+    """
+    from datetime import datetime
+
+    from podcast_research.db.repository import (
+        list_channels,
+        list_tracked_source_entries,
+        list_tracked_sources,
+    )
+    from podcast_research.db.session import get_session, init_db
+
+    vp = Path(vault_path_str)
+    now = datetime.now()
+
+    # ── YouTube Channels ────────────────────────────────────────────────
+    channel_count = 0
+    channel_last_refreshed: str | None = None
+    channel_new_count = 0
+    try:
+        init_db()
+        session = get_session()
+        try:
+            channels = list_channels(session, active_only=True)
+            channel_count = len(channels)
+            if channels:
+                latest = max(
+                    (c.get("last_refreshed_at") for c in channels
+                     if c.get("last_refreshed_at")),
+                    default=None,
+                )
+                if latest:
+                    channel_last_refreshed = _format_relative_time(latest, now)
+            # Count new videos across all channels
+            for ch in channels:
+                channel_new_count += sum(
+                    cnt for st, cnt in ch.get("video_counts", {}).items()
+                    if st == "new"
+                )
+        finally:
+            session.close()
+    except Exception:
+        pass
+
+    # ── Tracked External Sources ────────────────────────────────────────
+    tracked_count = 0
+    tracked_pending_entries = 0
+    tracked_failed_entries = 0
+    try:
+        init_db()
+        session = get_session()
+        try:
+            sources = list_tracked_sources(session, enabled_only=True)
+            tracked_count = len(sources)
+            for ts in sources:
+                entries = list_tracked_source_entries(
+                    session, ts["id"], status_filter="preview_ready",
+                )
+                tracked_pending_entries += len(entries)
+                failed = list_tracked_source_entries(
+                    session, ts["id"], status_filter="failed",
+                )
+                tracked_failed_entries += len(failed)
+        finally:
+            session.close()
+    except Exception:
+        pass
+
+    # ── URL Import Previews ─────────────────────────────────────────────
+    url_preview_count = len(_preview_store)
+
+    # ── File Upload Previews ────────────────────────────────────────────
+    file_preview_count = len(_file_preview_store)
+
+    # ── SourceArchive Stats ─────────────────────────────────────────────
+    archive_file_count = 0
+    if vp.exists():
+        archive_dir = vp / "01_Reports" / "SourceArchive"
+        if archive_dir.exists():
+            archive_file_count = len(list(archive_dir.glob("*.md")))
+
+    # ── Compose entry cards ─────────────────────────────────────────────
+    entry_cards = [
+        {
+            "key": "youtube",
+            "title": "YouTube 频道",
+            "icon": "📺",
+            "description": "长期跟踪 YouTube 频道，自动发现新视频并分析导入。",
+            "count_label": f"{channel_count} 个频道",
+            "count_detail": (
+                f"{channel_new_count} 个新视频待处理" if channel_new_count > 0
+                else "暂无新视频"
+            ),
+            "status": "active" if channel_count > 0 else "empty",
+            "status_text": (
+                f"最近刷新: {channel_last_refreshed}" if channel_last_refreshed
+                else "尚未添加频道"
+            ),
+            "action_url": "/sources/channels",
+            "action_label": "管理频道",
+        },
+        {
+            "key": "url_import",
+            "title": "网页导入",
+            "icon": "🌐",
+            "description": "粘贴任意网页 URL，解析内容后由你决定导入方式。",
+            "count_label": (
+                f"{url_preview_count} 个待确认预览" if url_preview_count > 0
+                else "无待处理预览"
+            ),
+            "status": "active" if url_preview_count > 0 else "idle",
+            "status_text": (
+                "有预览等待确认" if url_preview_count > 0
+                else "导入新网页"
+            ),
+            "action_url": "/sources/import",
+            "action_label": "导入网页",
+        },
+        {
+            "key": "tracked",
+            "title": "固定信息源",
+            "icon": "📡",
+            "description": "跟踪固定外部网页源（如 All-In Podcast 笔记），自动发现新条目。",
+            "count_label": f"{tracked_count} 个信息源",
+            "count_detail": (
+                f"{tracked_pending_entries} 条待导入"
+                if tracked_pending_entries > 0 else ""
+            ),
+            "status": (
+                "warning" if tracked_failed_entries > 0
+                else "active" if tracked_count > 0
+                else "empty"
+            ),
+            "status_text": (
+                f"{tracked_failed_entries} 条解析失败" if tracked_failed_entries > 0
+                else "已跟踪" if tracked_count > 0
+                else "尚未添加固定信息源"
+            ),
+            "action_url": "/sources/tracked",
+            "action_label": "管理信息源",
+        },
+        {
+            "key": "file_upload",
+            "title": "上传文件",
+            "icon": "📄",
+            "description": "上传 .md / .txt / .html / .htm 文本文件，提取内容后归档。",
+            "count_label": (
+                f"{file_preview_count} 个待确认预览" if file_preview_count > 0
+                else "无待处理预览"
+            ),
+            "status": "active" if file_preview_count > 0 else "idle",
+            "status_text": (
+                "有预览等待确认" if file_preview_count > 0
+                else "上传新文件"
+            ),
+            "action_url": "/sources/files/import",
+            "action_label": "上传文件",
+        },
+    ]
+
+    # ── Pending summary ─────────────────────────────────────────────────
+    pending_items: list[dict] = []
+    if url_preview_count > 0:
+        pending_items.append({
+            "type": "url_preview",
+            "label": f"{url_preview_count} 个网页导入预览待确认",
+            "url": "/sources/import",
+        })
+    if tracked_pending_entries > 0:
+        pending_items.append({
+            "type": "tracked_entries",
+            "label": f"{tracked_pending_entries} 条跟踪源条目待处理",
+            "url": "/sources/tracked",
+        })
+    if file_preview_count > 0:
+        pending_items.append({
+            "type": "file_preview",
+            "label": f"{file_preview_count} 个文件导入预览待确认",
+            "url": "/sources/files/import",
+        })
+    if tracked_failed_entries > 0:
+        pending_items.append({
+            "type": "failed",
+            "label": f"{tracked_failed_entries} 条导入失败",
+            "url": "/sources/tracked",
+        })
+
+    return {
+        "vault_configured": True,
+        "vault_path": vault_path_str,
+        "entry_cards": entry_cards,
+        "pending_items": pending_items,
+        "pending_total": len(pending_items),
+        "archive_file_count": archive_file_count,
+        "channel_count": channel_count,
+        "tracked_count": tracked_count,
+        "url_preview_count": url_preview_count,
+        "file_preview_count": file_preview_count,
+    }
+
+
+def _format_relative_time(dt, now) -> str:
+    """Format a datetime as a relative human-readable string in Chinese."""
+    if not dt:
+        return ""
+    diff = now - dt if hasattr(dt, 'replace') else now - dt
+    seconds = diff.total_seconds()
+    if seconds < 60:
+        return "刚刚"
+    elif seconds < 3600:
+        return f"{int(seconds / 60)} 分钟前"
+    elif seconds < 86400:
+        return f"{int(seconds / 3600)} 小时前"
+    elif seconds < 604800:
+        return f"{int(seconds / 86400)} 天前"
+    else:
+        return dt.strftime("%m-%d %H:%M") if hasattr(dt, 'strftime') else str(dt)[:16]
+
+
+@router.get("/sources")
+def page_sources_dashboard(request: Request):
+    """P2-S.3.4: Unified source ingestion dashboard."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    ctx = _build_sources_dashboard_context(vault_path_str)
+    ctx["request"] = request
+    ctx.update(_flash(request))
+    return _render("sources_dashboard.html", ctx)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # P2-M.1: Channel Source Manager
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -2070,6 +2312,11 @@ _import_results_store: dict[int, list[dict]] = {}  # tracked_source_id → per-e
 # P2-S.3.2.1: In-memory profile store (survives redirect to create step)
 _profile_store: dict[str, object] = {}  # profile_id → SourceProfile instance
 
+# P2-S.3.3: In-memory file preview store (no writes in preview phase)
+# This is a single-process preview cache for local workflow.
+# Durable import queues can replace it later.
+_file_preview_store: dict[str, object] = {}  # preview_id → FileImportPreview
+
 
 @router.get("/sources/import")
 def page_source_import(request: Request):
@@ -2584,3 +2831,219 @@ def action_tracked_source_delete(request: Request, tracked_source_id: int):
 
     return RedirectResponse(
         url="/sources/tracked?msg=info:已删除信息源及所有条目", status_code=303)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P2-S.3.3: User Text File Upload Preview & Archive
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Temp directory for uploaded files (lives in system temp, auto-cleaned)
+_UPLOAD_TEMP_DIR = Path(tempfile.gettempdir()) / "podcast_research_uploads"
+
+
+@router.get("/sources/files/import")
+def page_source_file_import(request: Request):
+    """File upload form page."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    ctx = {
+        "request": request,
+        "vault_configured": True,
+        "vault_path": vault_path_str,
+        "max_upload_mb": 5,
+    }
+    ctx.update(_flash(request))
+    return _render("source_file_import.html", ctx)
+
+
+@router.post("/sources/files/preview")
+async def action_source_file_preview(
+    request: Request,
+    file: UploadFile | None = None,
+):
+    """Receive uploaded file, extract content, and generate preview. NO vault writes."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+
+    if file is None or not file.filename:
+        return RedirectResponse(
+            url="/sources/files/import?msg=error:请选择要上传的文件", status_code=303,
+        )
+
+    vp = Path(vault_path_str)
+    if not vp.exists():
+        return RedirectResponse(
+            url="/sources/files/import?msg=error:知识库目录不存在", status_code=303,
+        )
+
+    # ── Validate extension early ────────────────────────────────────────
+    from podcast_research.sources.file_profile import (
+        ALLOWED_TEXT_EXTENSIONS,
+        UNSUPPORTED_MESSAGE,
+    )
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_TEXT_EXTENSIONS:
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:{UNSUPPORTED_MESSAGE}", status_code=303,
+        )
+
+    # ── Save to temp directory ──────────────────────────────────────────
+    _UPLOAD_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = _sanitize_upload_filename(file.filename)
+    tmp_path = _UPLOAD_TEMP_DIR / f"{__import__('uuid').uuid4().hex[:8]}_{safe_name}"
+    raw_bytes = await file.read()
+
+    # ── Size check ──────────────────────────────────────────────────────
+    from podcast_research.sources.file_profile import MAX_UPLOAD_BYTES
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        size_mb = len(raw_bytes) / (1024 * 1024)
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:文件大小 ({size_mb:.1f} MB) 超过限制 ({MAX_UPLOAD_BYTES // (1024 * 1024)} MB)", status_code=303,
+        )
+
+    try:
+        tmp_path.write_bytes(raw_bytes)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:无法保存上传文件 — {e}", status_code=303,
+        )
+
+    # ── Step 1: Profile the uploaded file ───────────────────────────────
+    from podcast_research.sources.file_profile import profile_uploaded_file
+    profile = profile_uploaded_file(tmp_path, file.filename, raw_bytes=raw_bytes)
+
+    if not profile.supported:
+        _cleanup_temp_file(tmp_path)
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:{profile.unsupported_reason or '文件不支持导入'}",
+            status_code=303,
+        )
+
+    # ── Step 2: Extract content ─────────────────────────────────────────
+    from podcast_research.sources.file_content_extractor import (
+        extract_text_from_uploaded_file,
+    )
+    content = extract_text_from_uploaded_file(
+        tmp_path,
+        file.filename,
+        content_hash=profile.content_hash or "",
+        detected_encoding=profile.detected_encoding or "utf-8",
+    )
+
+    # ── Step 3: Build preview ───────────────────────────────────────────
+    from podcast_research.sources.file_import_preview import (
+        build_file_import_preview,
+    )
+    preview = build_file_import_preview(profile, content, vp)
+
+    # ── Store preview for confirm step ──────────────────────────────────
+    _file_preview_store[preview.preview_id] = preview
+
+    # Store temp path for confirm step (attached to preview)
+    preview._temp_path = tmp_path  # type: ignore[attr-defined]
+
+    ctx = {
+        "request": request,
+        "preview": preview,
+        "vault_path": vault_path_str,
+    }
+    ctx.update(_flash(request))
+    return _render("source_file_import_preview.html", ctx)
+
+
+@router.post("/sources/files/confirm")
+def action_source_file_confirm(
+    request: Request,
+    preview_id: str = Form(...),
+    action: str = Form(...),
+):
+    """Execute the confirmed file import action. THIS is where vault writes happen."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+
+    vp = Path(vault_path_str)
+
+    preview = _file_preview_store.pop(preview_id, None)
+    if preview is None:
+        return RedirectResponse(
+            url="/sources/files/import?msg=error:预览已过期，请重新上传", status_code=303,
+        )
+
+    from podcast_research.sources.models import ActionEnum
+
+    if action == ActionEnum.skip.value:
+        _cleanup_temp_file(getattr(preview, "_temp_path", None))
+        return RedirectResponse(
+            url="/sources/files/import?msg=info:已跳过导入", status_code=303,
+        )
+
+    if action != ActionEnum.confirm_archive.value:
+        _cleanup_temp_file(getattr(preview, "_temp_path", None))
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:无效的操作: {action}", status_code=303,
+        )
+
+    if not preview.import_eligible:
+        _cleanup_temp_file(getattr(preview, "_temp_path", None))
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:{preview.ineligible_reason or '该文件不符合入库条件'}",
+            status_code=303,
+        )
+
+    # ── Execute import ──────────────────────────────────────────────────
+    from podcast_research.sources.file_import_preview import confirm_file_import
+
+    try:
+        result = confirm_file_import(preview, vp)
+    except Exception as e:
+        _cleanup_temp_file(getattr(preview, "_temp_path", None))
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:导入失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    # Cleanup temp file after successful import
+    _cleanup_temp_file(getattr(preview, "_temp_path", None))
+
+    if result.get("success"):
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=success:{result.get('message', '导入完成')}",
+            status_code=303,
+        )
+    else:
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:{result.get('message', '导入失败')}",
+            status_code=303,
+        )
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def _sanitize_upload_filename(filename: str) -> str:
+    """Sanitize a user-uploaded filename for temp storage."""
+    import re
+    # Keep only safe characters
+    safe = re.sub(r"[^\w\.\-]", "_", filename)
+    # Prevent directory traversal
+    safe = Path(safe).name
+    return safe or "uploaded_file"
+
+
+def _cleanup_temp_file(path: Path | None) -> None:
+    """Remove a temporary uploaded file."""
+    if path and path.exists():
+        try:
+            path.unlink()
+        except OSError:
+            pass

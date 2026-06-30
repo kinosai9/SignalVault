@@ -11,20 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class ConflictDetector:
-    """Detect conflicts for a prospective import URL against vault and DB.
+    """Detect conflicts for a prospective import against vault and DB.
 
-    Checks (in order, most specific first):
-      1. same_video_id_report — video_id already has a Report in DB
-      2. same_video_id_deep_notes — Deep Notes exists for this video_id
-      3. same_content_hash — content hash matches existing source archive
-      4. same_canonical_url — canonical URL matches existing source archive
-      5. same_url — exact URL already imported as source archive
+    Supports both URL-based imports (detect) and file-based imports
+    (detect_for_file). All conflict checks live in this single class so
+    the scanning logic is not duplicated across modules.
     """
+
+    # Directories scanned for file-type conflicts (broader than URL-type)
+    _FILE_SCAN_DIRS = [
+        "01_Reports/SourceArchive",
+        "01_Reports/ReportMaterial",
+        "01_Reports/DeepNotes",
+    ]
 
     def __init__(self, vault_path: Path) -> None:
         self._vault_path = vault_path
 
-    # ── Public API ───────────────────────────────────────────────────────
+    # ── Public API: URL import ──────────────────────────────────────────
 
     def detect(
         self,
@@ -33,7 +37,14 @@ class ConflictDetector:
         content_hash: str,
         detected_youtube_video_id: str,
     ) -> list[ConflictInfo]:
-        """Run all conflict checks and return a list of ConflictInfo.
+        """Run URL-specific conflict checks.
+
+        Checks (in order, most specific first):
+          1. same_video_id_report — video_id already has a Report in DB
+          2. same_video_id_deep_notes — Deep Notes exists for this video_id
+          3. same_content_hash — content hash matches existing source archive
+          4. same_canonical_url — canonical URL matches existing source archive
+          5. same_url — exact URL already imported as source archive
 
         Returns empty list if no conflicts found.
         """
@@ -68,6 +79,69 @@ class ConflictDetector:
             conflict = self._check_source_url(url)
             if conflict:
                 conflicts.append(conflict)
+
+        return conflicts
+
+    # ── Public API: File import ─────────────────────────────────────────
+
+    def detect_for_file(
+        self,
+        content_hash: str,
+        filename: str,
+        title: str,
+    ) -> list[ConflictInfo]:
+        """Run file-specific conflict checks against vault directories.
+
+        Checks:
+          1. same_content_hash — byte-level duplicate in any scan dir
+          2. same_filename — filename collision in any scan dir
+          3. same_title — title collision in any scan dir
+
+        Returns empty list if no conflicts found.
+        """
+        conflicts: list[ConflictInfo] = []
+        if not self._vault_path.exists():
+            return conflicts
+
+        for scan_rel in self._FILE_SCAN_DIRS:
+            scan_dir = self._vault_path / scan_rel
+            if not scan_dir.exists():
+                continue
+
+            for md_file in scan_dir.glob("*.md"):
+                try:
+                    head = md_file.read_text(encoding="utf-8")[:2048]
+                except Exception:
+                    continue
+
+                existing_rel = str(md_file.relative_to(self._vault_path))
+
+                # Check 1: same_content_hash
+                if content_hash and f"content_hash: {content_hash}" in head:
+                    conflicts.append(ConflictInfo(
+                        conflict_type="same_content_hash",
+                        severity="blocker",
+                        description=f"内容完全相同的文件已存在于归档中: {md_file.name}",
+                        existing_path=existing_rel,
+                    ))
+
+                # Check 2: same_filename
+                if filename and _filenames_match(md_file.name, filename):
+                    conflicts.append(ConflictInfo(
+                        conflict_type="same_filename",
+                        severity="warning",
+                        description=f"相同文件名的资料已存在: {md_file.name}",
+                        existing_path=existing_rel,
+                    ))
+
+                # Check 3: same_title
+                if title and _title_in_head(head, title):
+                    conflicts.append(ConflictInfo(
+                        conflict_type="same_title",
+                        severity="info",
+                        description=f"相同标题的资料已存在: {md_file.name}（标题: {title}）",
+                        existing_path=existing_rel,
+                    ))
 
         return conflicts
 
@@ -193,3 +267,29 @@ class ConflictDetector:
                 pass
 
         return None
+
+
+# ── File conflict helpers (used by ConflictDetector.detect_for_file) ─────────
+
+
+def _filenames_match(existing_name: str, uploaded_name: str) -> bool:
+    """Check if two filenames match, ignoring date prefixes and hash suffixes."""
+    import re
+    if existing_name == uploaded_name:
+        return True
+    existing_stem = Path(existing_name).stem
+    uploaded_stem = Path(uploaded_name).stem
+    if existing_stem == uploaded_stem:
+        return True
+    m = re.match(r"^\d{4}-\d{2}-\d{2}_(?:uploaded_)?(.+)", existing_stem)
+    return bool(m and m.group(1) == uploaded_stem)
+
+
+def _title_in_head(head: str, title: str) -> bool:
+    """Check if a title appears in the frontmatter header of a vault file."""
+    if not title or len(title) < 3:
+        return False
+    return (
+        f"# {title}" in head
+        or f"title: {title}" in head
+    )

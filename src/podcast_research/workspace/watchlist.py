@@ -284,6 +284,11 @@ def generate_watchlist_brief(
     vault_path: Path,
 ) -> list[WatchlistItemBrief]:
     """Generate per-item watchlist brief from vault snapshot."""
+    from podcast_research.workspace.canonical_view import (
+        build_canonical_claim_views,
+        build_canonical_signal_views,
+    )
+
     config = load_watchlist(vault_path)
     items: list[WatchlistItemBrief] = []
 
@@ -293,13 +298,19 @@ def generate_watchlist_brief(
     core_topic_names = {t.name for t in snapshot.core_topics()}
     active_topic_names = _get_active_topic_names(snapshot)
 
+    # Pre-compute canonical views once (expensive, ~0.4s each)
+    # Formerly called per-item inside _build_item_brief and
+    # build_watchlist_evidence (9 items × 2 views = ~7s wasted)
+    canonical_views = build_canonical_claim_views(snapshot)
+    signal_views = build_canonical_signal_views(snapshot)
+
     # Process companies
     for name in config.companies:
         resolved = resolve_watchlist_name(name, "company", company_names, topic_names)
         search_name = resolved["canonical_name"]
         item = _build_item_brief(
             search_name, "company", snapshot, topic_names, company_names,
-            core_topic_names, active_topic_names,
+            core_topic_names, active_topic_names, canonical_views, signal_views,
         )
         item.name = name  # Show original user input
         if resolved["match_status"] == "missing":
@@ -312,7 +323,7 @@ def generate_watchlist_brief(
         search_name = resolved["canonical_name"]
         item = _build_item_brief(
             search_name, "topic", snapshot, topic_names, company_names,
-            core_topic_names, active_topic_names,
+            core_topic_names, active_topic_names, canonical_views, signal_views,
         )
         item.name = name
         if resolved["match_status"] == "missing":
@@ -350,11 +361,17 @@ def _build_item_brief(
     company_names: set[str],
     core_topic_names: set[str],
     active_topic_names: set[str],
+    canonical_views: list | None = None,
+    signal_views: list | None = None,
 ) -> WatchlistItemBrief:
     """Build brief for a single watchlist item.
 
     P2-N.4.4.2: Uses canonical_view.build_watchlist_evidence() for unified
     dedup across all sections (direct/indirect/reinforced/observations).
+
+    canonical_views / signal_views: Pre-computed from
+        build_canonical_claim_views() and build_canonical_signal_views().
+        Pass from generate_watchlist_brief() to avoid recomputing per-item.
     """
     from podcast_research.workspace.canonical_view import build_watchlist_evidence
 
@@ -367,7 +384,11 @@ def _build_item_brief(
         item.card_exists = name in topic_names
 
     # Build unified evidence view (all sections share one dedup set)
-    ev = build_watchlist_evidence(snapshot, name, item_type)
+    ev = build_watchlist_evidence(
+        snapshot, name, item_type,
+        claim_views=canonical_views,
+        signal_views=signal_views,
+    )
 
     # Populate item from evidence view
     item.direct_items = ev.direct_claims[:3] + ev.direct_signals[:3]
@@ -380,12 +401,9 @@ def _build_item_brief(
     item.observation_count = ev.observation_count
 
     # P2-N.4.3.2: Extract context topics for company items
-    if item_type == "company":
-        from podcast_research.workspace.canonical_view import (
-            build_canonical_claim_views,
-        )
+    if item_type == "company" and canonical_views is not None:
         context_topics_set: set[str] = set()
-        for cv in build_canonical_claim_views(snapshot):
+        for cv in canonical_views:
             if name in cv.related_companies:
                 for t in cv.related_topics:
                     context_topics_set.add(t)

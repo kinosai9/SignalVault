@@ -8,15 +8,20 @@ from enum import Enum
 
 
 class ActionEnum(str, Enum):
-    """Import actions available to the user."""
+    """Import actions available to the user across all source types."""
+    # Deep Notes actions (URL / tracked sources)
     import_as_deep_notes = "import_as_deep_notes"
     import_as_deep_notes_linked = "import_as_deep_notes_linked"
     import_as_deep_notes_derived_only = "import_as_deep_notes_derived_only"
+    overwrite_deep_notes = "overwrite_deep_notes"
+    # Source Archive actions (URL / tracked sources)
     import_as_source_archive = "import_as_source_archive"
     link_as_derived_source = "link_as_derived_source"
     archive_only = "archive_only"
+    # File upload actions
+    confirm_archive = "confirm_archive"
+    # Universal
     skip = "skip"
-    overwrite_deep_notes = "overwrite_deep_notes"
 
 
 # Human-readable descriptions for the UI
@@ -29,6 +34,7 @@ ACTION_DESCRIPTIONS: dict[ActionEnum, str] = {
     ActionEnum.archive_only: "仅归档（不做关联）",
     ActionEnum.skip: "跳过不导入",
     ActionEnum.overwrite_deep_notes: "覆盖已有 Deep Notes",
+    ActionEnum.confirm_archive: "确认归档至 SourceArchive",
 }
 
 
@@ -137,3 +143,73 @@ class SourceProfile:
     risk_warnings: list[str] = field(default_factory=list)
     unsupported_reason: str | None = None
     suggested_action: SuggestedAction = SuggestedAction.unsupported
+
+
+# ── P2-S.3.3: File Upload Import ────────────────────────────────────────────
+
+
+class FileArchiveType(str, Enum):
+    """Recommended archive type for an uploaded file."""
+    source_archive = "source_archive"
+    report_material = "report_material"
+    deep_notes_candidate = "deep_notes_candidate"
+    skip = "skip"
+
+
+@dataclass
+class UploadedFileProfile:
+    """Profile of an uploaded text file after validation and content inspection.
+
+    Built by profile_uploaded_file(). Read-only — no vault writes.
+    """
+    filename: str = ""
+    original_filename: str = ""
+    extension: str = ""
+    mime_type: str | None = None
+    file_size_bytes: int = 0
+    supported: bool = False
+    unsupported_reason: str | None = None
+    detected_encoding: str | None = None
+    content_hash: str | None = None
+    extracted_text_length: int = 0
+    extracted_blocks_count: int = 0
+    parse_quality: str = "minimal"  # "good", "degraded", "minimal"
+    quality_warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class FileImportEligibility:
+    """Result of evaluating whether an uploaded file qualifies for archive import."""
+    import_eligible: bool = False
+    ineligible_reason: str | None = None
+    recommended_archive_type: FileArchiveType = FileArchiveType.source_archive
+    warning_messages: list[str] = field(default_factory=list)
+
+
+@dataclass
+class FileImportPreview:
+    """Full preview of a file upload import before any writes occur.
+
+    Built by build_file_import_preview(). Stored in-memory (never written to DB).
+    The user reviews this and picks an action before confirm executes writes.
+    """
+    preview_id: str = field(default_factory=lambda: __import__("uuid").uuid4().hex[:12])
+    filename: str = ""
+    extension: str = ""
+    file_size_bytes: int = 0
+    content_hash: str = ""
+    title: str = ""
+    extracted_text_excerpt: str = ""
+    extracted_text_length: int = 0
+    parse_quality: str = "minimal"
+    import_eligible: bool = False
+    ineligible_reason: str | None = None
+    conflicts: list[ConflictInfo] = field(default_factory=list)
+    recommended_action: ActionEnum = ActionEnum.skip
+    recommended_path: str = ""
+    available_actions: list[ActionEnum] = field(default_factory=list)
+    warning_messages: list[str] = field(default_factory=list)
+
+    # Internal: the full extracted text, stored for confirm execution
+    # Not serialized — lives only in _file_preview_store memory
+    _extracted_text: str = field(default="", repr=False, compare=False)

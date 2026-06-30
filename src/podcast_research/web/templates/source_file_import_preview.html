@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}文件导入预览 — {{ preview.title or preview.filename }}{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<a href="/sources/files/import" class="back-link">&larr; 返回重新上传</a>
+
+<h2 class="page-title">文件导入预览</h2>
+
+<div class="section-card">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+        <div>
+            <h3 style="margin:0;font-size:1.1rem">{{ preview.title or preview.filename }}</h3>
+            <p class="form-help" style="margin:4px 0 0">
+                <code>{{ preview.filename }}</code>
+                &middot; <code>{{ preview.extension }}</code>
+                &middot; 解析质量: <strong>{{ preview.parse_quality }}</strong>
+            </p>
+        </div>
+        {% if preview.import_eligible %}
+        <span class="count-badge" style="flex-shrink:0;background:#16a34a;color:#fff;padding:4px 10px;border-radius:12px;font-size:0.8rem;font-weight:700">可入库</span>
+        {% else %}
+        <span class="count-badge" style="flex-shrink:0;background:#dc2626;color:#fff;padding:4px 10px;border-radius:12px;font-size:0.8rem;font-weight:700">不可入库</span>
+        {% endif %}
+    </div>
+
+    <table style="width:100%;font-size:0.82rem;border-collapse:collapse;margin-top:8px">
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top">文件名</td>
+            <td style="padding:3px 0"><code style="font-size:0.8rem">{{ preview.filename }}</code></td>
+        </tr>
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">文件大小</td>
+            <td style="padding:3px 0">
+                {% if preview.file_size_bytes < 1024 %}
+                {{ preview.file_size_bytes }} B
+                {% elif preview.file_size_bytes < 1048576 %}
+                {{ "%.1f"|format(preview.file_size_bytes / 1024) }} KB
+                {% else %}
+                {{ "%.1f"|format(preview.file_size_bytes / 1048576) }} MB
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">文件类型</td>
+            <td style="padding:3px 0"><code style="font-size:0.8rem">{{ preview.extension }}</code></td>
+        </tr>
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">内容哈希</td>
+            <td style="padding:3px 0"><code style="font-size:0.75rem">{{ preview.content_hash[:20] }}{% if preview.content_hash %}...{% endif %}</code></td>
+        </tr>
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">提取文本长度</td>
+            <td style="padding:3px 0">{{ preview.extracted_text_length }} 字</td>
+        </tr>
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">推荐归档类型</td>
+            <td style="padding:3px 0"><code style="font-size:0.8rem">{{ preview.recommended_action.value }}</code></td>
+        </tr>
+        {% if preview.recommended_path %}
+        <tr>
+            <td style="color:var(--muted);padding:3px 8px 3px 0;white-space:nowrap">推荐保存位置</td>
+            <td style="padding:3px 0"><code style="font-size:0.75rem">{{ preview.recommended_path }}</code></td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% if preview.extracted_text_excerpt %}
+    <div style="margin-top:12px;padding:10px 12px;background:var(--surface-soft);border-radius:6px;border-left:3px solid var(--accent)">
+        <p style="font-size:0.85rem;color:var(--text-soft);margin:0 0 6px;font-weight:600">内容摘要</p>
+        <pre style="font-size:0.78rem;color:var(--text-soft);margin:0;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;line-height:1.5;font-family:inherit">{{ preview.extracted_text_excerpt }}</pre>
+    </div>
+    {% endif %}
+
+    {% if preview.ineligible_reason %}
+    <div style="margin-top:12px;padding:10px 12px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626">
+        <p style="font-size:0.85rem;color:#991b1b;margin:0;font-weight:600">不符合入库条件</p>
+        <p style="font-size:0.82rem;color:#991b1b;margin:4px 0 0">{{ preview.ineligible_reason }}</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if preview.conflicts %}
+<div class="section-card" style="border-color:var(--warning,#d97706);border-width:2px">
+    <h2 style="color:var(--warning,#d97706);margin-top:0">⚠️ 重复检测</h2>
+    {% for c in preview.conflicts %}
+    <div style="margin-bottom:10px;padding:10px;border-radius:6px;font-size:0.82rem;
+        {% if c.severity == 'blocker' %}
+        background:#fef2f2;border:1px solid #fca5a5;color:#991b1b
+        {% elif c.severity == 'warning' %}
+        background:#fffbeb;border:1px solid #fcd34d;color:#92400e
+        {% else %}
+        background:#f0f9ff;border:1px solid #bae6fd;color:#075985
+        {% endif %}
+    ">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+            <span style="font-weight:700;flex-shrink:0;margin-top:1px">
+                {% if c.severity == 'blocker' %}🚫{% elif c.severity == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+            </span>
+            <div>
+                <div><strong>{{ c.conflict_type }}</strong></div>
+                <div style="margin-top:2px">{{ c.description }}</div>
+                {% if c.existing_path %}
+                <div style="margin-top:4px"><code style="font-size:0.75rem">{{ c.existing_path }}</code></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if preview.warning_messages %}
+<div class="section-card">
+    <h2 style="margin-top:0">注意事项</h2>
+    {% for w in preview.warning_messages %}
+    <p class="form-help" style="color:var(--warning,#d97706);margin:4px 0">{{ w }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="section-card">
+    <h2 style="margin-top:0">选择操作</h2>
+    <form method="post" action="/sources/files/confirm" class="content-form">
+        <input type="hidden" name="preview_id" value="{{ preview.preview_id }}">
+
+        <div class="form-group">
+            <label class="form-label">操作</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                {% set has_confirm = false %}
+                {% set has_skip = false %}
+                {% set is_confirm_rec = false %}
+                {% for act in preview.available_actions %}
+                    {% if act.value == "confirm_archive" %}{% set has_confirm = true %}{% endif %}
+                    {% if act.value == "skip" %}{% set has_skip = true %}{% endif %}
+                {% endfor %}
+                {% if preview.recommended_action.value == "confirm_archive" %}{% set is_confirm_rec = true %}{% endif %}
+
+                {% if has_confirm %}
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px;border-radius:6px;
+                    {% if is_confirm_rec %}background:var(--accent-wash,#e6f2f0);border:2px solid var(--accent){% else %}border:1px solid var(--line-strong,#ddd){% endif %}
+                ">
+                    <input type="radio" name="action" value="confirm_archive"
+                           {% if is_confirm_rec %}checked{% endif %}
+                           style="margin-top:3px;flex-shrink:0">
+                    <div>
+                        <strong style="font-size:0.9rem">确认入库</strong>
+                        {% if is_confirm_rec %}<span style="font-size:0.7rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:4px">推荐</span>{% endif %}
+                        <p class="form-help" style="margin:4px 0 0;font-size:0.8rem">将文件内容写入 SourceArchive，文件名自动 sanitize。</p>
+                    </div>
+                </label>
+                {% endif %}
+
+                {% if has_skip %}
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px;border-radius:6px;
+                    {% if not is_confirm_rec %}background:var(--accent-wash,#e6f2f0);border:2px solid var(--accent){% else %}border:1px solid var(--line-strong,#ddd){% endif %}
+                ">
+                    <input type="radio" name="action" value="skip"
+                           {% if not is_confirm_rec %}checked{% endif %}
+                           style="margin-top:3px;flex-shrink:0">
+                    <div>
+                        <strong style="font-size:0.9rem">跳过</strong>
+                        {% if not is_confirm_rec %}<span style="font-size:0.7rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:4px">推荐</span>{% endif %}
+                        <p class="form-help" style="margin:4px 0 0;font-size:0.8rem">跳过不导入，不写入任何内容。</p>
+                    </div>
+                </label>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px">
+            {% if preview.import_eligible and has_confirm %}
+            <button type="submit" class="btn-action">确认入库</button>
+            {% elif has_skip %}
+            <p style="color:var(--text-soft);font-size:0.85rem">该文件不符合入库条件，无法执行确认入库操作。</p>
+            {% endif %}
+            <a href="/sources/files/import" class="btn-action btn-secondary">返回重新上传</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

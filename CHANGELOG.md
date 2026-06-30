@@ -1,5 +1,31 @@
 # Changelog
 
+## P2-S.3.3 + P2-S.3.4 — File Upload & Unified Sources Dashboard (2026-06-30)
+
+### P2-S.3.3: User Text File Upload Preview & Archive
+- New modules: `sources/file_profile.py`, `sources/file_content_extractor.py`, `sources/file_import_preview.py`
+- Supports `.md` / `.txt` / `.html` / `.htm` upload with encoding detection (UTF-8 / UTF-8-SIG / GB18030)
+- `UploadedFileProfile` → `ExtractedFileContent` → `FileImportPreview` pipeline
+- Content extraction: Markdown H1 as title, HTML script/style/nav stripping via BeautifulSoup
+- Import eligibility gate: text ≥ 200 chars, parse_quality ≠ minimal, content_hash required
+- Conflict detection: same_content_hash (blocker), same_filename (warning), same_title (info)
+- Scan dirs: SourceArchive, ReportMaterial, DeepNotes
+- Web routes: GET `/sources/files/import`, POST `/sources/files/preview`, POST `/sources/files/confirm`
+- File size limit: 5MB. Temp file cleanup on confirm. Filename sanitization.
+- 46 tests (45 passed, 1 skipped due to config_store fixture interaction)
+
+### P2-S.3.4: Source Ingestion Dashboard & Unified Navigation
+- New `/sources` dashboard page with four entry cards + stats bar + pending summary + quick-add
+- `_build_sources_dashboard_context()` gathers counts from DB, vault, and in-memory preview stores
+- Navigation: main nav → `/sources`, sub-nav adds "📋 总览", dashboard button updated
+- 19 tests
+
+### Code Consolidation (P2-S.3.x refactor)
+- **ActionEnum unified**: added `confirm_archive`, `FileImportPreview` now uses `ActionEnum` instead of bare `str`
+- **ConflictDetector unified**: added `detect_for_file()`, removed standalone `detect_file_conflicts()` from `file_import_preview.py`
+- **Performance fix**: `generate_watchlist_brief` — pre-compute canonical views outside per-item loop (7.3s → 0.69s, dashboard 10.4s → 2.8s)
+- 1384 tests, ruff clean
+
 ## P2-S — External Sources & Deep Notes Export (2026-06-26)
 - **P2-S.1**: External Derived Source Adapter (`external_html_notes`, `allin_zh_notes`) with retry engine
 - **P2-S.2**: Deep Notes markdown export, health check, report linking, episode linking
