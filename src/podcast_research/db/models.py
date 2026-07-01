@@ -278,3 +278,44 @@ class IngestJob(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ReviewItem(Base):
+    """P3-B/C: Review item for human-triage of lint issues, duplicates, patches, etc.
+
+    Unified review queue across vault lint, patch proposals, entity merge candidates,
+    duplicate reports, and manual items.
+    """
+
+    __tablename__ = "review_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    item_type: Mapped[str] = mapped_column(String(40), nullable=False)
+        # lint_frontmatter_invalid / lint_frontmatter_missing / lint_dead_wikilink
+        # lint_duplicate_report / lint_orphan_card / entity_duplicate_candidate
+        # patch_review / manual
+
+    severity: Mapped[str] = mapped_column(String(10), default="warning")
+        # error / warning / info
+
+    status: Mapped[str] = mapped_column(String(20), default="open")
+        # open / accepted / skipped / resolved
+
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+
+    # Source reference
+    source_ref: Mapped[str] = mapped_column(String(200), default="")
+        # e.g. "lint:frontmatter_invalid" or "patch:patch_id_xxx"
+    source_path: Mapped[str] = mapped_column(String(500), default="")
+        # vault-relative path to the file that triggered this item
+
+    # Suggested action (JSON)
+    suggested_action_json: Mapped[str] = mapped_column(Text, default="")
+
+    # Resolution
+    resolution_note: Mapped[str] = mapped_column(Text, default="")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

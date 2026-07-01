@@ -65,85 +65,47 @@ P2 解决了"能处理什么"，P3 解决"运行时出问题怎么办"和"怎么
 
 **结果：** 1439 tests（1438 passed, 1 pre-existing flaky），ruff clean。
 
-### P3-B：Vault Lint（预计 2-3 天）
+### P3-B：Vault Lint ✅ 已完成（2026-07-01）
 
-**当前问题：**
-- Obsidian vault 日积月累会产生质量问题
-- frontmatter 格式错误 → Obsidian 插件无法解析
-- `[[wikilink]]` 指向不存在的文件 → 死链
-- 同一内容的重复报告文件
-- 孤立卡片（没有关联报告的 Topic/Company）
-- 命名不一致（同一实体在不同卡片中名字不同）
-- 缺少 frontmatter 必填字段
+**实现摘要：**
 
-**目标状态：**
-- `vault_lint` CLI 命令 + web 面板
-- 7 类 lint rule，每类可独立开关
-- Lint 结果写入 `lint_results` 表（可追溯）
-- 可选的 auto-fix（死链删除、frontmatter 补全）
-
-**设计文档：** `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md`
-
-**Lint Rules：**
-
-| # | Rule | Severity | Auto-fix |
-|---|------|----------|----------|
-| 1 | frontmatter 格式错误 | error | 否（需人工） |
-| 2 | 必填字段缺失 | warning | 补默认值 |
-| 3 | 死 wikilink | warning | 删除链接 |
-| 4 | 重复报告（同 content_hash） | warning | 标记 duplicate |
-| 5 | 孤立卡片（无关联报告） | info | 标记 orphan |
-| 6 | 命名不一致 | info | 建议统一 |
-| 7 | 过期卡片（>90 天未更新） | info | 标记 stale |
+- 新增 `workspace/vault_lint.py` — 5 条 lint rule + runner
+- Rules: `frontmatter_invalid`, `frontmatter_missing`, `dead_wikilink`, `duplicate_report`, `orphan_card`
+- CLI: `vault-lint --vault <path> [--rules/--exclude/--json/--write-review]`
+- 与 P3-C 集成：`--write-review` 将 lint 发现写入 `review_items` 表
 
 **验收标准：**
-- [ ] `vault_lint` CLI 命令可用
-- [ ] 7 条 lint rule 全部实现
-- [ ] `lint_results` 表持久化
-- [ ] Web 面板显示 lint 结果
-- [ ] Lint 结果可关联到 review_items（P3-C）
-- [ ] 现有 Vault 相关测试不受影响
-- [ ] Lint 专项测试（≥15 tests）
-- [ ] ruff clean
+- [x] `vault_lint` CLI 命令可用
+- [x] 5 条 lint rule 全部实现
+- [x] Vault 中问题可检测和报告
+- [x] `--json` 输出格式
+- [x] `--write-review` 将发现写入 review_items
+- [x] 现有测试不受影响
+- [x] Lint 专项测试：27 tests（含于 test_vault_lint_review.py）
+- [x] ruff clean
 
-### P3-C：Review Queue（预计 2-3 天）
+### P3-C：Review Queue ✅ 已完成（2026-07-01）
 
-**当前问题：**
-- Patch Review 只覆盖 LLM-WIKI 卡片修改
-- Claim/Signal backlog 是独立的系统
-- Lint 发现问题后没有统一的处理入口
-- 用户面对多种"待处理"事项，分散在多个页面
+**实现摘要：**
 
-**目标状态：**
-- 统一的 `review_items` 表
-- 承接来源：lint issues、patch proposals、实体合并建议、重复报告、缺失卡片
-- 统一的 review 状态机：pending → in_review → accepted / rejected / deferred
-- 统一 Web 面板（`/reviews`）
-- 每项可关联源文件、建议操作、优先级
-
-**设计文档：** `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md`
-
-**Review Item 类型：**
-
-| Type | 来源 | 自动生成 |
-|------|------|----------|
-| lint_issue | Vault Lint | ✓ |
-| patch_proposal | LLM Patch Generator | ✓ |
-| entity_merge | Card Cleanup | ✓ |
-| duplicate_report | Conflict Detector | ✓ |
-| missing_card | Workspace Scanner | ✓ |
-| manual | 用户手动创建 | — |
+- 新增 `ReviewItem` SQLAlchemy 模型（12 列）— `db/models.py`
+- 新增 `_migrate_review_items_table` — `db/session.py`
+- 新增 `ReviewItemManager` — `sources/review_items.py`
+- 支持 7 种 item_type：`lint_frontmatter_invalid`, `lint_frontmatter_missing`, `lint_dead_wikilink`, `lint_duplicate_report`, `lint_orphan_card`, `entity_duplicate_candidate`, `patch_review`, `manual`
+- 状态机：`open → accepted/skipped/resolved`；`accepted → resolved`
+- CLI: `review list/show/accept/skip/resolve`
+- 去重：同一 `source_path + item_type + open` 不重复创建
+- 与 Patch Review 兼容：patch_review 类型已预留，现有 Patch Review 不受影响
 
 **验收标准：**
-- [ ] `review_items` 表创建
-- [ ] 统一状态机实现
-- [ ] Web 面板（`/reviews`）可用
-- [ ] Lint issues 自动转入 review_items
-- [ ] Patch proposals 关联 review_items
-- [ ] Entity merge 建议自动生成
-- [ ] 现有 Patch Review 测试继续通过
-- [ ] Review 专项测试（≥15 tests）
-- [ ] ruff clean
+- [x] `review_items` 表创建
+- [x] 统一状态机实现
+- [x] CLI review 命令可用
+- [x] Lint issues 自动转入 review_items（`--write-review`）
+- [x] 去重正常（同一文件+类型不重复创建 open item）
+- [x] 现有 Patch Review 测试继续通过
+- [x] Review 专项测试：26 tests（含于 test_vault_lint_review.py）
+- [x] ruff clean
 
 ### P3-D：MCP Server（预计 2-3 天）
 

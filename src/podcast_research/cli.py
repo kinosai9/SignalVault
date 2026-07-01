@@ -2874,6 +2874,226 @@ def ingest_resume():
 
 
 # ---------------------------------------------------------------------------
+# vault-lint 命令（P3-B：Vault Lint）
+# ---------------------------------------------------------------------------
+
+
+@app.command("vault-lint")
+def vault_lint(
+    vault: str = typer.Option(..., "--vault", help="Obsidian vault 路径"),
+    rules: str = typer.Option(
+        None, "--rules",
+        help="仅运行指定规则（逗号分隔）: frontmatter_invalid,frontmatter_missing,dead_wikilink,duplicate_report,orphan_card",
+    ),
+    exclude: str = typer.Option(
+        None, "--exclude",
+        help="排除指定规则（逗号分隔）",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="以 JSON 格式输出",
+    ),
+    write_review: bool = typer.Option(
+        False, "--write-review", help="将 lint 发现写入 review_items 表",
+    ),
+):
+    """扫描 Obsidian vault，检查 frontmatter、死 wikilink、重复报告、孤立卡片。"""
+    import json as _json
+    from pathlib import Path as _Path
+
+    from podcast_research.db.session import init_db
+    from podcast_research.workspace.vault_lint import (
+        run_vault_lint,
+        write_lint_to_review,
+    )
+
+    vp = _Path(vault)
+    if not vp.exists():
+        console.print(f"[red]Vault 路径不存在: {vault}[/red]")
+        raise typer.Exit(1)
+
+    rule_list = [r.strip() for r in rules.split(",")] if rules else None
+    exclude_list = [e.strip() for e in exclude.split(",")] if exclude else None
+
+    result = run_vault_lint(vp, rules=rule_list, exclude=exclude_list)
+
+    if json_output:
+        console.print(_json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        # Table output
+        console.print(f"\n[bold]Vault Lint 完成[/bold] — {result['total_findings']} 个发现")
+        console.print(f"  run_id: {result['run_id']}")
+
+        for rule_name, count in result["rule_counts"].items():
+            if count == -1:
+                console.print(f"  [red]{rule_name}: 执行失败[/red]")
+            elif count > 0:
+                color = "red" if "invalid" in rule_name else "yellow" if "missing" in rule_name or "dead" in rule_name else "dim"
+                console.print(f"  [{color}]{rule_name}: {count}[/{color}]")
+
+        if result["total_findings"] > 0:
+            console.print("")
+            table = Table(title="Lint 发现", show_lines=False)
+            table.add_column("规则", style="dim")
+            table.add_column("严重度")
+            table.add_column("文件", max_width=40)
+            table.add_column("消息", max_width=60)
+            for f in result["findings"][:50]:
+                sev_color = {"error": "red", "warning": "yellow", "info": "dim"}.get(
+                    f.get("severity", ""), "white",
+                )
+                table.add_row(
+                    f.get("rule", "")[:24],
+                    f"[{sev_color}]{f.get('severity', '')}[/{sev_color}]",
+                    f.get("file_path", "")[:38],
+                    f.get("message", "")[:58],
+                )
+            console.print(table)
+            if result["total_findings"] > 50:
+                console.print(f"[dim]... 及其他 {result['total_findings'] - 50} 条[/dim]")
+
+    if write_review:
+        init_db()
+        created = write_lint_to_review(result["findings"])
+        console.print(f"\n[green]已写入 {created} 条 review items[/green]")
+
+
+# ---------------------------------------------------------------------------
+# review 命令组（P3-C：Review Queue）
+# ---------------------------------------------------------------------------
+
+review_app = typer.Typer(help="Review Queue 管理（查看/接受/跳过/解决）")
+app.add_typer(review_app, name="review")
+
+
+@review_app.command("list")
+def review_list(
+    item_type: str = typer.Option(None, "--type", "-t", help="按类型过滤"),
+    status: str = typer.Option(None, "--status", "-s", help="按状态过滤: open/accepted/skipped/resolved"),
+    limit: int = typer.Option(50, "--limit", "-n", help="最大返回数"),
+):
+    """列出 review items。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+
+    init_db()
+    items = ReviewItemManager.list_items(
+        item_type=item_type, status=status, limit=limit,
+    )
+
+    if not items:
+        console.print("[dim]没有匹配的 review items。[/dim]")
+        return
+
+    table = Table(title="Review Queue", show_lines=False)
+    table.add_column("ID", style="dim")
+    table.add_column("类型")
+    table.add_column("严重度")
+    table.add_column("状态")
+    table.add_column("标题", max_width=60)
+
+    for item in items:
+        sev_color = {"error": "red", "warning": "yellow", "info": "dim"}.get(
+            item.get("severity", ""), "white",
+        )
+        status_color = {
+            "open": "yellow", "accepted": "green",
+            "skipped": "dim", "resolved": "blue",
+        }.get(item.get("status", ""), "white")
+
+        table.add_row(
+            str(item["id"]),
+            item.get("item_type", "")[:28],
+            f"[{sev_color}]{item.get('severity', '')}[/{sev_color}]",
+            f"[{status_color}]{item.get('status', '')}[/{status_color}]",
+            item.get("title", "")[:58],
+        )
+
+    console.print(table)
+
+
+@review_app.command("show")
+def review_show(
+    item_id: int = typer.Argument(..., help="Review item ID"),
+):
+    """查看 review item 详情。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+
+    init_db()
+    item = ReviewItemManager.get_item(item_id)
+    if item is None:
+        console.print(f"[red]Review item {item_id} 不存在。[/red]")
+        raise typer.Exit(1)
+
+    lines = [
+        f"ID: {item['id']}",
+        f"类型: {item['item_type']}",
+        f"严重度: {item['severity']}",
+        f"状态: {item['status']}",
+        f"标题: {item['title']}",
+        f"描述: {item.get('description') or '-'}",
+        f"来源引用: {item.get('source_ref') or '-'}",
+        f"来源路径: {item.get('source_path') or '-'}",
+        f"建议操作: {item.get('suggested_action_json') or '-'}",
+        f"处理备注: {item.get('resolution_note') or '-'}",
+        f"创建时间: {item.get('created_at') or '-'}",
+        f"解决时间: {item.get('resolved_at') or '-'}",
+    ]
+    console.print(Panel("\n".join(lines), title=f"Review Item #{item_id}"))
+
+
+@review_app.command("accept")
+def review_accept(
+    item_id: int = typer.Argument(..., help="Review item ID"),
+    note: str = typer.Option("", "--note", help="处理备注"),
+):
+    """接受 review item（open → accepted）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+
+    init_db()
+    result = ReviewItemManager.accept_item(item_id, note=note)
+    if result is None:
+        console.print(f"[red]Review item {item_id} 无法接受（不存在或状态不允许）。[/red]")
+        raise typer.Exit(1)
+    console.print(f"[green]Review item {item_id} 已接受。[/green]")
+
+
+@review_app.command("skip")
+def review_skip(
+    item_id: int = typer.Argument(..., help="Review item ID"),
+    note: str = typer.Option("", "--note", help="跳过原因"),
+):
+    """跳过 review item（open → skipped）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+
+    init_db()
+    result = ReviewItemManager.skip_item(item_id, note=note)
+    if result is None:
+        console.print(f"[red]Review item {item_id} 无法跳过（不存在或状态不允许）。[/red]")
+        raise typer.Exit(1)
+    console.print(f"[dim]Review item {item_id} 已跳过。[/dim]")
+
+
+@review_app.command("resolve")
+def review_resolve(
+    item_id: int = typer.Argument(..., help="Review item ID"),
+    note: str = typer.Option("", "--note", help="解决备注"),
+):
+    """解决 review item（open/accepted → resolved）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+
+    init_db()
+    result = ReviewItemManager.resolve_item(item_id, note=note)
+    if result is None:
+        console.print(f"[red]Review item {item_id} 无法解决（不存在或状态不允许）。[/red]")
+        raise typer.Exit(1)
+    console.print(f"[blue]Review item {item_id} 已解决。[/blue]")
+
+
+# ---------------------------------------------------------------------------
 # serve 命令
 # ---------------------------------------------------------------------------
 

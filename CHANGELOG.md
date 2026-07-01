@@ -18,9 +18,29 @@ P3 定位：把 podcast_research 从"可运行的数据处理流水线"升级为
 - **Tests**: 54 new tests in `tests/test_ingest_jobs.py` — CRUD, dedup, status transitions, retry, expiry, restart recovery, dual-write, CLI smoke
 - **Result**: 1439 tests (1438 passed, 1 pre-existing flaky), ruff clean
 
-### Planned (P3-B/C/D)
-- **P3-B**: Vault Lint — 7 lint rules for Obsidian vault health
-- **P3-C**: Review Queue — unified `review_items` table
+## P3-B/C — Vault Lint + Review Queue (2026-07-01)
+
+### P3-B Vault Lint Done
+- **5 lint rules** in `workspace/vault_lint.py`: frontmatter_invalid, frontmatter_missing, dead_wikilink, duplicate_report, orphan_card
+- **CLI**: `vault-lint --vault <path>` with `--rules`, `--exclude`, `--json`, `--write-review` flags
+- **Runner**: `run_vault_lint()` returns structured findings dict; `write_lint_to_review()` batch-creates review items
+- **Integration**: `--write-review` auto-creates review_items with dedup (same source_path + item_type + open)
+
+### P3-C Review Queue Done
+- **ReviewItem model**: 12-column SQLAlchemy model (`db/models.py`) — item_type, severity, status, title, description, source_ref, source_path, suggested_action_json, resolution_note, timestamps
+- **Migration**: `_migrate_review_items_table` with indexes on status, item_type, severity
+- **ReviewItemManager** (`sources/review_items.py`): create_item, create_from_lint_findings, list_items, get_item, count_by_status, accept/skip/resolve
+- **Status machine**: `open → accepted | skipped | resolved`; `accepted → resolved`
+- **8 item_types**: lint_frontmatter_invalid, lint_frontmatter_missing, lint_dead_wikilink, lint_duplicate_report, lint_orphan_card, entity_duplicate_candidate, patch_review, manual
+- **Dedup**: Same source_path + item_type + open → skip creation on re-lint
+- **CLI**: `review list/show/accept/skip/resolve`
+- **Patch Review compat**: `patch_review` item_type reserved; existing Patch Review system untouched
+
+### Test Results
+- **53 new tests** in `tests/test_vault_lint_review.py`
+- All existing tests pass; ruff clean
+
+### Planned
 - **P3-D**: MCP Server — 9 read-only tools via Python `mcp` package
 - Design docs: `docs/P3_PLAN.md`, `docs/INGEST_QUEUE_DESIGN.md`, `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md`, `docs/MCP_SERVER_DESIGN.md`
 - Project rules: `docs/PROJECT_RULES.md`

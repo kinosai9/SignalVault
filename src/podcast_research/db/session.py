@@ -200,6 +200,39 @@ def _migrate_ingest_jobs_table(engine) -> None:
         ))
 
 
+def _migrate_review_items_table(engine) -> None:
+    """P3-B/C: Create review_items table if not exists."""
+    insp = inspect(engine)
+    if "review_items" not in insp.get_table_names():
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE review_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_type VARCHAR(40) NOT NULL,
+                    severity VARCHAR(10) DEFAULT 'warning',
+                    status VARCHAR(20) DEFAULT 'open',
+                    title VARCHAR(500) NOT NULL,
+                    description TEXT DEFAULT '',
+                    source_ref VARCHAR(200) DEFAULT '',
+                    source_path VARCHAR(500) DEFAULT '',
+                    suggested_action_json TEXT DEFAULT '',
+                    resolution_note TEXT DEFAULT '',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at DATETIME
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_review_status ON review_items(status)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_review_type ON review_items(item_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_review_severity ON review_items(severity)"
+        ))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
@@ -209,6 +242,8 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_channel_videos_table(_engine)
     _migrate_investment_views_table(_engine)
     _migrate_tracked_sources_tables(_engine)
+    _migrate_ingest_jobs_table(_engine)
+    _migrate_review_items_table(_engine)
     _migrate_ingest_jobs_table(_engine)
 
 
