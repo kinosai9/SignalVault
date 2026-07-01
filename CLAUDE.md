@@ -7,7 +7,10 @@
 
 ## 当前阶段
 
-**P2-S Sources + Deep Notes Export。** P0–P2 (A–S) 已交付，1385 tests（含 26 job persistence + 7 Playwright UI smoke），80 个 Python 模块，9 个 CLI 命令组。
+**P3 规划中（P2 全部完成）。** P0–P2 (A–S) 已交付，1385 tests（含 26 job persistence + 7 Playwright UI smoke），80 个 Python 模块，9 个 CLI 命令组。
+
+P3 主线：持久化摄入队列 → Vault Lint → Review Queue → MCP Server → 文档。
+详细计划见 `docs/P3_PLAN.md`。P3 本轮只更新文档，不改业务代码。
 
 CI：GitHub Actions 自动 pytest + ruff lint。详细路线见 `docs/ROADMAP.md`，变更记录见 `CHANGELOG.md`。
 
@@ -100,5 +103,10 @@ python -m podcast_research --youtube-url "URL" --focus "AI投资" --no-mock
 | `docs/ROADMAP.md` | 规划 | 已完成/计划中阶段 |
 | `docs/DEV_GUIDE.md` | 开发者 | 环境、测试、命令速查 |
 | `docs/SOURCE_INGESTION.md` | 开发者 | Sources 模块目标、入口、流程、边界 |
+| `docs/PROJECT_RULES.md` | 开发者 | 工程规范、命名约定、DB 迁移规则 |
+| `docs/P3_PLAN.md` | 规划 | P3 阶段计划与验收标准 |
+| `docs/INGEST_QUEUE_DESIGN.md` | 设计 | P3-A 持久化摄入队列表设计 |
+| `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md` | 设计 | P3-B/C Lint + Review Queue 设计 |
+| `docs/MCP_SERVER_DESIGN.md` | 设计 | P3-D MCP Server 设计 |
 | `CHANGELOG.md` | 记录 | 阶段完成日志 |
 | `TODO.md` | 追踪 | 待办项 |

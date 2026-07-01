@@ -4,9 +4,16 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P2 全部完成
+## 当前阶段：P2 全部完成，P3 规划中
 
 P0 + P1 + P2（A 到 S）已完成，1385 个测试，80 个 Python 模块，9 个 CLI 命令组，约 20 个 Web 页面。
+
+**P3 方向**（详见 `docs/P3_PLAN.md`）：
+- P3-A 持久化摄入队列 — SQLite ingest_jobs 替代内存预览存储
+- P3-B Vault Lint — Obsidian vault 健康检查
+- P3-C Review Queue — 统一人工审核队列
+- P3-D MCP Server — 让 AI Agent 查询知识库
+- P3-E 文档与操作手册
 
 核心能力：
 - 单视频分析（本地字幕 / YouTube URL）→ Markdown 报告 + SQLite 入库

@@ -49,3 +49,4 @@ htmlcov/
 # Local backups
 .git.backup/
 .gstack/
+claudellm_wiki_ref/

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — P3 Planned (2026-07-01)
+
+P3 定位：把 podcast_research 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。
+
+### Planned
+- **P3-A**: 持久化摄入队列 — SQLite `ingest_jobs` 表收编 `_preview_store` 等内存状态
+- **P3-B**: Vault Lint — 7 条 lint rule 检查 Obsidian vault 健康
+- **P3-C**: Review Queue — `review_items` 表统一 Patch/Lint/合并建议等审核事项
+- **P3-D**: MCP Server — Python `mcp` 包实现 9 个只读 tool
+- **P3-E**: 文档与操作手册
+- Design docs: `docs/P3_PLAN.md`, `docs/INGEST_QUEUE_DESIGN.md`, `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md`, `docs/MCP_SERVER_DESIGN.md`
+- New project rules: `docs/PROJECT_RULES.md`
+
 ## P2-S.3.5 — Source Ingestion Consistency & Release Hardening (2026-07-01)
 
 ### Status & Action Label Unification
