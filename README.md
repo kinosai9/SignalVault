@@ -4,16 +4,15 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P2 全部完成，P3 规划中
+## 当前阶段：P3-A/B/C 已完成，P3-D 计划中
 
-P0 + P1 + P2（A 到 S）已完成，1385 个测试，80 个 Python 模块，9 个 CLI 命令组，约 20 个 Web 页面。
+P0 + P1 + P2（A 到 S）已完成，P3-A/B/C 已交付，1492 个测试，82 个 Python 模块，11 个 CLI 命令组，约 20 个 Web 页面。
 
-**P3 方向**（详见 `docs/P3_PLAN.md`）：
-- P3-A 持久化摄入队列 — SQLite ingest_jobs 替代内存预览存储
-- P3-B Vault Lint — Obsidian vault 健康检查
-- P3-C Review Queue — 统一人工审核队列
-- P3-D MCP Server — 让 AI Agent 查询知识库
-- P3-E 文档与操作手册
+**P3 已完成**（详见 `docs/P3_PLAN.md`）：
+- ✅ P3-A 持久化摄入队列 — SQLite `ingest_jobs` 替代内存预览存储
+- ✅ P3-B Vault Lint — 5 条 lint rule 检查 Obsidian vault 健康
+- ✅ P3-C Review Queue — 统一 `review_items` 审核队列
+- ⬜ P3-D MCP Server — 让 AI Agent 查询知识库
 
 核心能力：
 - 单视频分析（本地字幕 / YouTube URL）→ Markdown 报告 + SQLite 入库
@@ -87,6 +86,36 @@ python -m podcast_research serve --reload                  # 开发模式
 | `GET /api/search?q=NVIDIA&limit=20` | 搜索报告 |
 
 API 为本地只读服务，不做鉴权，默认绑定 127.0.0.1:8000。
+
+## 摄入队列管理（P3-A）
+
+```bash
+python -m podcast_research ingest list                        # 列出摄入任务
+python -m podcast_research ingest list --status pending_preview
+python -m podcast_research ingest show 1                      # 查看任务详情
+python -m podcast_research ingest retry 1                     # 重试失败任务
+python -m podcast_research ingest resume                      # 查看待处理摘要
+```
+
+## Vault 健康检查（P3-B）
+
+```bash
+python -m podcast_research vault-lint --vault /path/to/vault  # 运行全部检查
+python -m podcast_research vault-lint --vault /path/to/vault --rules dead_wikilink
+python -m podcast_research vault-lint --vault /path/to/vault --json
+python -m podcast_research vault-lint --vault /path/to/vault --write-review  # 问题写入审核队列
+```
+
+## 审核队列管理（P3-C）
+
+```bash
+python -m podcast_research review list                        # 列出审核项
+python -m podcast_research review list --status open --type lint_dead_wikilink
+python -m podcast_research review show 1                      # 查看详情
+python -m podcast_research review accept 1 --note "已修复"    # 接受
+python -m podcast_research review skip 1 --note "暂不处理"    # 跳过
+python -m podcast_research review resolve 1                   # 解决
+```
 
 ## Web Console
 

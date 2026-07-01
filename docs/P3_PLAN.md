@@ -107,20 +107,27 @@ P2 解决了"能处理什么"，P3 解决"运行时出问题怎么办"和"怎么
 - [x] Review 专项测试：26 tests（含于 test_vault_lint_review.py）
 - [x] ruff clean
 
-### P3-D：MCP Server（预计 2-3 天）
+### P3-D：MCP Server（下一步）
+
+**目标状态：**
+- `python -m podcast_research mcp-serve` 启动 MCP server
+- 只读查询：报告、观点、信号、实体、频道、lint 结果、review items、ingest 状态
+- 可在 Claude Code / Cursor / 其他 MCP 客户端中注册
+- 不依赖桌面应用（stdio transport，纯 Python）
+
+**设计文档：** `docs/MCP_SERVER_DESIGN.md`
+
+**约束：**
+- 只读优先：所有 tool 不修改 DB 或 vault
+- 不做写入操作（accept review、update claim status 等）
+- 不做 Deep Research
+- 不做复杂图谱算法
+- P3-A/B/C 表（`ingest_jobs`, `review_items`）纳入查询范围
 
 **当前问题：**
 - Claude Code 等 AI Agent 无法直接查询 podcast_research 的知识库
 - 用户需要手动打开 Web Console 或 CLI 查询
 - 知识库的价值受限于交互方式
-
-**目标状态：**
-- `python -m podcast_research mcp-serve` 启动 MCP server
-- 只读查询：报告、观点、信号、实体、频道、lint 结果
-- 可在 Claude Code / Cursor / 其他 MCP 客户端中注册
-- 不依赖桌面应用（stdio transport，纯 Python）
-
-**设计文档：** `docs/MCP_SERVER_DESIGN.md`
 
 **MCP Tools（Phase 1）：**
 

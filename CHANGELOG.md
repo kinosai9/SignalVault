@@ -38,7 +38,9 @@ P3 定位：把 podcast_research 从"可运行的数据处理流水线"升级为
 
 ### Test Results
 - **53 new tests** in `tests/test_vault_lint_review.py`
-- All existing tests pass; ruff clean
+- **1492 total tests**, all pass
+- **2 warnings** — known harmless: uvicorn websockets deprecation (pre-existing since P2-O), no action needed
+- ruff clean
 
 ### Planned
 - **P3-D**: MCP Server — 9 read-only tools via Python `mcp` package
