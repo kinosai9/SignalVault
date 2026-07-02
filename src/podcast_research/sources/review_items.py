@@ -28,6 +28,13 @@ VALID_ITEM_TYPES = frozenset({
     "entity_duplicate_candidate",
     "patch_review",
     "manual",
+    # P4-A: PDF extraction
+    "pdf_needs_ocr",
+    "pdf_quality_issue",
+    "pdf_extraction_failed",
+    # P4-B: PDF analysis
+    "pdf_analysis_skipped",
+    "pdf_evidence_missing",
 })
 
 
@@ -105,9 +112,14 @@ class ReviewItemManager:
                 _session = get_session()
             for f in findings:
                 rule = f.get("rule", "unknown")
-                item_type = f"lint_{rule}" if not rule.startswith("lint_") else rule
-                if item_type not in VALID_ITEM_TYPES:
-                    item_type = "manual"
+                # Map rule → item_type: if rule is already a valid item_type,
+                # use it directly. Otherwise prefix with "lint_" for lint rules.
+                if rule in VALID_ITEM_TYPES:
+                    item_type = rule
+                else:
+                    item_type = f"lint_{rule}"
+                    if item_type not in VALID_ITEM_TYPES:
+                        item_type = "manual"
 
                 # Dedup: skip if same source_path + item_type already open
                 existing = (

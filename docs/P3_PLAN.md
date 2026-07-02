@@ -238,5 +238,25 @@ mcp-serve [--db-path <path>] [--vault-path <path>]
 | ingest_jobs Phase 1 双写 | 内存 + DB 双写，Phase 2 可完全切换 | 所有 P3 阶段完成后评估切换 |
 | Vault Lint 误报率 | 5 条 rule，info 级别不阻塞 | 积累使用数据后调优阈值 |
 | Review Queue 积压 | 无自动分配/提醒 | 每次 vault-lint --write-review 前人工检查 |
-| MCP 仅查 DB | Vault 文件系统的 Claim/Signal 不在查询范围 | P4 扩展 `search_claims`/`search_signals` tool |
+| MCP 仅查 DB | Vault 文件系统的 Claim/Signal 不在查询范围 | P5 扩展 `search_claims`/`search_signals` tool |
 | MCP 无写入 | accept/skip/resolve 需 CLI 或 Web | 保持只读安全边界，写入走现有 CLI |
+
+---
+
+## P4 展望：PDF Document Ingestion Expansion
+
+> 详细计划见 `docs/P4_PDF_INGESTION_PLAN.md` 和 `docs/PDF_EXTRACTION_DESIGN.md`
+
+P4 调整为 **PDF 入库优先**（原"多期观点对比"推迟到 P5）。核心思路：
+
+- 在 `sources/` 层新增 PDF 适配器（pdfplumber 文本提取 + pytesseract OCR 后备）
+- 完全复用 P3 ingest_jobs / review_items / mcp_server 基础设施
+- 页码级 evidence：投资观点可追溯到 PDF 页码
+- 不做表格结构化提取、不做多模态图表理解、不做 Deep Research
+
+**分阶段：**
+- P4-A：文本型 PDF 提取（主路径，80%+ 覆盖）
+- P4-B：OCR 后备路径（扫描件）
+- P4-C：PDF Source Profile + 元数据
+- P4-D：Page-level Evidence + Review Queue
+- P4-E：文档 + MCP 自动受益

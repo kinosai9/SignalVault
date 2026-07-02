@@ -107,6 +107,7 @@ def save_investment_views(session: Session, report_id: int, views: list[Investme
             investment_relevance=v.investment_relevance,
             topic_tags=json.dumps(v.topic_tags, ensure_ascii=False),
             quote_support_strength=v.quote_support_strength,
+            evidence_page=v.evidence.page_number,  # P4-B: PDF page number
         )
         session.add(rec)
 
@@ -314,6 +315,7 @@ def get_report_detail(session: Session, report_id: int) -> dict | None:
                 "business_impact": v.business_impact,
                 "investment_relevance": v.investment_relevance,
                 "quote_support_strength": v.quote_support_strength,
+                "evidence_page": v.evidence_page,
             }
             for v in views
         ],

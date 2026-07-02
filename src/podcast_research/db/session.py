@@ -69,7 +69,7 @@ def _migrate_channel_videos_table(engine) -> None:
 
 
 def _migrate_investment_views_table(engine) -> None:
-    """为 investment_views 表补齐 P2-A1 新增列。"""
+    """为 investment_views 表补齐 P2-A1 + P4-B 新增列。"""
     insp = inspect(engine)
     if "investment_views" not in insp.get_table_names():
         return
@@ -81,6 +81,7 @@ def _migrate_investment_views_table(engine) -> None:
         ("investment_relevance", "VARCHAR(10) DEFAULT 'medium'"),
         ("topic_tags", "TEXT DEFAULT '[]'"),
         ("quote_support_strength", "VARCHAR(10) DEFAULT 'medium'"),
+        ("evidence_page", "INTEGER"),  # P4-B: PDF page number
     ]
     with engine.begin() as conn:
         for col_name, col_type in migrations:
@@ -233,6 +234,62 @@ def _migrate_review_items_table(engine) -> None:
         ))
 
 
+def _migrate_knowledge_graph_tables(engine) -> None:
+    """P5-B: Create knowledge_nodes and knowledge_edges tables if not exist."""
+    insp = inspect(engine)
+    if "knowledge_nodes" not in insp.get_table_names():
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE knowledge_nodes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    node_key VARCHAR(256) NOT NULL UNIQUE,
+                    node_type VARCHAR(40) NOT NULL,
+                    label VARCHAR(500) DEFAULT '',
+                    normalized_label VARCHAR(500) DEFAULT '',
+                    source_ref VARCHAR(200) DEFAULT '',
+                    metadata_json TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    if "knowledge_edges" not in insp.get_table_names():
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE knowledge_edges (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    edge_key VARCHAR(256) NOT NULL UNIQUE,
+                    source_node_key VARCHAR(256) NOT NULL,
+                    target_node_key VARCHAR(256) NOT NULL,
+                    edge_type VARCHAR(40) NOT NULL,
+                    weight FLOAT DEFAULT 1.0,
+                    evidence_ref VARCHAR(200) DEFAULT '',
+                    report_id INTEGER,
+                    source_type VARCHAR(20) DEFAULT '',
+                    source_path VARCHAR(500) DEFAULT '',
+                    page_number INTEGER,
+                    timestamp VARCHAR(20) DEFAULT '',
+                    metadata_json TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_kn_type ON knowledge_nodes(node_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_kn_label ON knowledge_nodes(normalized_label)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ke_type ON knowledge_edges(edge_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ke_source ON knowledge_edges(source_node_key)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ke_target ON knowledge_edges(target_node_key)"
+        ))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
@@ -244,6 +301,7 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_tracked_sources_tables(_engine)
     _migrate_ingest_jobs_table(_engine)
     _migrate_review_items_table(_engine)
+    _migrate_knowledge_graph_tables(_engine)
     _migrate_ingest_jobs_table(_engine)
 
 

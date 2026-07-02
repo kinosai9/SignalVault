@@ -18,6 +18,7 @@ class Evidence(BaseModel):
     evidence_detail: str = ""
     evidence_strength: str = Field(default="medium", description="strong/medium/weak")
     missing_info: str = ""
+    page_number: int | None = None  # P4-B: PDF page number (1-indexed)
 
 
 class InvestmentView(BaseModel):

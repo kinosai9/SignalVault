@@ -206,6 +206,121 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    Tool(
+        name="unified_search",
+        description="统一搜索知识库：报告、投资观点、跟踪信号、实体。支持类型过滤和来源过滤。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "搜索关键词",
+                },
+                "result_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["report", "investment_view", "tracking_signal", "entity"],
+                    },
+                    "description": "限定结果类型，不传则搜索全部",
+                },
+                "source_type": {
+                    "type": "string",
+                    "enum": ["youtube", "pdf_upload", "local", "all"],
+                    "default": "all",
+                    "description": "按来源过滤",
+                },
+                "entity_type": {
+                    "type": "string",
+                    "description": "实体类型过滤: company / topic / technology / person / stock",
+                },
+                "view_direction": {
+                    "type": "string",
+                    "enum": ["bullish", "bearish", "neutral", "all"],
+                    "default": "all",
+                    "description": "观点方向过滤",
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "maximum": 100,
+                    "description": "最大返回数量",
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="get_entity_neighborhood",
+        description="查询实体的知识图谱邻域：关联的公司、话题、报告、观点、信号。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "entity_name": {
+                    "type": "string",
+                    "description": "实体名称（模糊匹配）",
+                },
+                "entity_type": {
+                    "type": "string",
+                    "description": "实体类型: company / topic / person",
+                },
+                "depth": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 1,
+                    "description": "邻域深度（当前仅支持 1）",
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 30,
+                    "maximum": 100,
+                    "description": "最大返回邻居数",
+                },
+            },
+            "required": ["entity_name"],
+        },
+    ),
+    Tool(
+        name="list_graph_edges",
+        description="列出知识图谱边，支持按类型和实体过滤。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "edge_type": {
+                    "type": "string",
+                    "description": "边类型: mentioned_in / derived_from / supports / related_to / tracks / cites_page / cites_timestamp",
+                },
+                "entity_name": {
+                    "type": "string",
+                    "description": "按实体名过滤关联边",
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 30,
+                    "maximum": 100,
+                    "description": "最大返回数量",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="get_evidence_trail",
+        description="获取证据链：观点/信号→原文引用→来源→时间戳/页码→报告。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "view_id": {
+                    "type": "integer",
+                    "description": "投资观点 ID",
+                },
+                "signal_id": {
+                    "type": "integer",
+                    "description": "跟踪信号 ID",
+                },
+            },
+        },
+    ),
 ]
 
 # ── Query helpers (DB-backed, read-only) ────────────────────────────────────
@@ -591,6 +706,70 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 severity=arguments.get("severity", "all"),
                 limit=min(int(arguments.get("limit", 20)), 100),
             )
+            return [TextContent(type="text", text=_json.dumps(result, ensure_ascii=False, default=str))]
+
+        elif name == "unified_search":
+            from podcast_research.db.unified_search import (
+                serialize_unified_result,
+                unified_search,
+            )
+            session = get_session()
+            try:
+                rtypes = arguments.get("result_types")
+                results = unified_search(
+                    session,
+                    arguments.get("query", ""),
+                    result_types=list(rtypes) if rtypes else None,
+                    source_type=arguments.get("source_type", "all"),
+                    entity_type=arguments.get("entity_type"),
+                    view_direction=arguments.get("view_direction", "all"),
+                    limit=min(int(arguments.get("limit", 20)), 100),
+                )
+                output = [serialize_unified_result(r) for r in results]
+            finally:
+                session.close()
+            return [TextContent(type="text", text=_json.dumps(output, ensure_ascii=False, default=str))]
+
+        elif name == "get_entity_neighborhood":
+            from podcast_research.db.knowledge_graph import get_entity_neighborhood
+            session = get_session()
+            try:
+                result = get_entity_neighborhood(
+                    session,
+                    arguments.get("entity_name", ""),
+                    entity_type=arguments.get("entity_type"),
+                    depth=min(int(arguments.get("depth", 1)), 1),
+                    limit=min(int(arguments.get("limit", 30)), 100),
+                )
+            finally:
+                session.close()
+            return [TextContent(type="text", text=_json.dumps(result, ensure_ascii=False, default=str))]
+
+        elif name == "list_graph_edges":
+            from podcast_research.db.knowledge_graph import list_graph_edges
+            session = get_session()
+            try:
+                result = list_graph_edges(
+                    session,
+                    edge_type=arguments.get("edge_type"),
+                    entity_name=arguments.get("entity_name"),
+                    limit=min(int(arguments.get("limit", 30)), 100),
+                )
+            finally:
+                session.close()
+            return [TextContent(type="text", text=_json.dumps(result, ensure_ascii=False, default=str))]
+
+        elif name == "get_evidence_trail":
+            from podcast_research.db.knowledge_graph import get_evidence_trail
+            session = get_session()
+            try:
+                result = get_evidence_trail(
+                    session,
+                    view_id=arguments.get("view_id"),
+                    signal_id=arguments.get("signal_id"),
+                )
+            finally:
+                session.close()
             return [TextContent(type="text", text=_json.dumps(result, ensure_ascii=False, default=str))]
 
         else:

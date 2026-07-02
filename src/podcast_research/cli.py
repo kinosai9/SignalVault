@@ -3094,6 +3094,427 @@ def review_resolve(
 
 
 # ---------------------------------------------------------------------------
+# graph 命令组（P5-B：轻量知识图谱）
+# ---------------------------------------------------------------------------
+
+graph_app = typer.Typer(help="知识图谱管理（重建/查询/导出）")
+app.add_typer(graph_app, name="graph")
+
+
+@graph_app.command("rebuild")
+def graph_rebuild():
+    """从现有 DB 全量重建知识图谱（幂等）。"""
+    from podcast_research.db.knowledge_graph import rebuild_knowledge_graph
+    from podcast_research.db.session import get_session, init_db
+
+    init_db()
+    session = get_session()
+    try:
+        result = rebuild_knowledge_graph(session)
+    finally:
+        session.close()
+
+    console.print("[green]知识图谱重建完成[/green]")
+    console.print(f"  Nodes: {result['nodes']}")
+    console.print(f"  Edges: {result['edges']}")
+    if result.get("node_types"):
+        console.print("  Node types:")
+        for t, c in sorted(result["node_types"].items()):
+            console.print(f"    {t}: {c}")
+    if result.get("edge_types"):
+        console.print("  Edge types:")
+        for t, c in sorted(result["edge_types"].items()):
+            console.print(f"    {t}: {c}")
+
+
+@graph_app.command("neighborhood")
+def graph_neighborhood(
+    entity_name: str = typer.Argument(..., help="实体名称"),
+    entity_type: str = typer.Option(None, "--type", "-t", help="实体类型: company/topic/person"),
+    depth: int = typer.Option(1, "--depth", help="邻域深度（当前仅支持 1）"),
+    limit: int = typer.Option(50, "--limit", "-n", help="最大返回邻居数"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+):
+    """查询实体在图谱中的邻域。"""
+    import json as _json
+
+    from podcast_research.db.knowledge_graph import get_entity_neighborhood
+    from podcast_research.db.session import get_session, init_db
+
+    init_db()
+    session = get_session()
+    try:
+        result = get_entity_neighborhood(
+            session, entity_name,
+            entity_type=entity_type, depth=min(depth, 1), limit=limit,
+        )
+    finally:
+        session.close()
+
+    if json_output:
+        console.print(_json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    elif result["center"] is None:
+        console.print(f"[yellow]未找到实体: {entity_name}[/yellow]")
+    else:
+        c = result["center"]
+        console.print(f"\n[bold]Entity: {c['label']}[/bold] ({c['node_type']})")
+        console.print(f"  Connections: {result['summary']['total_connections']}")
+        if result["neighbors"]:
+            console.print(f"\n  Neighbors ({len(result['neighbors'])}):")
+            for n in result["neighbors"][:20]:
+                console.print(f"    [{n['node_type']}] {n['label'][:60]}")
+
+
+@graph_app.command("evidence-trail")
+def graph_evidence_trail(
+    view_id: int = typer.Option(None, "--view", help="投资观点 ID"),
+    signal_id: int = typer.Option(None, "--signal", help="跟踪信号 ID"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+):
+    """查询观点或信号的证据链。"""
+    import json as _json
+
+    from podcast_research.db.knowledge_graph import get_evidence_trail
+    from podcast_research.db.session import get_session, init_db
+
+    if not view_id and not signal_id:
+        console.print("[red]请指定 --view 或 --signal[/red]")
+        raise typer.Exit(1)
+
+    init_db()
+    session = get_session()
+    try:
+        result = get_evidence_trail(session, view_id=view_id, signal_id=signal_id)
+    finally:
+        session.close()
+
+    if json_output:
+        console.print(_json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    elif result["target"] is None:
+        console.print("[yellow]未找到目标。[/yellow]")
+    else:
+        t = result["target"]
+        console.print(f"\n[bold]Target: {t['label']}[/bold] ({t['node_type']})")
+        if result["evidence"]:
+            for i, ev in enumerate(result["evidence"], 1):
+                page = f"p.{ev['page_number']}" if ev.get("page_number") else ""
+                ts = ev.get("timestamp", "")
+                loc = page or ts or "-"
+                console.print(f"  Evidence {i}: [{ev['type']}] {ev['source_quote'][:120]} ({loc})")
+        if result["report"]:
+            console.print(f"  Report: {result['report']['label']}")
+
+
+@graph_app.command("export")
+def graph_export(
+    output: str = typer.Option(None, "--output", "-o", help="输出 JSON 文件路径"),
+):
+    """导出知识图谱为 JSON。"""
+    from pathlib import Path as _Path
+
+    from podcast_research.db.knowledge_graph import export_graph_json
+    from podcast_research.db.session import get_session, init_db
+
+    init_db()
+    session = get_session()
+    try:
+        json_str = export_graph_json(session)
+    finally:
+        session.close()
+
+    if output:
+        _Path(output).parent.mkdir(parents=True, exist_ok=True)
+        _Path(output).write_text(json_str, encoding="utf-8")
+        console.print(f"[green]已导出: {output}[/green]")
+    else:
+        console.print(json_str)
+
+
+# ---------------------------------------------------------------------------
+# pdf 命令组（P4-A：PDF 文本提取与 Source Profile）
+# ---------------------------------------------------------------------------
+
+pdf_app = typer.Typer(help="PDF 文档提取与预览")
+app.add_typer(pdf_app, name="pdf")
+
+
+@pdf_app.command("preview")
+def pdf_preview(
+    path: str = typer.Argument(..., help="PDF 文件路径"),
+    json_output: bool = typer.Option(
+        False, "--json", help="以 JSON 格式输出",
+    ),
+    write_review: bool = typer.Option(
+        False, "--write-review", help="将质量问题写入 review_items 表",
+    ),
+    db_path: str = typer.Option(
+        None, "--db-path", help="SQLite 数据库路径（覆盖 .env 配置）",
+    ),
+):
+    """预览 PDF 文件提取结果（不写入 ingest_jobs，不调用 LLM）。"""
+    import json as _json
+    from pathlib import Path as _Path
+
+    from podcast_research.sources.pdf_extraction import (
+        build_pdf_review_findings,
+        extract_pdf,
+    )
+
+    fp = _Path(path)
+    if not fp.exists():
+        console.print(f"[red]文件不存在: {path}[/red]")
+        raise typer.Exit(1)
+    if not fp.is_file():
+        console.print(f"[red]不是文件: {path}[/red]")
+        raise typer.Exit(1)
+    if fp.suffix.lower() != ".pdf":
+        console.print(f"[yellow]警告: 文件扩展名不是 .pdf ({fp.suffix})，仍尝试提取。[/yellow]")
+
+    result = extract_pdf(fp)
+
+    if json_output:
+        console.print(_json.dumps(_serialize_result(result), ensure_ascii=False, indent=2))
+    else:
+        console.print(f"\n[bold]📄 PDF Preview: {result.file_name}[/bold]")
+        console.print(f"  Pages: {result.page_count}")
+        console.print(f"  Size: {_fmt_size(result.file_size)}")
+        console.print(f"  Content hash: {result.content_hash}")
+
+        quality_color = {
+            "good": "green", "degraded": "yellow",
+            "minimal": "red", "failed": "red",
+        }.get(result.quality, "white")
+        console.print(f"  Quality: [{quality_color}]{result.quality}[/{quality_color}]")
+        console.print(f"  Needs OCR: {'[yellow]Yes[/yellow]' if result.needs_ocr else 'No'}")
+
+        total_chars = sum(p.char_count for p in result.pages)
+        console.print(f"  Total characters: {total_chars}")
+        if result.page_count > 0:
+            console.print(f"  Avg chars/page: {total_chars / result.page_count:.0f}")
+
+        if result.metadata.title:
+            console.print(f"  Title: {result.metadata.title}")
+        if result.metadata.author:
+            console.print(f"  Author: {result.metadata.author}")
+
+        if result.error_message:
+            console.print(f"  [red]Error: {result.error_message}[/red]")
+
+        # Page quality breakdown
+        quality_counts: dict[str, int] = {}
+        for p in result.pages:
+            quality_counts[p.quality] = quality_counts.get(p.quality, 0) + 1
+        if quality_counts:
+            parts = [f"{q}: {c}" for q, c in sorted(quality_counts.items())]
+            console.print(f"  Page quality: {', '.join(parts)}")
+
+        # Show first non-empty page excerpt
+        for p in result.pages:
+            if p.text.strip():
+                excerpt = p.text.strip()[:200]
+                console.print(f"\n  [dim]Page {p.page_number} excerpt:[/dim]")
+                console.print(f"  [dim]{excerpt}[/dim]")
+                break
+
+    if write_review:
+        from podcast_research.db.session import init_db
+        from podcast_research.sources.review_items import ReviewItemManager
+
+        if db_path:
+            init_db(db_path)
+        else:
+            init_db()
+        findings = build_pdf_review_findings(result)
+        if findings:
+            created = ReviewItemManager.create_from_lint_findings(findings)
+            console.print(f"\n[green]已写入 {created} 条 review items[/green]")
+        else:
+            console.print("\n[dim]无质量问题，跳过 review 写入。[/dim]")
+
+
+@pdf_app.command("extract")
+def pdf_extract(
+    path: str = typer.Argument(..., help="PDF 文件路径"),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="输出文本文件路径（不指定则输出到 stdout）",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="以 JSON 格式输出完整提取结果",
+    ),
+    write_review: bool = typer.Option(
+        False, "--write-review", help="将质量问题写入 review_items 表",
+    ),
+    db_path: str = typer.Option(
+        None, "--db-path", help="SQLite 数据库路径（覆盖 .env 配置）",
+    ),
+):
+    """提取 PDF 全文文本并输出。支持 --json / --output / --write-review。"""
+    import json as _json
+    from pathlib import Path as _Path
+
+    from podcast_research.sources.pdf_extraction import (
+        build_pdf_review_findings,
+        extract_pdf,
+    )
+
+    fp = _Path(path)
+    if not fp.exists():
+        console.print(f"[red]文件不存在: {path}[/red]")
+        raise typer.Exit(1)
+
+    result = extract_pdf(fp)
+
+    if json_output:
+        console.print(_json.dumps(_serialize_result(result), ensure_ascii=False, indent=2))
+    elif output:
+        out_path = _Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(result.full_text, encoding="utf-8")
+        console.print(f"[green]已写入: {out_path}[/green]")
+        console.print(f"  {result.page_count} pages, {len(result.full_text)} chars")
+    else:
+        console.print(result.full_text)
+
+    if write_review:
+        from podcast_research.db.session import init_db
+        from podcast_research.sources.review_items import ReviewItemManager
+
+        if db_path:
+            init_db(db_path)
+        else:
+            init_db()
+        findings = build_pdf_review_findings(result)
+        if findings:
+            created = ReviewItemManager.create_from_lint_findings(findings)
+            console.print(f"\n[green]已写入 {created} 条 review items[/green]")
+        else:
+            console.print("\n[dim]无质量问题，跳过 review 写入。[/dim]")
+
+
+@pdf_app.command("analyze")
+def pdf_analyze(
+    path: str = typer.Argument(..., help="PDF 文件路径"),
+    focus: str = typer.Option(None, "--focus", help="关注点，逗号分隔，如 '新能源,AI算力'"),
+    depth: str = typer.Option("standard", "--depth", help="分析深度: standard / deep"),
+    mock: bool = typer.Option(True, "--mock/--no-mock", help="使用 mock LLM（默认 mock，--no-mock 使用真实 LLM）"),
+    output: str | None = typer.Option(None, "--output", "-o", help="报告输出目录"),
+    write_review: bool = typer.Option(False, "--write-review", help="将质量问题写入 review_items 表"),
+    db_path: str = typer.Option(None, "--db-path", help="SQLite 数据库路径（覆盖 .env 配置）"),
+):
+    """分析 PDF 文件，生成投资研究报告。
+
+    先提取 PDF 文本，检查质量，然后送入 LLM 分析 pipeline。
+    文本型 PDF 质量 good/degraded → 进入分析；
+    质量 minimal/failed → 跳过分析，写入 review_items。
+
+    示例：
+      pdf analyze report.pdf                      # mock 分析
+      pdf analyze report.pdf --no-mock            # 真实 LLM 分析
+      pdf analyze report.pdf --focus "AI投资,美股"
+      pdf analyze report.pdf --write-review       # 质量问题写入审核队列
+    """
+    from pathlib import Path as _Path
+
+    fp = _Path(path)
+    if not fp.exists():
+        console.print(f"[red]文件不存在: {path}[/red]")
+        raise typer.Exit(1)
+
+    focus_areas = [f.strip() for f in focus.split(",") if f.strip()] if focus else None
+    provider = "openai-compatible" if not mock else "mock"
+
+    console.print(f"\n[bold]📄 PDF Analysis: {fp.name}[/bold]")
+    console.print(f"  Provider: {provider}")
+
+    from podcast_research.sources.pdf_analysis import analyze_pdf
+
+    result = analyze_pdf(
+        file_path=fp,
+        provider_name=provider,
+        focus_areas=focus_areas,
+        analysis_depth=depth,
+        write_review=write_review,
+        db_path=db_path,
+    )
+
+    if not result["eligible"]:
+        quality_color = "red" if result["quality"] in ("failed", "minimal") else "yellow"
+        console.print(f"\n[bold {quality_color}]PDF 不满足分析条件[/bold {quality_color}]")
+        console.print(f"  原因: {result['reason']}")
+        console.print(f"  质量: {result['quality']}")
+        console.print(f"  Needs OCR: {result.get('needs_ocr', False)}")
+        if write_review:
+            console.print("  [dim]质量问题已写入 review_items[/dim]")
+    else:
+        console.print("\n[green]分析完成[/green]")
+        console.print(f"  Report ID: {result['report_id']}")
+        console.print(f"  观点数: {result['view_count']}")
+        console.print(f"  实体数: {result['entity_count']}")
+        if result.get("report_path"):
+            console.print(f"  报告: {result['report_path']}")
+        if result.get("extraction_path"):
+            console.print(f"  JSON: {result['extraction_path']}")
+        if result.get("reason") == "degraded_ocr_recommended":
+            console.print("  [yellow]建议使用 OCR 提升文本质量。[/yellow]")
+
+
+def _sanitize_text(text: str) -> str:
+    """Remove control characters that could break JSON or console output."""
+    import re
+    # Remove all control characters except tab (0x09)
+    # Newlines and carriage returns are replaced with spaces to keep
+    # the text readable while avoiding JSON/console issues
+    text = text.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    # Remove other control chars (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F, 0x7F-0x9F)
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", text)
+
+
+def _serialize_result(result) -> dict:
+    """Serialize PdfExtractionResult to a JSON-safe dict."""
+    return {
+        "source_path": result.source_path,
+        "file_name": result.file_name,
+        "file_size": result.file_size,
+        "content_hash": result.content_hash,
+        "page_count": result.page_count,
+        "quality": result.quality,
+        "needs_ocr": result.needs_ocr,
+        "error_message": result.error_message,
+        "total_chars": sum(p.char_count for p in result.pages),
+        "metadata": {
+            "title": result.metadata.title,
+            "author": result.metadata.author,
+            "subject": result.metadata.subject,
+            "creator": result.metadata.creator,
+            "producer": result.metadata.producer,
+            "creation_date": result.metadata.creation_date,
+            "page_count": result.metadata.page_count,
+            "is_encrypted": result.metadata.is_encrypted,
+        },
+        "pages": [
+            {
+                "page_number": p.page_number,
+                "char_count": p.char_count,
+                "extraction_method": p.extraction_method,
+                "quality": p.quality,
+            }
+            for p in result.pages
+        ],
+        "full_text": _sanitize_text(result.full_text),
+    }
+
+
+def _fmt_size(bytes_count: int) -> str:
+    """Format byte count to human-readable string."""
+    if bytes_count < 1024:
+        return f"{bytes_count} B"
+    elif bytes_count < 1024 * 1024:
+        return f"{bytes_count / 1024:.1f} KB"
+    else:
+        return f"{bytes_count / (1024 * 1024):.1f} MB"
+
+
+# ---------------------------------------------------------------------------
 # serve 命令
 # ---------------------------------------------------------------------------
 
@@ -3119,6 +3540,107 @@ def serve(
         reload=reload,
         factory=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# search 命令（P5-A：统一搜索）
+# ---------------------------------------------------------------------------
+
+
+@app.command("search")
+def search(
+    query: str = typer.Argument(..., help="搜索关键词"),
+    result_type: str = typer.Option(
+        "all", "--type", "-t",
+        help="结果类型: report / investment_view / tracking_signal / entity / all",
+    ),
+    source_type: str = typer.Option(
+        "all", "--source-type",
+        help="来源过滤: youtube / pdf_upload / local / all",
+    ),
+    entity_type: str = typer.Option(
+        None, "--entity-type",
+        help="实体类型过滤: company / topic / technology / person / stock",
+    ),
+    view_direction: str = typer.Option(
+        "all", "--direction",
+        help="观点方向: bullish / bearish / neutral / all",
+    ),
+    signal_status: str = typer.Option(
+        "all", "--signal-status",
+        help="信号状态: open / triggered / resolved / all",
+    ),
+    limit: int = typer.Option(20, "--limit", "-n", help="最大返回数量"),
+    json_output: bool = typer.Option(False, "--json", help="以 JSON 格式输出"),
+):
+    """统一搜索知识库：报告、投资观点、跟踪信号、实体。
+
+    示例：
+      search "NVIDIA"                        # 搜索全部
+      search "NVIDIA" --type investment_view # 仅搜索观点
+      search "AI" --source-type pdf_upload   # 仅搜索 PDF 来源
+      search "GPU" --json --limit 30         # JSON 输出
+    """
+    import json as _json
+
+    from podcast_research.db.session import get_session, init_db
+    from podcast_research.db.unified_search import (
+        serialize_unified_result,
+        unified_search,
+    )
+
+    init_db()
+    session = get_session()
+    try:
+        rtypes = None if result_type == "all" else [result_type]
+        results = unified_search(
+            session, query,
+            result_types=rtypes,
+            source_type=source_type,
+            entity_type=entity_type,
+            view_direction=view_direction,
+            signal_status=signal_status,
+            limit=limit,
+        )
+    finally:
+        session.close()
+
+    if json_output:
+        output = [serialize_unified_result(r) for r in results]
+        console.print(_json.dumps(output, ensure_ascii=False, indent=2))
+        return
+
+    if not results:
+        console.print(f"[yellow]未找到与 \"{query}\" 相关的结果。[/yellow]")
+        return
+
+    table = Table(title=f"搜索: {query}（{len(results)} 条结果）", show_lines=False)
+    table.add_column("#", style="dim", justify="right")
+    table.add_column("类型")
+    table.add_column("标题/摘要", max_width=50)
+    table.add_column("来源")
+    table.add_column("位置", max_width=12)
+    table.add_column("相关度", justify="right")
+
+    type_labels = {
+        "report": "[bold]报告[/bold]",
+        "investment_view": "[cyan]观点[/cyan]",
+        "tracking_signal": "[yellow]信号[/yellow]",
+        "entity": "[magenta]实体[/magenta]",
+    }
+
+    for i, r in enumerate(results, 1):
+        pos = r.timestamp or (f"p.{r.page_number}" if r.page_number else "-")
+        table.add_row(
+            str(i),
+            type_labels.get(r.result_type, r.result_type),
+            (r.title or r.snippet)[:50],
+            r.source_type[:12],
+            pos[:12],
+            f"{r.relevance_score:.2f}",
+        )
+
+    console.print(table)
 
 
 # ---------------------------------------------------------------------------

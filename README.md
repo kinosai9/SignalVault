@@ -99,6 +99,47 @@ python -m podcast_research reports sources                 # 来源统计
 python -m podcast_research reports rebuild-index           # 重建 FTS5 搜索索引
 ```
 
+## Search & Graph（P5）
+
+### 统一搜索
+
+一次搜索覆盖报告、投资观点、跟踪信号、实体：
+
+```bash
+python -m podcast_research search "NVIDIA"                              # 搜索全部
+python -m podcast_research search "GPU" --type investment_view          # 仅观点
+python -m podcast_research search "AI" --source-type pdf_upload         # 仅 PDF
+python -m podcast_research search "半导体" --direction bullish           # bullish
+python -m podcast_research search "投资" --json --limit 30              # JSON
+```
+
+MCP: `unified_search` tool → 返回 `UnifiedSearchResult[]`（含 report_id/source_type/page_number/source_quote）
+
+### 知识图谱
+
+SQLite 轻量图谱，可从现有 DB 重建，支持实体邻域、证据链、JSON 导出：
+
+```bash
+python -m podcast_research graph rebuild                       # 全量重建（幂等）
+python -m podcast_research graph neighborhood "NVIDIA"         # 实体邻域
+python -m podcast_research graph evidence-trail --view 1       # 证据链
+python -m podcast_research graph export -o graph.json          # JSON 导出
+```
+
+MCP: `get_entity_neighborhood` / `list_graph_edges` / `get_evidence_trail`
+
+### MCP Tools 总览
+
+当前 12 个只读 MCP tool，覆盖查询→搜索→图谱→证据链全链路：
+
+```
+P3-D (8): search_reports, get_report, list_channels, search_entities,
+          get_entity_profile, list_investment_views, list_tracking_signals,
+          list_review_items
+P5-A (1): unified_search
+P5-B (3): get_entity_neighborhood, list_graph_edges, get_evidence_trail
+```
+
 ## 本地 API 服务
 
 启动本地只读 API + HTML Web Console：
@@ -191,6 +232,57 @@ python -m podcast_research mcp-serve --db-path /path/to/db  # 指定数据库
 | `list_review_items` | 列出审核事项（type/status/severity） |
 
 详见 `docs/MCP_SERVER_DESIGN.md`。
+
+## PDF 入库工作流（P4-A + P4-B）
+
+支持文本型 PDF 的完整入库链路：**预览 → 提取 → 分析 → 报告 → MCP 查询**。
+扫描型 PDF 标记 `needs_ocr` 并写入 Review Queue，OCR 为后续可选能力。
+
+### 工作流
+
+```bash
+# 1. 预览 PDF 质量（不写入 DB）
+python -m podcast_research pdf preview research_report.pdf
+python -m podcast_research pdf preview report.pdf --json
+
+# 2. 提取全文文本
+python -m podcast_research pdf extract report.pdf
+python -m podcast_research pdf extract report.pdf -o output.txt
+
+# 3. 分析生成投资研究报告（mock 模式，不调用真实 LLM）
+python -m podcast_research pdf analyze report.pdf
+
+# 4. 真实 LLM 分析（需 .env 配置 LLM_API_KEY）
+python -m podcast_research pdf analyze report.pdf --no-mock --focus "AI投资,美股"
+
+# 5. 质量问题入审核队列
+python -m podcast_research pdf preview report.pdf --write-review
+python -m podcast_research pdf analyze report.pdf --write-review
+
+# 6. 查看 PDF 相关的审核项
+python -m podcast_research review list --type pdf_needs_ocr
+python -m podcast_research review list --type pdf_quality_issue
+python -m podcast_research review list --type pdf_analysis_skipped
+```
+
+### MCP 查询 PDF 报告
+
+启动 MCP server 后，Claude Code/Codex 可直接查询 PDF 产生的数据：
+
+```
+"搜索最近关于 AI 基础设施的 PDF 报告"
+  → search_reports → source_type="pdf_upload"
+
+"报告 #15 中第 12 页有什么观点"
+  → get_report(15) → views[].evidence_page=12
+
+"列出所有需要 OCR 的 PDF"
+  → list_review_items(item_type="pdf_needs_ocr")
+```
+
+所有 8 个 MCP tool 自动支持 PDF 数据（`source_type`/`evidence_page`/`source_file`），无需新增 tool。
+
+详见 `docs/P4_ACCEPTANCE_REPORT.md` 和 `docs/P4_PDF_INGESTION_PLAN.md`。
 
 ## Web Console
 
@@ -510,7 +602,7 @@ src/podcast_research/
     managed_block.py      # 托管块工具
   utils/                  # 工具函数
   mcp_server/             # MCP Server（P3-D）：8 个只读 tool
-tests/                    # 1563 个 pytest 测试
+tests/                    # 1641 个 pytest 测试
 ```
 
 ## 核心原则
@@ -560,7 +652,9 @@ tests/                    # 1563 个 pytest 测试
 | P2-M | 频道筛选 + Source Pages + 视觉优化 | ✅ 已完成 |
 | P2-N | Research Brief 质量调优 + 内容积累 | ✅ 已完成 |
 | P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
-| P4 | 多期观点对比、Claim/Signal MCP tool 扩展 | 待启动 |
+| P4 | PDF 文档入库（P4-A ✅ P4-B ✅ | OCR/Web 计划中） | 进行中 |
+| P5 | 统一搜索 + 轻量知识图谱（P5-A 搜索 ✅ | P5-B 图谱 ✅ | MCP 12 tools） | 进行中 |
+| P6 | 多期观点对比 | 待启动 |
 
 ## 许可证
 

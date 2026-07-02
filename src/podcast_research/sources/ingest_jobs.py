@@ -59,6 +59,8 @@ def _make_job_key(source_type: str, source_url: str = "", source_hash: str = "",
         return f"url_import:{url_hash}"
     elif source_type == "file_upload":
         return f"file_upload:{source_hash}"
+    elif source_type == "pdf_upload":
+        return f"pdf_upload:{source_hash}"
     elif source_type == "tracked_entry":
         url_hash = hashlib.sha256(source_url.encode()).hexdigest()[:16]
         return f"tracked_entry:{tracked_source_id}:{url_hash}"

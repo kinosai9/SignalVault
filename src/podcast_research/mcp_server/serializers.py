@@ -51,6 +51,9 @@ def serialize_report_detail(d: dict) -> dict:
         "llm_model": d.get("llm_model", ""),
         "created_at": _iso(d.get("created_at")),
         "report_markdown": d.get("report_markdown", ""),
+        "source_file": d.get("source_file", ""),          # P4-B: PDF source file
+        "source_hash": d.get("source_hash", ""),           # P4-B: PDF content hash
+        "page_count": d.get("page_count"),                 # P4-B: PDF page count
         "views": [serialize_investment_view(v) for v in (d.get("views") or [])],
         "signals": [serialize_tracking_signal(s) for s in (d.get("signals") or [])],
     }
@@ -77,6 +80,7 @@ def serialize_investment_view(v: dict) -> dict:
         "ai_value_chain_layer": v.get("ai_value_chain_layer", ""),
         "business_impact": v.get("business_impact", ""),
         "investment_relevance": v.get("investment_relevance", ""),
+        "evidence_page": v.get("evidence_page"),  # P4-B: PDF page number
     }
 
 

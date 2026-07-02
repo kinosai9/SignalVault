@@ -1,5 +1,186 @@
 # Changelog
 
+## Unreleased
+
+### P5-S — Closeout & Documentation Consolidation (2026-07-02)
+
+**Done:**
+- `docs/P5_ACCEPTANCE_REPORT.md`: comprehensive acceptance report — P5-A/B/C deliverables, data model changes, CLI/MCP inventories, graph data flow, evidence trail example, test results (1703 passed), exclusion list
+- `docs/P5_SEARCH_GRAPH_PLAN.md`: P5-C marked complete (delivered within P5-A/B), P5-S closeout section added
+- `docs/SEARCH_ENHANCEMENT_DESIGN.md`: as-implemented summary (FTS5 + LIKE + metadata filter + CLI/MCP)
+- `docs/LIGHTWEIGHT_GRAPH_DESIGN.md`: as-implemented summary (6 node builders, 4 edge builders, 7 node types, 7 edge types, reserved algorithm stubs)
+- `README.md`: consolidated "Search & Graph" section with CLI examples and full 12-tool MCP inventory
+- `CHANGELOG.md`: this entry
+
+**P5 Final State:**
+```
+P5-A  Unified Search             — FTS5+LIKE, UnifiedSearchResult, CLI search, MCP unified_search
+P5-B  Lightweight Knowledge Graph — knowledge_nodes/edges, rebuild, neighborhood, evidence trail, export
+P5-C  MCP Integration            — delivered within P5-A/B; 12 total read-only MCP tools
+P5-S  Closeout                   — acceptance report, documentation consolidation
+```
+
+**Naming unified:**
+- P5-A: Unified Search Enhancement
+- P5-B: Lightweight Knowledge Graph
+- P5-C: MCP Integration (completed as part of P5-A/B)
+- P5-S: Closeout
+
+### P5-B — Lightweight Knowledge Graph (2026-07-02)
+
+**Implemented:**
+- `db/models.py`: `KnowledgeNode` (10 columns) + `KnowledgeEdge` (16 columns) SQLAlchemy models
+- `db/session.py`: `_migrate_knowledge_graph_tables` + 5 indexes
+- `db/knowledge_graph.py` (~420 lines): `rebuild_knowledge_graph()` (6 node builders, 4 edge builders) + `get_entity_neighborhood()` + `get_evidence_trail()` + `list_graph_edges()` + `export_graph_json()`
+- 7 node types: report, source, company, topic, person, investment_view, tracking_signal, evidence
+- 7 edge types: mentioned_in, derived_from, supports, related_to, tracks, cites_page, cites_timestamp
+- Rebuild is idempotent (node_key/edge_key dedup)
+- CLI: `graph rebuild` / `graph neighborhood <entity>` / `graph evidence-trail --view <id>` / `graph export`
+- MCP: `get_entity_neighborhood` / `list_graph_edges` / `get_evidence_trail` (12 total MCP tools)
+- Tests: 27 new in `tests/test_knowledge_graph.py`
+
+**Not yet:**
+- Complex graph algorithms (Louvain, Adamic-Adar, PageRank) — interfaces reserved
+- Graph visualization UI
+- Obsidian vault scan for graph construction
+
+### P5-A — Unified Search Enhancement (2026-07-02)
+
+**Implemented:**
+- `db/unified_search.py`: `UnifiedSearchResult` dataclass (22 fields) + `unified_search()` entry point + `_unified_search_like()` (4-table fallback) + `_unified_search_fts()` (FTS5 path) + `serialize_unified_result()`
+- Search across reports, investment_views, tracking_signals, entities with a single query
+- Metadata filters: result_type, source_type, entity_type, view_direction, signal_status
+- Lightweight relevance scoring via matched field heuristics
+- `_clean_snippet()` context extraction
+- CLI: `search <query>` command (--type/--source-type/--entity-type/--direction/--signal-status/--json/--limit)
+- MCP: `unified_search` tool (9th read-only MCP tool)
+- Tests: 35 new in `tests/test_unified_search.py`
+
+**Architecture:**
+```
+search "NVIDIA GPU"
+  → unified_search()
+    → FTS5 (Fast) → LIKE fallback (Always available)
+    → Metadata filters on top
+    → UnifiedSearchResult[] sorted by relevance_score
+```
+
+**Not yet:**
+- Vector search / embedding
+- knowledge_nodes / knowledge_edges (P5-B)
+- entity_neighborhood / graph_edges / evidence_trail MCP tools
+
+### P5 Planning — Search Enhancement + Lightweight Knowledge Graph (2026-07-02)
+
+P5 规划启动：在已入库的报告/观点/信号/实体/PDF 证据基础上，构建统一搜索层和轻量知识图谱。
+
+**规划文档：**
+- `docs/P5_SEARCH_GRAPH_PLAN.md` — 高层计划：P5-A 搜索增强 / P5-B 轻量图谱 / P5-C MCP 集成 / P5-S 收口
+- `docs/SEARCH_ENHANCEMENT_DESIGN.md` — 统一搜索设计：FTS5+LIKE+Metadata Filter 三层架构、UnifiedSearchResult schema、跨类型 relevance 评分、MCP unified_search tool
+- `docs/LIGHTWEIGHT_GRAPH_DESIGN.md` — 轻量图谱设计：knowledge_nodes + knowledge_edges 两张 SQLite 表、8 种节点类型、11 种边类型、entity neighborhood 查询、evidence trail、graph export JSON
+
+**核心设计决策：**
+- 纯 SQLite：不引入向量数据库、Neo4j、外部搜索引擎
+- 图可重建 + 增量更新：从现有 DB 表 batch rebuild，按 report 增量追加
+- 不做复杂图算法：Louvain、Adamic-Adar、PageRank 仅预留接口
+- 4 个新 MCP tool（全部只读）：unified_search / get_entity_neighborhood / list_graph_edges / get_evidence_trail
+- 复用现有 FTS5 + CJK tokenize，扩展 view/signal/entity 三级 FTS 表
+- 不新增 pyproject.toml 依赖
+
+### P4-S — Closeout & Documentation Consolidation (2026-07-02)
+
+**Done:**
+- `docs/P4_ACCEPTANCE_REPORT.md`: comprehensive acceptance report — P4-A/B deliverables, CLI command list, data model changes, page-level evidence trace, quality gate behavior, OCR boundary, MCP auto-benefit, test results (1641 passed)
+- `docs/P4_PDF_INGESTION_PLAN.md`: P4-S closeout section; phased naming unified (P4-A Extraction / P4-B Analysis / P4-S Closeout); future P4-C/D candidates noted
+- `docs/PDF_EXTRACTION_DESIGN.md`: as-implemented summary section added covering both phases, evidence flow, quality gate table
+- `README.md`: "PDF 入库工作流" section replacing single-phase description — covers preview→extract→analyze→review→MCP query
+- `CHANGELOG.md`: this entry
+
+**P4 Final State:**
+```
+P4-A  PDF Extraction       — pdfplumber text extraction, quality grading, ingest_jobs, review_items
+P4-B  PDF Analysis + Page  — analysis pipeline, page-level evidence, quality gate, MCP serializers
+P4-S  Closeout             — acceptance report, documentation consolidation
+```
+
+**Naming unified:**
+- P4-A: PDF Extraction
+- P4-B: PDF Analysis + Page-level Evidence
+- P4-S: Closeout
+
+**Future candidates (not in current scope):**
+- P4-C: Web upload + non-technical user entry
+- P4-D: OCR Provider implementation
+
+### P4-B — PDF Analysis Pipeline + Page-level Evidence (2026-07-02)
+
+**Implemented:**
+- `sources/pdf_analysis.py`: `analyze_pdf()` entry point + `build_pdf_source_profile()` + `_pages_to_segments()` + `_check_analysis_eligibility()`
+- Page-to-segment conversion: each PDF page → SubtitleSegment with `segment_id="page_N"`, `start_time="p.{N}"` carrying page numbers through the pipeline
+- Quality gating: minimal/failed PDFs skip analysis → review_items (pdf_analysis_skipped)
+- `analysis/models.py`: Evidence.page_number: int | None
+- `db/models.py`: InvestmentViewRecord.evidence_page: int | None (nullable)
+- `db/session.py`: migration for evidence_page column
+- `db/repository.py`: save_investment_views stores evidence_page; get_report_detail returns it
+- `sources/review_items.py`: 2 new item_types — pdf_analysis_skipped, pdf_evidence_missing
+- `mcp_server/serializers.py`: serialize_investment_view returns evidence_page; serialize_report_detail returns source_file/source_hash/page_count
+- CLI: `pdf analyze <path>` (--mock/--no-mock, --focus, --write-review, --output, --db-path)
+- Tests: 31 new in `tests/test_pdf_analysis.py`
+
+**Architecture:**
+```
+PDF → extract_pdf() → build_pdf_source_profile() → _check_analysis_eligibility()
+  → quality gate → _pages_to_segments() → _run_pipeline() (existing)
+  → report + views + signals (with evidence_page)
+```
+
+### P4-A — PDF Text Extraction & Source Profile (2026-07-02)
+
+**Implemented:**
+- `sources/pdf_extraction.py`: PdfPage, PdfMetadata, PdfExtractionResult dataclasses + `extract_pdf()` (pdfplumber-based, page-level) + `try_ocr_pdf()` (OCR skeleton, graceful degrade) + `build_pdf_review_findings()` (review integration)
+- `ingest_jobs` extended: `source_type="pdf_upload"`, job_key `pdf_upload:{content_hash}`
+- `review_items` extended: 3 new item_types — `pdf_needs_ocr`, `pdf_quality_issue`, `pdf_extraction_failed`
+- CLI: `pdf preview <path>` / `pdf extract <path>` (--json, --write-review, --output, --db-path)
+- Dependency: `pdfplumber>=0.11`
+- Tests: 47 new in `tests/test_pdf_extraction.py`
+
+**OCR Strategy Clarified (2026-07-02 documentation update):**
+- P4 defaults to text-based PDF; scanned/low-text PDFs are not in P4-A mandatory scope
+- Scanned PDFs are marked `needs_ocr=True` and enter Review Queue — no automatic OCR call
+- No local heavy OCR (tesseract/PaddleOCR) required by default
+- Future OCR will use pluggable provider architecture with user-supplied API keys
+- OCR providers (Tencent/Aliyun/Azure/Google/Mistral/OpenAI Vision) are candidates only
+- No API key is built-in; no external request is made unless user explicitly configures a provider
+- P4-A does NOT: full OCR, table extraction, chart understanding, Deep Research, external API integration, file upload to external services
+
+**Not yet:**
+- Full LLM analysis pipeline integration
+- Table/chart structured extraction
+- OCR provider implementation (skeleton only)
+
+### P4 Planning — PDF Document Ingestion Expansion (2026-07-02)
+
+P4 路线调整：原"多期观点对比"推迟到 P5，P4 改为 **PDF 文档入库优先**。
+
+**规划文档：**
+- `docs/P4_PDF_INGESTION_PLAN.md` — 高层计划：定位、分阶段、复用 P3 基础设施、测试策略、排除项
+- `docs/PDF_EXTRACTION_DESIGN.md` — 详细设计：双路径提取、数据模型、OCR 后备、页码 evidence、Review Queue 集成
+
+**核心设计决策：**
+- PDF 适配在 `sources/` 层完成，不侵入 `analysis/`、`llm/`、`db/` 核心
+- 文本提取主路径（pdfplumber）+ OCR 后备（pytesseract），自动降级
+- 复用 P3 ingest_jobs（`source_type="pdf_upload"`）、review_items（`pdf_quality_issue` / `pdf_needs_ocr`）
+- 页码级 evidence：`InvestmentViewRecord.evidence_page`，`Evidence.page_number`
+- OCR 为 optional dependency，无 Tesseract 环境 graceful degrade
+- 不做：表格结构化、图表理解、Deep Research、写入型 MCP
+
+**分阶段：**
+- P4-A：文本型 PDF 提取
+- P4-B：OCR 后备路径
+- P4-C：PDF Source Profile + 元数据
+- P4-D：Page-level Evidence + Review Queue
+- P4-E：文档 + 收口
+
 ## P3-A — Persistent Ingest Job Queue (2026-07-01)
 
 P3 定位：把 podcast_research 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。

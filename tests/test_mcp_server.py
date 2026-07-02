@@ -57,9 +57,9 @@ class TestMCPServerSmoke:
         assert server.name == "podcast-research"
 
     def test_all_tools_registered(self, seeded_db):
-        """8 tools are registered on the server."""
+        """9 tools are registered on the server (8 original + unified_search)."""
         from podcast_research.mcp_server import TOOLS
-        assert len(TOOLS) == 8
+        assert len(TOOLS) == 12
         tool_names = {t.name for t in TOOLS}
         expected = {
             "search_reports",
@@ -70,6 +70,10 @@ class TestMCPServerSmoke:
             "list_investment_views",
             "list_tracking_signals",
             "list_review_items",
+            "unified_search",
+            "get_entity_neighborhood",
+            "list_graph_edges",
+            "get_evidence_trail",
         }
         assert tool_names == expected
 
@@ -575,7 +579,7 @@ class TestMCPReadOnly:
     def test_tool_names_are_read_only(self, seeded_db):
         """Tool names imply read-only operations."""
         from podcast_research.mcp_server import TOOLS
-        read_prefixes = ["search_", "get_", "list_"]
+        read_prefixes = ["search_", "get_", "list_", "unified_"]
         for tool in TOOLS:
             assert any(
                 tool.name.startswith(p) for p in read_prefixes

@@ -72,6 +72,7 @@ class InvestmentViewRecord(Base):
     investment_relevance: Mapped[str] = mapped_column(String(10), default="medium")
     topic_tags: Mapped[str] = mapped_column(Text, default="[]")
     quote_support_strength: Mapped[str] = mapped_column(String(10), default="medium")
+    evidence_page: Mapped[int | None] = mapped_column(Integer, nullable=True)  # P4-B: PDF page number
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -319,3 +320,55 @@ class ReviewItem(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class KnowledgeNode(Base):
+    """P5-B: Lightweight knowledge graph node.
+
+    Each row represents one entity in the knowledge graph: a report, source,
+    company, topic, person, investment_view, tracking_signal, or evidence.
+    node_key is globally unique and used for edge references.
+    """
+
+    __tablename__ = "knowledge_nodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_key: Mapped[str] = mapped_column(String(256), nullable=False, unique=True, index=True)
+    node_type: Mapped[str] = mapped_column(String(40), nullable=False)
+        # report / source / company / topic / person /
+        # investment_view / tracking_signal / evidence
+    label: Mapped[str] = mapped_column(String(500), default="")
+    normalized_label: Mapped[str] = mapped_column(String(500), default="")
+    source_ref: Mapped[str] = mapped_column(String(200), default="")
+        # e.g. "report:15" or "entity:NVIDIA"
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class KnowledgeEdge(Base):
+    """P5-B: Lightweight knowledge graph edge.
+
+    Each row represents a directed relationship between two nodes.
+    edge_key is globally unique and used for dedup on rebuild.
+    """
+
+    __tablename__ = "knowledge_edges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    edge_key: Mapped[str] = mapped_column(String(256), nullable=False, unique=True, index=True)
+    source_node_key: Mapped[str] = mapped_column(String(256), nullable=False)
+    target_node_key: Mapped[str] = mapped_column(String(256), nullable=False)
+    edge_type: Mapped[str] = mapped_column(String(40), nullable=False)
+        # mentioned_in / derived_from / supports / related_to /
+        # tracks / cites_page / cites_timestamp
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+    evidence_ref: Mapped[str] = mapped_column(String(200), default="")
+        # e.g. "view:123" or "signal:45"
+    report_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_type: Mapped[str] = mapped_column(String(20), default="")
+    source_path: Mapped[str] = mapped_column(String(500), default="")
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    timestamp: Mapped[str] = mapped_column(String(20), default="")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
