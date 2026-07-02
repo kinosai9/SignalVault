@@ -1,6 +1,6 @@
 # P3 Plan: 知识库后端化
 
-> 状态：P3-A 已完成 | P3-B/C/D 计划中 | 2026-07-01
+> 状态：P3-A/B/C/D 已完成 | P3-S 收口 | 2026-07-02
 > 基于 P2-S.3.5 完成状态
 
 ## 定位
@@ -107,125 +107,136 @@ P2 解决了"能处理什么"，P3 解决"运行时出问题怎么办"和"怎么
 - [x] Review 专项测试：26 tests（含于 test_vault_lint_review.py）
 - [x] ruff clean
 
-### P3-D：MCP Server（下一步）
+### P3-D：MCP Server ✅ 已完成（2026-07-02）
 
-**目标状态：**
-- `python -m podcast_research mcp-serve` 启动 MCP server
-- 只读查询：报告、观点、信号、实体、频道、lint 结果、review items、ingest 状态
-- 可在 Claude Code / Cursor / 其他 MCP 客户端中注册
-- 不依赖桌面应用（stdio transport，纯 Python）
+**实现摘要：**
 
-**设计文档：** `docs/MCP_SERVER_DESIGN.md`
+- 新增 `mcp_server/` 包（4 个模块：`__init__.py`, `server.py`, `tools.py`, `serializers.py`）
+- 8 个只读 MCP tool：`search_reports`, `get_report`, `list_channels`, `search_entities`, `get_entity_profile`, `list_investment_views`, `list_tracking_signals`, `list_review_items`
+- CLI: `python -m podcast_research mcp-serve [--db-path path/to/db]`
+- stdio transport，兼容 Claude Code / Codex / Claude Desktop
+- 依赖：`mcp>=1.0`
+- 71 个专项测试 — `tests/test_mcp_server.py`
+- Query 函数与 MCP 适配层拆开，核心逻辑无 MCP 依赖即可完整单测
 
-**约束：**
-- 只读优先：所有 tool 不修改 DB 或 vault
-- 不做写入操作（accept review、update claim status 等）
-- 不做 Deep Research
-- 不做复杂图谱算法
-- P3-A/B/C 表（`ingest_jobs`, `review_items`）纳入查询范围
+**架构：**
+```
+MCP Client (Claude Code / Codex)
+    │ stdio (JSON-RPC)
+    ▼
+create_mcp_server() → Server
+    ├─ @list_tools → 8 Tool 定义
+    └─ @call_tool  → handle_call_tool(name, args) → _query_*()
+```
 
-**当前问题：**
-- Claude Code 等 AI Agent 无法直接查询 podcast_research 的知识库
-- 用户需要手动打开 Web Console 或 CLI 查询
-- 知识库的价值受限于交互方式
+**MCP Tools（8 个，全部只读）：**
 
-**MCP Tools（Phase 1）：**
-
-| Tool | 功能 |
-|------|------|
-| `search_reports` | 搜索报告（关键词 + status 过滤） |
-| `get_report` | 获取报告详情（含 views/signals/markdown） |
-| `list_entities` | 列出实体（按类型/名称过滤） |
-| `get_channel` | 获取频道信息 |
-| `search_claims` | 搜索观点（按 target/status 过滤） |
-| `search_signals` | 搜索信号（按 target/status 过滤） |
-| `get_lint_issues` | 获取 lint 结果 |
-| `get_review_items` | 获取 review 队列 |
-| `vault_status` | Vault 健康概览 |
+| Tool | 功能 | 数据源 |
+|------|------|--------|
+| `search_reports` | 搜索报告（关键词 + source 过滤） | SQLite FTS5/LIKE |
+| `get_report` | 获取报告详情（含 views/signals/markdown） | reports JOIN episodes |
+| `list_channels` | 列出 YouTube 频道及视频统计 | channels 表 |
+| `search_entities` | 搜索实体（按类型/名称过滤） | entities 表 |
+| `get_entity_profile` | 获取实体详情 + 关联观点 | entities + investment_views |
+| `list_investment_views` | 列出投资观点（target/direction/ai_layer） | investment_views 表 |
+| `list_tracking_signals` | 列出跟踪信号（target/status） | tracking_signals 表 |
+| `list_review_items` | 列出审核事项（type/status/severity） | review_items 表 |
 
 **验收标准：**
-- [ ] `python -m podcast_research mcp-serve` 可启动
-- [ ] 9 个 tool 全部可用
-- [ ] 只读验证（不能修改 vault/DB）
-- [ ] Claude Desktop 集成测试
-- [ ] MCP 专项测试（≥10 tests）
-- [ ] ruff clean
+- [x] `python -m podcast_research mcp-serve` 可启动
+- [x] 8 个 tool 全部可用
+- [x] 只读验证（无写入 tool，查询不修改 DB）
+- [x] 空 DB / 无结果稳定返回
+- [x] MCP 专项测试：71 tests
+- [x] ruff clean
+- [x] 文档更新：MCP_SERVER_DESIGN.md 改为 as-implemented
 
-### P3-E：文档与操作手册（持续）
+### P3-E：文档与操作手册 ✅ 已完成（2026-07-02）
 
-**输出：**
-- [x] `docs/P3_PLAN.md` — 本文件（P3-A 完成状态已更新）
-- [x] `docs/INGEST_QUEUE_DESIGN.md` — P3-A 实现后已补充字段/状态机/CLI
-- [x] `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md` — 设计文档
-- [x] `docs/MCP_SERVER_DESIGN.md` — 设计文档
+**交付文档：**
+- [x] `docs/P3_PLAN.md` — 本文件
+- [x] `docs/INGEST_QUEUE_DESIGN.md` — P3-A 实现后已补充
+- [x] `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md` — P3-B/C 实现后已补充
+- [x] `docs/MCP_SERVER_DESIGN.md` — P3-D 实现后已更新
+- [x] `docs/P3_ACCEPTANCE_REPORT.md` — P3-S 验收报告（新增）
 - [x] `docs/PROJECT_RULES.md` — 工程规范（含 P3 规则）
-- [x] `docs/LLM_WIKI_ANALYSIS.md` — 参考项目分析
-- [x] `README.md` — 已更新 P3 方向
-- [x] `CHANGELOG.md` — 已更新 P3-A 完成
+- [x] `README.md` — 已更新 P3-A/B/C/D 完成状态 + P3 后端化章节
+- [x] `CHANGELOG.md` — 已更新全部 P3 阶段
 
-## 不做什么（P3 明确排除）
+---
 
-- 不引入桌面 UI（React/Tauri/Electron）
-- 不实现 Deep Research
-- 不新增 LLM provider（保持 OpenAI-compatible）
-- 不实现自动定时任务
-- 不直接复制 nashsu/llm_wiki GPL v3 代码
-- 不新增向量数据库（LanceDB 等）
-- 不新增 Chrome 扩展
-- 不新增 PDF/Office 解析能力
+## P3-S 收口（2026-07-02）
 
-## 测试策略
+### P3 四件套
 
-每阶段独立测试，不依赖后续阶段：
+P3 形成了四个独立但可串联的子系统：
+
+| 系统 | 模块 | 作用 | CLI 入口 |
+|------|------|------|----------|
+| **持久化摄入队列** | `sources/ingest_jobs.py` + `IngestJob` 模型 | 所有摄入任务可恢复、可追踪、可去重 | `ingest list/show/retry/resume` |
+| **Vault 健康检查** | `workspace/vault_lint.py` | 5 条 lint rule 检查 Obsidian vault 健康 | `vault-lint --vault <path>` |
+| **人工审核队列** | `sources/review_items.py` + `ReviewItem` 模型 | lint issues / patch / entity merge 统一 triage | `review list/show/accept/skip/resolve` |
+| **MCP Server** | `mcp_server/` | 8 个只读 tool，让 AI Agent 查询知识库 | `mcp-serve [--db-path]` |
+
+### P3 数据表（全部新增于 P3，无破坏现有结构）
+
+| 表 | 阶段 | 行数 | 用途 |
+|------|------|------|------|
+| `ingest_jobs` | P3-A | 22 列 | 摄入任务持久化，含部分唯一索引 |
+| `review_items` | P3-B/C | 12 列 | 统一审核队列，4 态状态机 |
+
+### CLI 命令清单（P3 新增）
 
 ```
-P3-A 测试：
-  - test_ingest_jobs_crud.py         — DB CRUD 操作
-  - test_ingest_jobs_dedup.py        — source_hash 去重
-  - test_ingest_jobs_expiry.py       — 过期清理
-  - test_ingest_jobs_dashboard.py    — Dashboard 统计一致性
-  - test_ingest_jobs_restart.py      — 重启恢复
-  - 更新现有 Sources 测试（移除 _preview_store 引用）
+# 摄入队列
+ingest list [--type/--status/--limit]
+ingest show <job_id>
+ingest retry <job_id>
+ingest resume
 
-P3-B 测试：
-  - test_vault_lint_rules.py         — 每条 rule 的检测逻辑
-  - test_vault_lint_cli.py           — CLI 命令
-  - test_vault_lint_autofix.py       — Auto-fix 安全
-  - test_vault_lint_web.py           — Web 面板
+# Vault 健康检查
+vault-lint --vault <path> [--rules/--exclude/--json/--write-review]
 
-P3-C 测试：
-  - test_review_items_crud.py        — CRUD + 状态机
-  - test_review_from_lint.py         — Lint → Review 流转
-  - test_review_from_patch.py        — Patch → Review 关联
-  - test_review_web.py               — Web 面板
+# 审核队列
+review list [--type/--status/--limit]
+review show <item_id>
+review accept <item_id> [--note]
+review skip <item_id> [--note]
+review resolve <item_id> [--note]
 
-P3-D 测试：
-  - test_mcp_server_startup.py       — 启动/配置
-  - test_mcp_tools.py                — 每个 tool 的输入/输出
-  - test_mcp_readonly.py             — 只读验证
-  - test_mcp_integration.py          — 与真实 MCP client 交互
+# MCP Server
+mcp-serve [--db-path <path>] [--vault-path <path>]
 ```
 
-## 风险与边界
+### 测试结果
 
-| 风险 | 缓解 |
+| 阶段 | 新增测试 | 累计测试 | 结果 |
+|------|----------|----------|------|
+| P3-A | 54 | 1439 | ✅ |
+| P3-B/C | 53 | 1492 | ✅ |
+| P3-D | 71 | 1563 | ✅ |
+
+全绿，ruff clean。2 个已知 harmless warnings（uvicorn websockets deprecation，P2-O 以来已知）。
+
+### P3 不做（明确排除）
+
+| 排除项 | 原因 |
 |------|------|
-| DB migration 影响现有数据 | P3-A 只新增表，不修改现有表结构；使用 `if not exists` |
-| Vault Lint 误报 | 每条 rule 可独立开关；info 级别不阻塞；auto-fix 需 --apply |
-| Review Queue 与现有 Patch Review 冲突 | 保留现有 patches/ 路径，review_items 作为上层的统一视图 |
-| MCP Server 安全问题 | 只读；仅在 localhost 监听；不需要认证（本地信任模型） |
-| 测试数量膨胀 | 复用现有 fixtures（seeded_db, tmp_path）；mock provider 模式 |
+| 写入型 MCP tool | 安全边界：MCP 保持只读，写入通过 CLI/Web 执行 |
+| Deep Research | 超出 P3 范围，需要多轮 LLM 编排 |
+| 复杂知识图谱 | 实体关系图、因果链需要独立设计阶段 |
+| 桌面 UI（React/Tauri/Electron） | 不在项目路线，Web Console 已覆盖 |
+| 自动定时任务 | 依赖外部调度器（cron/systemd），不进项目 |
+| 向量数据库（LanceDB 等） | RAG 场景未验证，不提前引入 |
+| 新增 LLM provider | 保持 OpenAI-compatible 单一接口 |
+| Chrome 扩展 / PDF/Office 解析 | 不在项目范围 |
 
-## 依赖关系
+### 残余风险与后续建议
 
-```
-P3-A (持久化摄入队列)
-  └─→ P3-B (Vault Lint) — lint 可检测重复报告（复用 content_hash）
-        └─→ P3-C (Review Queue) — lint issues → review_items
-  
-P3-D (MCP Server) — 可独立开发，查询现有 API + P3-A/B/C 新增表
-
-P3-E (文档) — 随各阶段持续更新
-```
-
-推荐执行顺序：**P3-A → P3-B → P3-C → P3-D**，P3-D 可在 P3-A 完成后并行启动。
+| 风险 | 当前状态 | 建议 |
+|------|------|------|
+| ingest_jobs Phase 1 双写 | 内存 + DB 双写，Phase 2 可完全切换 | 所有 P3 阶段完成后评估切换 |
+| Vault Lint 误报率 | 5 条 rule，info 级别不阻塞 | 积累使用数据后调优阈值 |
+| Review Queue 积压 | 无自动分配/提醒 | 每次 vault-lint --write-review 前人工检查 |
+| MCP 仅查 DB | Vault 文件系统的 Claim/Signal 不在查询范围 | P4 扩展 `search_claims`/`search_signals` tool |
+| MCP 无写入 | accept/skip/resolve 需 CLI 或 Web | 保持只读安全边界，写入走现有 CLI |

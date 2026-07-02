@@ -4,15 +4,53 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P3-A/B/C 已完成，P3-D 计划中
+## 当前阶段：P3-A/B/C/D 已完成
 
-P0 + P1 + P2（A 到 S）已完成，P3-A/B/C 已交付，1492 个测试，82 个 Python 模块，11 个 CLI 命令组，约 20 个 Web 页面。
+P0 + P1 + P2（A 到 S）已完成，P3-A/B/C/D 已交付，1563 个测试，83 个 Python 模块，12 个 CLI 命令组，约 20 个 Web 页面。
 
 **P3 已完成**（详见 `docs/P3_PLAN.md`）：
 - ✅ P3-A 持久化摄入队列 — SQLite `ingest_jobs` 替代内存预览存储
 - ✅ P3-B Vault Lint — 5 条 lint rule 检查 Obsidian vault 健康
 - ✅ P3-C Review Queue — 统一 `review_items` 审核队列
-- ⬜ P3-D MCP Server — 让 AI Agent 查询知识库
+- ✅ P3-D MCP Server — 只读 MCP server，8 个 tool，让 AI Agent 查询知识库
+
+## P3: Agent-ready knowledge backend
+
+P3 将 podcast_research 升级为**可恢复、可审计、可被 AI Agent 查询**的知识库后端。四个子系统独立运行、可串联协作：
+
+| 系统 | CLI | 作用 |
+|------|------|------|
+| 摄入队列 | `ingest list/show/retry/resume` | 所有摄入任务持久化到 SQLite，重启不丢失 |
+| Vault 健康检查 | `vault-lint --vault <path>` | 5 条 lint rule 检查 Obsidian vault 质量 |
+| 审核队列 | `review list/show/accept/skip/resolve` | 统一 triage lint issues / patch / entity merge |
+| MCP Server | `mcp-serve` | 8 个只读 tool，Claude Code/Codex 直接查知识库 |
+
+**MCP Tools（Claude Code/Codex 可用）：**
+
+| Tool | 查询什么 |
+|------|----------|
+| `search_reports` | 搜索报告（关键词 + source 过滤） |
+| `get_report` | 报告详情（含 views/signals/markdown） |
+| `list_channels` | YouTube 频道及视频统计 |
+| `search_entities` | 实体（公司/产品/技术/人物） |
+| `get_entity_profile` | 实体详情 + 关联投资观点 |
+| `list_investment_views` | 投资观点（target/direction/ai_layer） |
+| `list_tracking_signals` | 跟踪信号（target/status） |
+| `list_review_items` | 审核事项（type/status/severity） |
+
+```bash
+# Vault 健康检查 → 问题写入审核队列
+python -m podcast_research vault-lint --vault /path/to/vault --write-review
+
+# 审核队列 triage
+python -m podcast_research review list --status open
+python -m podcast_research review accept 1 --note "已修复"
+
+# 启动 MCP Server（Claude Code 自动发现）
+python -m podcast_research mcp-serve
+```
+
+详见 `docs/P3_ACCEPTANCE_REPORT.md` 和 `docs/P3_PLAN.md`。
 
 核心能力：
 - 单视频分析（本地字幕 / YouTube URL）→ Markdown 报告 + SQLite 入库
@@ -116,6 +154,43 @@ python -m podcast_research review accept 1 --note "已修复"    # 接受
 python -m podcast_research review skip 1 --note "暂不处理"    # 跳过
 python -m podcast_research review resolve 1                   # 解决
 ```
+
+## MCP Server（P3-D）— 只读知识库查询
+
+启动 stdio MCP server，让 Claude Code / Codex / Claude Desktop 查询知识库。
+
+```bash
+python -m podcast_research mcp-serve                        # 使用默认数据库
+python -m podcast_research mcp-serve --db-path /path/to/db  # 指定数据库
+```
+
+**Claude Desktop 配置：**
+
+```json
+{
+    "mcpServers": {
+        "podcast-research": {
+            "command": "python",
+            "args": ["-m", "podcast_research", "mcp-serve"]
+        }
+    }
+}
+```
+
+**8 个只读 tool：**
+
+| Tool | 功能 |
+|------|------|
+| `search_reports` | 搜索报告（关键词 + source 过滤） |
+| `get_report` | 获取报告详情（含 views/signals/markdown） |
+| `list_channels` | 列出 YouTube 频道及视频统计 |
+| `search_entities` | 搜索实体（按类型/名称过滤） |
+| `get_entity_profile` | 获取实体详情 + 关联投资观点 |
+| `list_investment_views` | 列出投资观点（target/direction/ai_layer） |
+| `list_tracking_signals` | 列出跟踪信号（target/status） |
+| `list_review_items` | 列出审核事项（type/status/severity） |
+
+详见 `docs/MCP_SERVER_DESIGN.md`。
 
 ## Web Console
 
@@ -367,7 +442,7 @@ python -m podcast_research --youtube-url "VIDEO_URL" --focus "AI投资,美股" -
 
 ```
 src/podcast_research/
-  cli.py                  # Typer CLI（9 个命令组，~46 个子命令）
+  cli.py                  # Typer CLI（12 个命令组，~50 个子命令）
   config.py               # .env 加载 + 全局配置
   config_store.py         # 用户设置持久化
   evaluation.py           # 跨频道质量评估
@@ -434,7 +509,8 @@ src/podcast_research/
     watchlist.py          # Watchlist Brief 生成
     managed_block.py      # 托管块工具
   utils/                  # 工具函数
-tests/                    # 904 个 pytest 测试
+  mcp_server/             # MCP Server（P3-D）：8 个只读 tool
+tests/                    # 1563 个 pytest 测试
 ```
 
 ## 核心原则
@@ -455,6 +531,10 @@ tests/                    # 904 个 pytest 测试
 - 团队协作、云端同步
 - 登录鉴权
 - 自动定时抓取
+- Deep Research（多轮 LLM 编排）
+- 写入型 MCP tool（保持 MCP 只读安全边界）
+- 复杂知识图谱（实体关系图、因果链）
+- Vault 文件系统 MCP tool（当前只查 DB）
 
 ## 路线图
 
@@ -479,8 +559,8 @@ tests/                    # 904 个 pytest 测试
 | P2-L | 首次使用引导 + Vault 初始化/修复 | ✅ 已完成 |
 | P2-M | 频道筛选 + Source Pages + 视觉优化 | ✅ 已完成 |
 | P2-N | Research Brief 质量调优 + 内容积累 | ✅ 已完成 |
-| P3 | 小宇宙链接导入 + 其他增强 | 待启动 |
-| P4 | 多期观点对比 | 待启动 |
+| P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
+| P4 | 多期观点对比、Claim/Signal MCP tool 扩展 | 待启动 |
 
 ## 许可证
 

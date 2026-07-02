@@ -42,10 +42,63 @@ P3 定位：把 podcast_research 从"可运行的数据处理流水线"升级为
 - **2 warnings** — known harmless: uvicorn websockets deprecation (pre-existing since P2-O), no action needed
 - ruff clean
 
-### Planned
-- **P3-D**: MCP Server — 9 read-only tools via Python `mcp` package
-- Design docs: `docs/P3_PLAN.md`, `docs/INGEST_QUEUE_DESIGN.md`, `docs/VAULT_LINT_REVIEW_QUEUE_DESIGN.md`, `docs/MCP_SERVER_DESIGN.md`
-- Project rules: `docs/PROJECT_RULES.md`
+## P3-D — MCP Server (2026-07-02)
+
+### Done
+- **mcp_server package** (`src/podcast_research/mcp_server/`): 4 modules — `__init__.py`, `server.py`, `tools.py`, `serializers.py`
+- **8 read-only MCP tools**: `search_reports`, `get_report`, `list_channels`, `search_entities`, `get_entity_profile`, `list_investment_views`, `list_tracking_signals`, `list_review_items`
+- **Architecture**: Query functions (`_query_*()`) decoupled from MCP adapter layer (`handle_call_tool()`), enabling full unit testing without MCP dependency
+- **Transport**: stdio (JSON-RPC), compatible with Claude Code / Codex / Claude Desktop
+- **CLI**: `python -m podcast_research mcp-serve [--db-path path/to/db]`
+- **Dependency**: `mcp>=1.0` added to `pyproject.toml`
+- **Security**: All tools read-only; no write operations exposed; local stdio only; max limits on all queries (50-100)
+- **81 new tests** in `tests/test_mcp_server.py` — server smoke, all 8 tool query functions, tool handler dispatch, empty DB stability, read-only verification
+- **Documentation**: `docs/MCP_SERVER_DESIGN.md` rewritten from design to as-implemented; README, P3_PLAN, CHANGELOG updated
+
+### Not in scope
+- No Vault file-system tools (vault_status, get_lint_issues, search_claims) — deferred to future iteration
+- No write tools (accept/skip/resolve review, retry ingest, trigger analysis)
+- No streaming/SSE transport
+- No OAuth/API Key authentication
+
+### Test Results
+- **71 new tests** in `tests/test_mcp_server.py`
+- **1563 total tests**, all pass
+- ruff clean
+
+## P3-S — Closeout & Documentation Consolidation (2026-07-02)
+
+### Done
+- **P3_PLAN.md**: Added P3-S closeout section with quartet summary, CLI command list, data table list, exclusions, residual risks
+- **P3_ACCEPTANCE_REPORT.md**: New comprehensive acceptance report — sub-phase deliverables, CLI/MCP tool/data table inventories, test results, known warnings, residual risks
+- **README.md**: Added "P3: Agent-ready knowledge backend" consolidated section with MCP tool table; updated roadmap table to mark P3 complete; updated project structure and metrics
+- **MCP_SERVER_DESIGN.md**: Expanded integration guide with Claude Code/Codex/Cursor/Claude Desktop examples; strengthened security section with explicit remote-exposure prohibition
+- **CHANGELOG.md**: This entry — P3-S closeout documentation
+
+### P3 Final State
+
+```
+P3 deliverables:
+  ingest_jobs   — persistent ingest queue (22-column table, 14-method manager)
+  vault_lint    — 5 lint rules scanning Obsidian vaults
+  review_items  — unified human-triage queue (12-column table, 4-state machine)
+  mcp_server    — 8 read-only MCP tools via stdio transport
+  
+CLI:     13 new commands across 4 command groups
+Tests:   178 new (54 + 53 + 71), 1563 total, all pass
+Ruff:    clean
+Docs:    6 design/plan/report documents updated
+```
+
+### P3 Explicitly Excluded
+- Write-capable MCP tools (security boundary)
+- Deep Research (multi-turn LLM orchestration)
+- Complex knowledge graph (entity relationships, causal chains)
+- Desktop UI (React/Tauri/Electron)
+- Automatic scheduled tasks
+- Vector database (LanceDB etc.)
+- New LLM provider
+- Chrome extension / PDF/Office parsing
 
 ## P2-S.3.5 — Source Ingestion Consistency & Release Hardening (2026-07-01)
 

@@ -3119,3 +3119,54 @@ def serve(
         reload=reload,
         factory=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# mcp-serve 命令（P3-D：MCP Server）
+# ---------------------------------------------------------------------------
+
+
+@app.command("mcp-serve")
+def mcp_serve(
+    db_path: str = typer.Option(None, "--db-path", help="SQLite 数据库路径（覆盖 .env 配置）"),
+    vault_path: str = typer.Option(None, "--vault-path", help="Obsidian Vault 路径（预留，当前版本不使用）"),
+) -> None:
+    """启动只读 MCP Server（stdio transport）。
+
+    用于 Claude Code / Codex 等 MCP 客户端查询知识库。
+    所有 tool 只读，不修改数据库或 Vault 文件。
+
+    Claude Desktop 配置示例：
+    {
+        "mcpServers": {
+            "podcast-research": {
+                "command": "python",
+                "args": ["-m", "podcast_research", "mcp-serve"],
+                "env": {
+                    "DB_PATH": "/path/to/data/podcast_analyst.db"
+                }
+            }
+        }
+    }
+    """
+    import asyncio
+    import sys
+
+    from podcast_research.config import DB_PATH as _default_db
+    from podcast_research.logging_config import setup_logging
+
+    setup_logging("WARNING")
+
+    resolved_db = db_path or str(_default_db)
+
+    console.print("[green]MCP Server 启动[/green]")
+    console.print("  Transport: stdio")
+    console.print(f"  Database: {resolved_db}")
+    console.print("  Mode: read-only")
+    console.print("  Tools: 8 (search_reports, get_report, list_channels, "
+                 "search_entities, get_entity_profile, list_investment_views, "
+                 "list_tracking_signals, list_review_items)")
+    console.print("[dim]等待 MCP 客户端连接...[/dim]", file=sys.stderr)
+
+    from podcast_research.mcp_server import run_mcp_server
+    asyncio.run(run_mcp_server(db_path=resolved_db))
