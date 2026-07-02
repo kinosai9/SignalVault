@@ -35,6 +35,12 @@ VALID_ITEM_TYPES = frozenset({
     # P4-B: PDF analysis
     "pdf_analysis_skipped",
     "pdf_evidence_missing",
+    # P6-A1: ZSXQ import
+    "zsxq_cli_missing",
+    "zsxq_auth_required",
+    "zsxq_permission_denied",
+    "zsxq_parse_failed",
+    "zsxq_attachment_unsupported",
 })
 
 

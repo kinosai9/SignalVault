@@ -3094,6 +3094,161 @@ def review_resolve(
 
 
 # ---------------------------------------------------------------------------
+# zsxq 命令组（P6-A1：ZSXQ 只读订阅导入）
+# ---------------------------------------------------------------------------
+
+zsxq_app = typer.Typer(help="知识星球只读导入（检测/刷新/导入/同步）")
+app.add_typer(zsxq_app, name="zsxq")
+
+
+@zsxq_app.command("doctor")
+def zsxq_doctor():
+    """检测 zsxq-cli 可用性和登录状态。"""
+    from podcast_research.sources.zsxq_cli import check_cli
+
+    result = check_cli()
+    console.print("\n[bold]ZSXQ CLI Check[/bold]")
+
+    if result["available"]:
+        console.print(f"  CLI: [green]{result['version'] or 'zsxq-cli'}[/green] ✓")
+    else:
+        console.print("  CLI: [red]not found[/red] ✗")
+        console.print(f"  [red]{result['error']}[/red]")
+        return
+
+    if result["logged_in"]:
+        console.print("  Login: [green]logged in[/green] ✓")
+    else:
+        console.print("  Login: [yellow]not logged in[/yellow]")
+        if result["error"]:
+            console.print(f"  [yellow]{result['error']}[/yellow]")
+
+    if result["available"] and result["logged_in"]:
+        console.print("\n[green]All checks passed.[/green]")
+    else:
+        console.print("\n[yellow]Some checks failed. See details above.[/yellow]")
+
+
+@zsxq_app.command("groups")
+def zsxq_groups(
+    refresh: bool = typer.Option(False, "--refresh", help="调用 zsxq-cli 刷新授权星球列表"),
+):
+    """列出本地 group registry 中的星球。使用 --refresh 手动刷新授权范围。"""
+    from podcast_research.sources.zsxq_cli import (
+        ZsxqCliMissingError,
+        ZsxqParseError,
+        list_groups,
+    )
+    from podcast_research.sources.zsxq_registry import list_registry, refresh_registry
+
+    if refresh:
+        console.print("\n[bold]Refreshing ZSXQ group authorization...[/bold]")
+        try:
+            result = list_groups()
+        except (ZsxqCliMissingError, ZsxqParseError) as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
+
+        if not result.success:
+            console.print(f"[red]Error: {result.error}[/red]")
+            raise typer.Exit(1)
+
+        cli_data = result.data or []
+        groups_raw = cli_data if isinstance(cli_data, list) else cli_data.get("groups", []) or []
+        cli_groups = [{"group_id": g.get("group_id", g.get("id", "")),
+                        "name": g.get("name", g.get("group_name", "")),
+                        "topic_count": g.get("topic_count", 0)}
+                       for g in groups_raw if isinstance(g, dict)]
+
+        changes = refresh_registry(cli_groups)
+        console.print(f"  + Added: {changes['added']}")
+        console.print(f"  ↻ Reactivated: {changes['reactivated']}")
+        console.print(f"  − Deactivated: {changes['deactivated']}")
+        console.print(f"  = Unchanged: {changes['unchanged']}")
+
+    groups = list_registry()
+    if not groups:
+        console.print("[yellow]No groups in registry. Run --refresh to populate.[/yellow]")
+        return
+
+    active_count = sum(1 for g in groups if g.access_status == "active")
+    console.print(f"\n[bold]ZSXQ Group Registry[/bold] ({len(groups)} total, {active_count} active)")
+    table = Table(show_lines=False)
+    table.add_column("Group ID", style="dim")
+    table.add_column("Name")
+    table.add_column("Status")
+    table.add_column("Topics")
+    table.add_column("Last Refreshed", style="dim")
+
+    for g in groups:
+        status_color = "green" if g.access_status == "active" else "red"
+        table.add_row(
+            g.group_id[:16],
+            g.group_name[:40],
+            f"[{status_color}]{g.access_status}[/{status_color}]",
+            str(g.topic_count),
+            g.last_refreshed_at[:19] if g.last_refreshed_at else "-",
+        )
+    console.print(table)
+
+    if any(g.access_status == "inaccessible" for g in groups):
+        console.print("\n[dim]Inaccessible groups retain all imported data. "
+                       "Re-subscribe in ZSXQ app and run --refresh to re-enable.[/dim]")
+
+
+@zsxq_app.command("import-topic")
+def zsxq_import_topic(
+    group_id: str = typer.Option(..., "--group-id", help="星球 ID"),
+    topic_id: str = typer.Option(..., "--topic-id", help="主题 ID"),
+):
+    """导入单个知识星球主题为 ingest_job（不进入 LLM 分析）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+    from podcast_research.sources.zsxq_import import import_topic_to_ingest
+
+    init_db()
+    result = import_topic_to_ingest(group_id, topic_id)
+
+    if result["success"]:
+        profile = result["profile"]
+        console.print(f"\n[green]Topic imported: {profile.topic_title}[/green]")
+        console.print(f"  Group: {profile.group_name}")
+        console.print(f"  Author: {profile.author_name}")
+        console.print(f"  Quality: {profile.parse_quality}")
+        console.print(f"  Chars: {len(profile.content_text)}")
+        console.print(f"  Job ID: {result['job']['id']}")
+    else:
+        console.print(f"\n[red]Import failed: {result['error']}[/red]")
+
+    if result["review_findings"]:
+        created = ReviewItemManager.create_from_lint_findings(result["review_findings"])
+        console.print(f"[dim]Review items written: {created}[/dim]")
+
+
+@zsxq_app.command("sync")
+def zsxq_sync(
+    group_id: str = typer.Option(..., "--group-id", help="星球 ID"),
+    limit: int = typer.Option(20, "--limit", "-n", help="最多导入主题数"),
+):
+    """批量导入指定星球的最新主题（创建多个 ingest_jobs）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.review_items import ReviewItemManager
+    from podcast_research.sources.zsxq_import import sync_group_to_ingest
+
+    init_db()
+    console.print(f"\n[bold]Syncing group {group_id}...[/bold]")
+    result = sync_group_to_ingest(group_id, limit=limit)
+
+    console.print(f"  Imported: {result['imported']}")
+    console.print(f"  Skipped (duplicate): {result['skipped']}")
+    console.print(f"  Errors: {result['errors']}")
+
+    if result["review_findings"]:
+        created = ReviewItemManager.create_from_lint_findings(result["review_findings"])
+        console.print(f"  Review items: {created}")
+
+
+# ---------------------------------------------------------------------------
 # graph 命令组（P5-B：轻量知识图谱）
 # ---------------------------------------------------------------------------
 

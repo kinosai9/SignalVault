@@ -627,6 +627,8 @@ tests/                    # 1641 个 pytest 测试
 - 写入型 MCP tool（保持 MCP 只读安全边界）
 - 复杂知识图谱（实体关系图、因果链）
 - Vault 文件系统 MCP tool（当前只查 DB）
+- 知识星球客户端（仅做只读导入，不做订阅/发布/评论/运营）
+- 未订阅内容发现（不绕过付费墙）
 
 ## 路线图
 
@@ -653,8 +655,8 @@ tests/                    # 1641 个 pytest 测试
 | P2-N | Research Brief 质量调优 + 内容积累 | ✅ 已完成 |
 | P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
 | P4 | PDF 文档入库（P4-A ✅ P4-B ✅ | OCR/Web 计划中） | 进行中 |
-| P5 | 统一搜索 + 轻量知识图谱（P5-A 搜索 ✅ | P5-B 图谱 ✅ | MCP 12 tools） | 进行中 |
-| P6 | 多期观点对比 | 待启动 |
+| P5 | 统一搜索 + 轻量知识图谱（✅ 1703 tests, 12 MCP tools） | 已完成 |
+| P6 | ZSXQ 只读订阅导入（P6-A1 CLI/registry/import ✅ | analyze 计划中） | 进行中 |
 
 ## 许可证
 

@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+### P6-A1 — ZSXQ Read-only Subscription Import (2026-07-02)
+
+**Implemented:**
+- `sources/zsxq_models.py`: ZsxqGroup, ZsxqTopic, ZsxqSourceProfile dataclasses + compute_content_hash
+- `sources/zsxq_cli.py`: zsxq-cli wrapper (subprocess) — check_cli(), list_groups(), fetch_topic(), fetch_topics() + 4 exception types
+- `sources/zsxq_registry.py`: JSON-file group registry — list_registry(), get_group(), refresh_registry() (added/reactivated/deactivated/unchanged)
+- `sources/zsxq_import.py`: topic import — build_zsxq_source_profile() + import_topic_to_ingest() + sync_group_to_ingest() with error→review mapping
+- `ingest_jobs.py`: source_type="zsxq_topic"
+- `review_items.py`: 5 new item_types (zsxq_cli_missing, zsxq_auth_required, zsxq_permission_denied, zsxq_parse_failed, zsxq_attachment_unsupported)
+- CLI: zsxq doctor / groups (--refresh) / import-topic / sync
+- Tests: 29 new in `tests/test_zsxq_import.py` (all mock, no real CLI/network)
+- Registry: JSON file at data/zsxq_groups.json, access_status tracking, historical data preserved
+
+**Not yet:**
+- LLM analysis pipeline integration (topic → _run_pipeline)
+- Attachment download/OCR
+
+### P6 Planning — ZSXQ Read-only Subscription Import (2026-07-02)
+
+P6 路线明确：P6-A 定位为知识星球只读订阅导入，不是 ZSXQ 客户端。
+
+**规划文档：**
+- `docs/P6_ZSXQ_CONNECTOR_PLAN.md` — 高层计划：定位、复用 P3/P4/P5、CLI 范围（允许/禁止）、数据边界、接入方式、入库策略、内容使用边界、排除项
+- `docs/ZSXQ_CONNECTOR_DESIGN.md` — 详细设计：ZsxqTopic/ZsxqSourceProfile 数据模型、zsxq-cli wrapper、source profile、ingest_jobs 复用、analysis pipeline 接入、review items、CLI 命令设计
+
+**核心约束：**
+- 唯一接入方式：官方 `zsxq-cli`，不使用社区逆向工具、不抓 cookie、不反编译 API
+- 只读导入用户已订阅内容；不做订阅/发布/评论/运营
+- 订阅/取消订阅只在官方客户端完成；本项目提供手动刷新授权范围
+- Group registry：本地 `zsxq_groups` 表，`access_status` 标记 active/inaccessible
+- 权限消失的星球不删除历史数据；重新订阅后可恢复 active
+- 不做定时扫描 — 刷新由用户手动触发
+- 不保存成员列表、手机号、私信等用户隐私字段
+- source_type = "zsxq_topic"，content_hash 去重
+- 5 种新 review item_type：cli_missing / auth_required / permission_denied / parse_failed / attachment_unsupported
+- CLI: zsxq doctor / groups (--refresh) / import-topic / sync / analyze
+- 不规划：search-groups / subscribe / topic create-edit-delete / comment-reply-like / member search / admin
+- unified_search 和 knowledge_graph 自动受益，无需修改
+
 ### P5-S — Closeout & Documentation Consolidation (2026-07-02)
 
 **Done:**
