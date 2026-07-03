@@ -347,6 +347,9 @@ def _infer_source_type(episode) -> str:
     # Check if this is a PDF source
     if episode.source == "pdf_upload":
         return "pdf_upload"
+    # P6-A2: ZSXQ topic source
+    if episode.source == "zsxq_topic":
+        return "zsxq_topic"
     return "local"
 
 

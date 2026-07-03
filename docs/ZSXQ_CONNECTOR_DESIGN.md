@@ -1,6 +1,6 @@
 # P6-A: ZSXQ Connector Design
 
-> 状态：P6-A1 Implemented | P6-A2 Design | 2026-07-02
+> 状态：P6-A1 Implemented | P6-A2 Implemented | 2026-07-03
 > 前置阅读：`docs/P6_ZSXQ_CONNECTOR_PLAN.md`
 
 ## 〇、授权范围刷新
@@ -496,18 +496,18 @@ tests/
     test_zsxq_cli.py       ← NEW: ~5 tests
 ```
 
-## 九、P5 自动受益
+## 九、P5 自动受益（As-Implemented）
 
-P6-A 不需要修改 P5 任何代码：
+P6-A 对 P5 做了最小修改（仅 source_type 识别），分析产物自动受益：
 
-| P5 能力 | 如何自动支持 ZSXQ |
-|----------|-------------------|
-| `unified_search` | ZSXQ 产生的 report/views/signals 自动被搜索（FTS5 + LIKE） |
-| `get_entity_neighborhood` | ZSXQ 中提到的实体自动进入图谱 |
-| `get_evidence_trail` | ZSXQ 观点可追溯到 source_url + topic_id |
-| `list_graph_edges` | ZSXQ source node → report edges 自动生成 |
-
-`knowledge_graph._build_source_nodes()` 中增加 `zsxq_topic` 来源类型的 source node 即可。
+| P5 能力 | 修改程度 | 如何支持 ZSXQ |
+|----------|----------|---------------|
+| `unified_search` | 1 行 | `_infer_source_type()` → `zsxq_topic` |
+| `knowledge_graph._build_source_nodes()` | 8 行 | 从 `episodes WHERE source="zsxq_topic"` 创建 source nodes |
+| `get_entity_neighborhood` | 0 行 | ZSXQ 中提到的实体自动进入图谱 |
+| `get_evidence_trail` | 0 行 | ZSXQ 观点可追溯到 source_url + topic_id |
+| `list_graph_edges` | 0 行 | ZSXQ source node → report edges 自动生成 |
+| MCP Server (8 tools) | 0 行 | 所有 tool 自动支持 ZSXQ 数据 |
 
 ## 十、边界情况
 
@@ -522,3 +522,58 @@ P6-A 不需要修改 P5 任何代码：
 | 网络超时 | 重试 1 次，仍失败 → error + 不崩溃 |
 | topic_id 重复导入 | content_hash 去重 → ingest_jobs unique index 阻止 |
 | 超大正文（>50K 字符） | 复用现有 chunking 机制 |
+
+## 十一、As-Implemented 摘要 (P6-S)
+
+### 模块结构（实际）
+
+```
+sources/zsxq_models.py     — ZsxqGroup, ZsxqTopic, ZsxqSourceProfile + compute_content_hash
+sources/zsxq_cli.py        — CLI wrapper (subprocess): check_cli, list_groups, fetch_topic, fetch_topics + 4 exceptions
+sources/zsxq_registry.py   — Group Registry JSON CRUD: list, get, refresh (added/reactivated/deactivated/unchanged)
+sources/zsxq_import.py     — Import pipeline: build_zsxq_source_profile, import_topic_to_ingest, sync_group_to_ingest
+sources/zsxq_analysis.py   — Analysis pipeline: analyze_zsxq_topic, build_zsxq_analysis_source, _check_zsxq_analysis_eligibility, _topic_to_segments, import_and_analyze
+sources/ingest_jobs.py     — Extended: source_type="zsxq_topic"
+sources/review_items.py    — Extended: 8 ZSXQ item_types
+db/repository.py           — Extended: _infer_source_type → zsxq_topic, pdf_upload
+db/unified_search.py       — Extended: _infer_source_type → zsxq_topic
+db/knowledge_graph.py      — Extended: _build_source_nodes → ZSXQ source nodes
+cli.py                     — Extended: zsxq command group (6 commands)
+```
+
+### Evidence / source_info 传递
+
+ZSXQ 没有视频 timestamp，没有 PDF page。追溯通过 `source_info` 实现：
+
+```python
+source_info = {
+    "source_type": "zsxq_topic",
+    "source_url": profile.source_url,       # → episode.source_url
+    "zsxq_group_id": profile.group_id,
+    "zsxq_group_name": profile.group_name,
+    "zsxq_topic_id": profile.topic_id,
+    "zsxq_topic_type": profile.topic_type,
+    "zsxq_author": profile.author_name,
+    "zsxq_create_time": profile.create_time,
+    "zsxq_tags": profile.tags,
+    "zsxq_content_hash": profile.content_hash,
+}
+
+episode_extra = {
+    "source": "zsxq_topic",                 # → episode.source
+    "source_url": profile.source_url,
+    "video_id": "",                         # ZSXQ 无 video_id
+    "language": "zh",
+}
+```
+
+追溯路径：`report.id → episode.source_url/source → source_info.zsxq_group_id/zsxq_topic_id`
+
+### 只读安全边界
+
+- 6 个 CLI 命令全部只读（doctor/groups/import-topic/sync/analyze）
+- zsxq-cli 仅调用 `group list`/`topic detail`/`auth status`（全部只读）
+- 不调用 `api raw/call`，不暴露原始 API
+- Token 不进日志/DB/代码
+- 附件仅存元数据，不下载正文
+- 不做定时扫描，不做未订阅内容获取

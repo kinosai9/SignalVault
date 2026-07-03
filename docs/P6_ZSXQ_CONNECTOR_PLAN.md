@@ -1,6 +1,6 @@
 # P6 Plan: ZSXQ Read-only Subscription Import
 
-> 状态：P6-A1 ✅ | P6-A2 计划中 | 2026-07-02
+> 状态：P6-A1 ✅ | P6-A2 ✅ | 2026-07-03
 > 前置：P3/P4/P5 全部完成（ingest_jobs, review_items, mcp_server, pdf, unified_search, knowledge_graph）
 
 ## 一、定位
@@ -104,29 +104,37 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 - 不新增 pyproject.toml 依赖（zsxq-cli 由用户自行安装）
 
 **验收标准：**
-- [ ] `zsxq doctor` 检测 zsxq-cli 可用性和登录状态
-- [ ] `zsxq groups` 列出本地 group registry（含 access_status）
-- [ ] `zsxq groups --refresh` 刷新授权范围：新星球→active，权限消失→inaccessible
-- [ ] inaccessible 星球的历史数据不删除
-- [ ] `zsxq import-topic` 导入单个主题
-- [ ] `zsxq sync` 批量导入指定星球的主题
-- [ ] content_hash 去重
-- [ ] CLI 缺失/未登录/权限不足 → graceful degrade + review_items
-- [ ] 导入文本进入 `_run_pipeline()`，生成报告
-- [ ] unified_search 可搜索 ZSXQ 内容
-- [ ] knowledge_graph 包含 ZSXQ 来源节点
-- [ ] ≥25 专项测试（mock zsxq-cli JSON）
-- [ ] ruff clean
+- [x] `zsxq doctor` 检测 zsxq-cli 可用性和登录状态
+- [x] `zsxq groups` 列出本地 group registry（含 access_status）
+- [x] `zsxq groups --refresh` 刷新授权范围：新星球→active，权限消失→inaccessible
+- [x] inaccessible 星球的历史数据不删除
+- [x] `zsxq import-topic` 导入单个主题
+- [x] `zsxq sync` 批量导入指定星球的主题
+- [x] content_hash 去重
+- [x] CLI 缺失/未登录/权限不足 → graceful degrade + review_items
+- [x] 导入文本进入 `_run_pipeline()`，生成报告
+- [x] unified_search 可搜索 ZSXQ 内容
+- [x] knowledge_graph 包含 ZSXQ 来源节点
+- [x] ≥25 专项测试（mock zsxq-cli JSON）
+- [x] ruff clean
+
+### P6-S：收口封板 ✅ (2026-07-03)
+
+- ✅ 验收报告（`docs/P6_ACCEPTANCE_REPORT.md`）
+- ✅ 文档一致性更新
+- ✅ 命名一致性检查
+- ✅ 1771 tests passed，ruff clean
+- ✅ 使用路径整理（README ZSXQ workflow）
 
 ### P6-B（候选）：ZSXQ 增强
+
+以下为后续候选，不属 P6 范围：
 
 - 附件下载和 OCR（复用 P4 PDF pipeline）
 - 增量同步（按 update_time 拉取新主题）
 - 多星球批量导入
-
-### P6-S：收口封板
-
-- 验收报告、文档一致性
+- Web 信息源界面（ZSXQ topics 在 Web UI 可预览/管理）
+- 更细粒度评论/问答上下文（只读增强）
 
 ## 五、CLI 范围
 
@@ -134,12 +142,12 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 
 | 命令 | 功能 |
 |------|------|
-| `zsxq doctor` | 检测 zsxq-cli 可用性、登录状态、token 有效性 |
-| `zsxq groups` | 列出本地 group registry 中的星球及 access_status |
-| `zsxq groups --refresh` | 调用 zsxq-cli 刷新当前账号可访问的星球列表，更新 group registry |
-| `zsxq import-topic --group-id <id> --topic-id <id>` | 导入单个主题 |
-| `zsxq sync --group-id <id> --limit <n>` | 批量导入指定星球的最新主题 |
-| `zsxq analyze --topic-id <id>` | 导入 + 分析单个主题（含 LLM analysis） |
+| `zsxq doctor` | 检测 zsxq-cli 可用性、登录状态、token 有效性 ✅ |
+| `zsxq groups` | 列出本地 group registry 中的星球及 access_status ✅ |
+| `zsxq groups --refresh` | 调用 zsxq-cli 刷新当前账号可访问的星球列表，更新 group registry ✅ |
+| `zsxq import-topic --group-id <id> --topic-id <id>` | 导入单个主题 ✅ |
+| `zsxq sync --group-id <id> --limit <n>` | 批量导入指定星球的最新主题 ✅ |
+| `zsxq analyze --group-id <id> --topic-id <id>` | 导入 + 分析单个主题（含 LLM analysis） ✅ |
 
 ### 明确不允许规划的 CLI 命令
 
@@ -221,6 +229,9 @@ content_hash → 去重（复用 ingest_jobs partial unique index）
 | `zsxq_permission_denied` | 无权访问指定星球或主题 | warning |
 | `zsxq_parse_failed` | JSON 解析失败 | error |
 | `zsxq_attachment_unsupported` | 附件类型不支持 | info |
+| `zsxq_analysis_skipped` | 星球 inactive / 附件为主 / 解析质量低 | warning |
+| `zsxq_content_too_short` | 正文为空或 < 100 chars | warning |
+| `zsxq_evidence_missing` | profile 缺少 topic_id/group_id | warning |
 
 ### 导入后链路
 
@@ -246,13 +257,13 @@ zsxq import-topic → extract → profile → quality check
 
 ## 十、测试策略
 
+实际实现：
 ```
-tests/test_zsxq_connector.py   — CLI wrapper + JSON 解析
-tests/test_zsxq_profile.py     — source profile + eligibility
-tests/test_zsxq_ingest.py      — ingest_jobs 集成 + 去重
-tests/test_zsxq_cli.py         — CLI smoke
-tests/test_zsxq_review.py      — Review Queue 集成
+tests/test_zsxq_import.py      — 29 tests (models, registry, profile, ingest, errors, review, CLI smoke)
+tests/test_zsxq_analysis.py    — 39 tests (segments, eligibility, source_info, mock pipeline, evidence, review, CLI, search, graph)
 ```
+
+总计 68 个 ZSXQ 专项测试，1771 total。
 
 **Mock 策略：**
 - mock zsxq-cli JSON 输出（本地 JSON fixture 文件）

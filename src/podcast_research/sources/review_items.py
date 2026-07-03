@@ -41,6 +41,10 @@ VALID_ITEM_TYPES = frozenset({
     "zsxq_permission_denied",
     "zsxq_parse_failed",
     "zsxq_attachment_unsupported",
+    # P6-A2: ZSXQ analysis
+    "zsxq_analysis_skipped",
+    "zsxq_content_too_short",
+    "zsxq_evidence_missing",
 })
 
 

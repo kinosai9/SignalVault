@@ -148,6 +148,10 @@ def _infer_source_type(episode: Episode) -> str:
         return "youtube"
     if episode.source_url and ("youtube.com" in episode.source_url or "youtu.be" in episode.source_url):
         return "youtube"
+    if episode.source == "pdf_upload":
+        return "pdf_upload"
+    if episode.source == "zsxq_topic":
+        return "zsxq_topic"
     return "local"
 
 

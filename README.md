@@ -4,15 +4,23 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P3-A/B/C/D 已完成
+## 当前阶段：P6-A 进行中
 
-P0 + P1 + P2（A 到 S）已完成，P3-A/B/C/D 已交付，1563 个测试，83 个 Python 模块，12 个 CLI 命令组，约 20 个 Web 页面。
+P0–P5 已完成，P6-A2 已交付。1771 个测试，80+ Python 模块，12+ CLI 命令组，约 20 个 Web 页面。
 
-**P3 已完成**（详见 `docs/P3_PLAN.md`）：
-- ✅ P3-A 持久化摄入队列 — SQLite `ingest_jobs` 替代内存预览存储
-- ✅ P3-B Vault Lint — 5 条 lint rule 检查 Obsidian vault 健康
-- ✅ P3-C Review Queue — 统一 `review_items` 审核队列
-- ✅ P3-D MCP Server — 只读 MCP server，8 个 tool，让 AI Agent 查询知识库
+**P6-A 知识星球只读导入**（详见 `docs/P6_ZSXQ_CONNECTOR_PLAN.md`）：
+- ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
+- ✅ P6-A2 主题分析 pipeline — eligibility check → `_run_pipeline()` → report/views/signals
+
+**P3–P5 已交付**：
+- ✅ P3-A 持久化摄入队列 — SQLite `ingest_jobs`
+- ✅ P3-B Vault Lint — 5 条 lint rule
+- ✅ P3-C Review Queue — 统一 `review_items`
+- ✅ P3-D MCP Server — 8 个只读 MCP tool
+- ✅ P4-A PDF 文本提取 — pdfplumber
+- ✅ P4-B PDF 分析 pipeline — _run_pipeline 接入
+- ✅ P5-A 统一搜索 — FTS5 + LIKE fallback
+- ✅ P5-B 轻量知识图谱 — 6 node types + 4 edge types
 
 ## P3: Agent-ready knowledge backend
 
@@ -283,6 +291,67 @@ python -m podcast_research review list --type pdf_analysis_skipped
 所有 8 个 MCP tool 自动支持 PDF 数据（`source_type`/`evidence_page`/`source_file`），无需新增 tool。
 
 详见 `docs/P4_ACCEPTANCE_REPORT.md` 和 `docs/P4_PDF_INGESTION_PLAN.md`。
+
+## ZSXQ 知识星球（P6：只读订阅导入）
+
+知识星球内容作为只读信息源，接入现有分析 pipeline。**不做客户端操作、不做写入。**
+
+### 典型工作流
+
+```bash
+# 0. 前置：在知识星球官方 App/Web 完成订阅
+#    (本项目不做订阅操作)
+
+# 1. 检查环境
+python -m podcast_research zsxq doctor
+
+# 2. 首次使用：刷新授权星球列表
+python -m podcast_research zsxq groups --refresh
+
+# 3. 查看已授权星球
+python -m podcast_research zsxq groups
+
+# 4. 导入单个主题（不进 LLM 分析）
+python -m podcast_research zsxq import-topic --group-id <id> --topic-id <id>
+
+# 5. 批量导入星球最新主题
+python -m podcast_research zsxq sync --group-id <id> --limit 20
+
+# 6. 分析单个主题（fetch → eligibility → LLM → report）
+python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --mock --focus "AI芯片"
+
+# 7. 查询分析结果
+python -m podcast_research search "NVIDIA" --source-type zsxq_topic
+python -m podcast_research graph neighborhood "NVIDIA"
+```
+
+### 分析链路
+
+```
+zsxq import-topic → profile → ingest_job → eligibility
+  → _run_pipeline() → report + views + signals
+  → unified_search (自动) + knowledge_graph (自动)
+```
+
+### 数据追溯
+
+- `source_type = zsxq_topic` 统一贯穿 ingest_jobs → episodes → reports → search → graph
+- 每个观点/信号可追溯到 `group_id + topic_id + source_url + source_quote`
+- ZSXQ 无视频 timestamp / PDF page，证据通过 source_url + topic_id 定位
+
+### 安全边界
+
+| 允许 | 不允许 |
+|------|--------|
+| 检测 CLI 可用性 (`zsxq doctor`) | 搜索公开星球 |
+| 刷新已授权星球列表 (`groups --refresh`) | 订阅/购买/推荐 |
+| 导入主题 (`import-topic` / `sync`) | 发帖/评论/点赞/删除 |
+| 分析主题 (`analyze`) | 管理成员/运营功能 |
+| 搜索/图谱/MCP 查询 | 调用原始 API / 逆向 cookie |
+| | 定时自动扫描 |
+| | 附件批量下载 |
+
+详见 `docs/P6_ACCEPTANCE_REPORT.md`、`docs/P6_ZSXQ_CONNECTOR_PLAN.md` 和 `docs/ZSXQ_CONNECTOR_DESIGN.md`。
 
 ## Web Console
 
@@ -656,7 +725,7 @@ tests/                    # 1641 个 pytest 测试
 | P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
 | P4 | PDF 文档入库（P4-A ✅ P4-B ✅ | OCR/Web 计划中） | 进行中 |
 | P5 | 统一搜索 + 轻量知识图谱（✅ 1703 tests, 12 MCP tools） | 已完成 |
-| P6 | ZSXQ 只读订阅导入（P6-A1 CLI/registry/import ✅ | analyze 计划中） | 进行中 |
+| P6 | ZSXQ 只读订阅导入（P6-A1 ✅ | P6-A2 ✅ | P6-B 候选） | 进行中 |
 
 ## 许可证
 

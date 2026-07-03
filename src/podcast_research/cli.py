@@ -3248,6 +3248,67 @@ def zsxq_sync(
         console.print(f"  Review items: {created}")
 
 
+@zsxq_app.command("analyze")
+def zsxq_analyze(
+    group_id: str = typer.Option(..., "--group-id", help="星球 ID"),
+    topic_id: str = typer.Option(..., "--topic-id", help="主题 ID"),
+    mock: bool = typer.Option(False, "--mock", help="使用 mock 规则引擎"),
+    focus: str = typer.Option(None, "--focus", help="关注点，逗号分隔，如 'AI芯片,新能源'"),
+    output: Path | None = typer.Option(None, "-o", help="报告输出目录"),
+    depth: str = typer.Option("standard", "--depth", help="分析深度: standard / deep"),
+):
+    """导入并分析单个知识星球主题（fetch → eligibility → LLM analysis）。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.zsxq_analysis import import_and_analyze
+
+    init_db()
+    focus_areas = [f.strip() for f in focus.split(",") if f.strip()] if focus else None
+    provider = "mock" if mock else LLM_PROVIDER
+
+    console.print("\n[bold]ZSXQ Analyze[/bold]")
+    console.print(f"  Group: {group_id}")
+    console.print(f"  Topic: {topic_id}")
+    console.print(f"  Provider: {provider}")
+
+    result = import_and_analyze(
+        group_id=group_id,
+        topic_id=topic_id,
+        provider_name=provider,
+        output_dir=output,
+        focus_areas=focus_areas,
+        analysis_depth=depth,
+    )
+
+    if result["success"] and result["analysis"]:
+        a = result["analysis"]
+        console.print("\n[green]Analysis complete![/green]")
+        console.print(f"  Report ID: {a.get('report_id')}")
+        console.print(f"  Views: {a.get('view_count', 0)}")
+        console.print(f"  Entities: {a.get('entity_count', 0)}")
+        if a.get("report_path"):
+            console.print(f"  Report: {a['report_path']}")
+        if a.get("extraction_path"):
+            console.print(f"  Extraction: {a['extraction_path']}")
+    else:
+        reason = ""
+        if result.get("analysis") and result["analysis"].get("reason"):
+            reason = f": {result['analysis']['reason']}"
+        elif result.get("analysis") and not result["analysis"].get("eligible"):
+            reason = f": {result['analysis'].get('reason', 'not eligible')}"
+        console.print(f"\n[red]Analysis failed: {result.get('error', 'unknown error')}{reason}[/red]")
+
+    if result.get("review_findings"):
+        from podcast_research.sources.review_items import ReviewItemManager
+        created = ReviewItemManager.create_from_lint_findings(result["review_findings"])
+        if created > 0:
+            console.print(f"[dim]Review items written: {created}[/dim]")
+
+    if result.get("profile"):
+        p = result["profile"]
+        console.print(f"\n[dim]Topic: {p.topic_title} | Author: {p.author_name} | "
+                       f"Chars: {len(p.content_text)} | Eligible: {p.import_eligible}[/dim]")
+
+
 # ---------------------------------------------------------------------------
 # graph 命令组（P5-B：轻量知识图谱）
 # ---------------------------------------------------------------------------

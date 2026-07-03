@@ -159,6 +159,18 @@ def _build_source_nodes(session: Session) -> int:
                      metadata={"episode_id": ep.id, "source_type": "pdf_upload",
                                "source_url": ep.source_url})
         count += 1
+    # P6-A2: ZSXQ topic sources (from episodes with source=zsxq_topic)
+    for ep in session.query(Episode).filter(Episode.source == "zsxq_topic").all():
+        key = f"source:zsxq:{ep.source_url or ep.id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        _upsert_node(session, key, "source",
+                     label=ep.title or ep.source_url or f"ZSXQ #{ep.id}",
+                     source_ref=f"episode:{ep.id}",
+                     metadata={"episode_id": ep.id, "source_type": "zsxq_topic",
+                               "source_url": ep.source_url})
+        count += 1
     return count
 
 

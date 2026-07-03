@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+### P6-S — Closeout: Acceptance Report & Documentation (2026-07-03)
+
+**Delivered:**
+- `docs/P6_ACCEPTANCE_REPORT.md` — 完整验收报告：目标、交付清单、CLI 命令、数据模型、review items、pipeline 链路、auto-benefits、测试结果、未做事项、P6-B 候选
+- `docs/P6_ZSXQ_CONNECTOR_PLAN.md` — 更新：P6-A1/A2 标记完成，P6-S Closeout，P6-B 候选明确边界
+- `docs/ZSXQ_CONNECTOR_DESIGN.md` — 新增 §11 As-Implemented 摘要（模块结构、evidence 传递、只读边界）
+- `README.md` — 整理 ZSXQ 使用工作流（7 步）、分析链路、数据追溯、安全边界表
+- 命名一致性检查通过：`source_type=zsxq_topic` 统一贯穿所有模块
+- 1771 tests passed，ruff clean
+
+### P6-A2 — ZSXQ Topic Analysis Pipeline (2026-07-03)
+
+**Implemented:**
+- `sources/zsxq_analysis.py`: ZSXQ topic → LLM analysis pipeline — `analyze_zsxq_topic()`, `build_zsxq_analysis_source()`, `_check_zsxq_analysis_eligibility()`, `_topic_to_segments()`, `import_and_analyze()`
+- Reuses existing `_run_pipeline()` from `analysis/pipeline.py` — no new LLM pipeline
+- Eligibility checks: empty/short content, inactive group, attachment-only, minimal quality, missing key fields
+- 3 new review item types: `zsxq_analysis_skipped`, `zsxq_content_too_short`, `zsxq_evidence_missing`
+- Evidence design: source_type=zsxq_topic, source_url, group_id, topic_id via source_info; page_number=None, timestamp=None
+- Report metadata: group_id, group_name, topic_id, topic_title, author_name, create_time, source_url, content_hash in source_info
+- `_infer_source_type()` extended in `repository.py` and `unified_search.py` to recognize `zsxq_topic`
+- `_build_source_nodes()` extended in `knowledge_graph.py` to include ZSXQ source nodes
+- CLI: `zsxq analyze --group-id <id> --topic-id <id> --mock --focus --output --depth`
+- Tests: 39 new in `tests/test_zsxq_analysis.py` (all mock, no real CLI/network/LLM)
+- Coverage: topic→segments, eligibility, mock pipeline, report metadata, evidence traceability, review items, CLI smoke, unified_search, knowledge_graph rebuild
+
+**Boundary (still read-only):**
+- No search-groups / api raw/call
+- No posting/commenting/liking/deleting
+- No attachment download/OCR
+- No Web UI / new MCP tool / new external dependency
+- No scheduled scanning
+
 ### P6-A1 — ZSXQ Read-only Subscription Import (2026-07-02)
 
 **Implemented:**
