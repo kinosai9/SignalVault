@@ -2,6 +2,94 @@
 
 ## Unreleased
 
+### P7-D — Diagnostic Bundle Export (2026-07-03)
+
+**Implemented:**
+- `diagnostics/bundle.py` — `DiagnosticBundleBuilder` producing timestamped zip with 9 files
+- `DiagnosticBundleConfig` / `DiagnosticBundleResult` dataclasses
+- `redact_value()` / `redact_dict()` / `redact_list()` — recursive redaction with 3-tier policy:
+  - REDACT_KEYS (12 keys): api_key, token, password, secret, cookie, etc. → `[REDACTED]`
+  - TRUNCATE_KEYS (8 keys): content_text, source_quote, report_markdown, etc. → `[N chars redacted]`
+  - EXISTENCE_KEYS (3 keys): vault_path, db_path, data_dir → true/false
+- 9 bundle files: manifest.json, diagnostics_summary.json, operation_logs.json, review_items_summary.json, ingest_jobs_summary.json, config_summary.json, system_info.json, search_graph_summary.json, README.txt
+- CLI: `podcast-research diagnostics bundle --output <path> --limit-logs <n> --json`
+- Bundle export records `system.diagnostics` operation log
+- All using stdlib `zipfile` — no external dependencies
+- `export_diagnostic_bundle()` convenience function
+
+**Tests:** 34 new in `tests/test_diagnostic_bundle.py` (11 redaction + 13 creation + 5 redaction-in-bundle + 4 CLI + 1 convenience)
+**Ruff:** Clean
+
+### P7-C — Diagnostics Center Backend (2026-07-03)
+
+**Implemented:**
+- `diagnostics/summary.py` — `DiagnosticsCenter.get_summary()` aggregating 9 subsystems
+- `SubsystemStatus` dataclass: name, label, status (ok/attention/blocked/unknown), summary, counts, issues, suggested_actions
+- `DiagnosticsSummary` dataclass: overall_status, 9 subsystems, recent_failures, open_review_count, blocked_count, attention_count, suggested_actions
+- `RecoveryAction` dataclass + 9 registered actions (install zsxq-cli, login zsxq, refresh groups, retry ingest, review items, vault lint, rebuild graph, configure LLM, handle PDF OCR)
+- 9 subsystem checks: ingest, review, operations, zsxq, pdf, vault, search, graph, config
+- Overall status computation: blocked > attention (=any open review) > ok
+- CLI: `podcast-research diagnostics summary` (--json)
+- CLI: `podcast-research doctor` (alias for diagnostics summary)
+- Operation logging: diagnostics summary records `system.diagnostics` operation
+- All checks work with mock/fresh DB, no real zsxq-cli/API key required
+
+**Tests:** 28 new in `tests/test_diagnostics_summary.py` (all mock)
+**Ruff:** Clean
+**Full suite:** 1847 passed
+
+### P7-A/B — Error Taxonomy + Operation Log (2026-07-03)
+
+**Implemented:**
+
+P7-A: Error Taxonomy (`diagnostics/errors.py`)
+- `ErrorSeverity` enum: info / warning / error / blocker
+- `ErrorCategory` enum: 11 categories (source / auth / permission / extraction / analysis / llm / database / vault / search_graph / mcp / config)
+- `ErrorRecord` dataclass: 18 fields (error_code, category, severity, user_message, technical_detail, suggested_actions, related_command, source_type, entity_ref, create_review_item, review_item_type, metadata, etc.)
+- `ErrorCodeRegistry`: register, get, list_all, list_by_category, list_by_severity, list_by_source_type, count
+- 30 built-in error codes covering P3-P6 scenarios
+- `create_error_record()` — factory with template + runtime context
+- `map_exception_to_error()` — 7 Python exception types → error_code mapping
+- `review_item_to_error_record()` — 13 review item_types → error_code mapping
+- All user_messages in Chinese, all codes have suggested_actions
+
+P7-B: Operation Log (`diagnostics/operation_log.py`)
+- `OperationLog` ORM in `db/models.py` — 16 columns + 4 indexes
+- `_migrate_operation_logs_table()` in `db/session.py` — auto-creates on init_db
+- `OperationLogManager`: start, succeed, fail, get, list_operations, count_by_status, recent_failures
+- 24 VALID_OPERATION_TYPES (zsxq/pdf/ingest/vault/review/search/graph/mcp/system)
+- `_sanitize_metadata()` — redacts api_key/token/password/secret + trims content_text/source_quote
+- duration_ms auto-computed on succeed/fail
+- CLI: `logs list` (--status, --type, --limit, --json) + `logs show <id>` (prefix matching)
+
+Operation log wiring (key CLI paths):
+- `graph rebuild` — wired with success/failure logging
+- `zsxq doctor` — wired with success/failure + error_code
+- `zsxq analyze` — wired with success/failure + error_code
+
+**Tests:** 48 new (28 error taxonomy + 20 operation log), all mock
+**Ruff:** Clean
+
+### P7 Planning — User-facing Reliability & Diagnostics (2026-07-03)
+
+**规划文档（本轮只更新文档，不写业务代码）：**
+- `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md` — P7 整体计划：定位、现状评估、设计原则、6 阶段交付范围、分阶段计划、模块结构、DB 变更、测试策略、边界、与 Codex 对接点
+- `docs/ERROR_TAXONOMY_DESIGN.md` — P7-A 统一错误分类体系：ErrorRecord 数据结构、11 大类别 40+ error_code、ErrorCodeRegistry、与 review_items 映射、现有 error_type 迁移表
+- `docs/OPERATION_LOG_DESIGN.md` — P7-B 操作日志：OperationLog 数据模型、22+ operation types、OperationLogManager CRUD、生命周期示例
+- `docs/DIAGNOSTIC_BUNDLE_DESIGN.md` — P7-C/D 诊断中心 + 诊断包：DiagnosticsSummary 9 子系统、overall_status 判定、Bundle 10 文件结构、Redaction 规则、Recovery Actions 注册表、CLI 命令设计、Web/API 对接
+
+**设计亮点：**
+- 统一 error_code 格式：`CATEGORY_SUBCATEGORY_NNN`（如 `AUTH_ZSXQ_001`）
+- Operation Log 覆盖 22+ 操作类型，独立于 JobEvent
+- 诊断包脱敏规则：绝对不包含密钥/原文/隐私字段
+- CLI + Web 共用数据结构，Codex 前端可直接消费
+- Recovery Actions：8 个常见问题的标准恢复动作
+
+**P7 边界：**
+- 不做前端 UI 实现（属 Codex 侧）
+- 不做自动修复、远程上报、性能 profiling
+- 不改 analysis prompt、不新增信息源
+
 ### P6-S — Closeout: Acceptance Report & Documentation (2026-07-03)
 
 **Delivered:**

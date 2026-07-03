@@ -290,6 +290,45 @@ def _migrate_knowledge_graph_tables(engine) -> None:
         ))
 
 
+def _migrate_operation_logs_table(engine) -> None:
+    """P7-B: Create operation_logs table and indexes if not exist."""
+    insp = inspect(engine)
+    if "operation_logs" not in insp.get_table_names():
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE operation_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    operation_id VARCHAR(36) NOT NULL UNIQUE,
+                    operation_type VARCHAR(50) NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'started',
+                    started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    finished_at DATETIME,
+                    duration_ms INTEGER,
+                    source_type VARCHAR(50) DEFAULT '',
+                    target_ref VARCHAR(300) DEFAULT '',
+                    summary TEXT DEFAULT '',
+                    error_code VARCHAR(50) DEFAULT '',
+                    error_detail TEXT DEFAULT '',
+                    initiated_by VARCHAR(20) DEFAULT 'user',
+                    metadata_json TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_opl_type ON operation_logs(operation_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_opl_status ON operation_logs(status)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_opl_created ON operation_logs(created_at)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_opl_target ON operation_logs(target_ref)"
+        ))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
@@ -302,7 +341,7 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_ingest_jobs_table(_engine)
     _migrate_review_items_table(_engine)
     _migrate_knowledge_graph_tables(_engine)
-    _migrate_ingest_jobs_table(_engine)
+    _migrate_operation_logs_table(_engine)
 
 
 def get_session() -> Session:

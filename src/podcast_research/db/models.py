@@ -372,3 +372,36 @@ class KnowledgeEdge(Base):
     timestamp: Mapped[str] = mapped_column(String(20), default="")
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class OperationLog(Base):
+    """P7-B: Structured operation audit log — user & system actions.
+
+    Complements stdlib logging (debug) with user-visible, queryable
+    operation records. Independent of JobEvent (which stays Job-scoped).
+    """
+
+    __tablename__ = "operation_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    operation_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True)
+    operation_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="started")
+        # started / succeeded / failed / cancelled
+
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    source_type: Mapped[str] = mapped_column(String(50), default="")
+    target_ref: Mapped[str] = mapped_column(String(300), default="")
+
+    summary: Mapped[str] = mapped_column(Text, default="")
+    error_code: Mapped[str] = mapped_column(String(50), default="")
+    error_detail: Mapped[str] = mapped_column(Text, default="")
+
+    initiated_by: Mapped[str] = mapped_column(String(20), default="user")
+        # user / system / mcp
+
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

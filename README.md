@@ -4,9 +4,22 @@
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P6-A 进行中
+## 当前阶段：P6 已完成，P7 规划中
 
-P0–P5 已完成，P6-A2 已交付。1771 个测试，80+ Python 模块，12+ CLI 命令组，约 20 个 Web 页面。
+P0–P6 已完成，P7 规划中。1771 个测试，80+ Python 模块，12+ CLI 命令组，约 20 个 Web 页面。
+
+**P6 知识星球只读导入**（已交付，详见 `docs/P6_ACCEPTANCE_REPORT.md`）：
+- ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
+- ✅ P6-A2 主题分析 pipeline — eligibility check → `_run_pipeline()` → report/views/signals
+- ✅ P6-S 收口封板 — 验收报告 + 文档一致性 + 使用路径整理
+
+**P7 用户可靠性 & 诊断**（规划中，详见 `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md`）：
+- 📋 P7-A 统一错误分类体系（11 大类，40+ error_code）
+- 📋 P7-B 操作日志（22+ operation types）
+- 📋 P7-C 诊断中心（9 子系统健康聚合）
+- 📋 P7-D 诊断包导出（脱敏 zip）
+- 📋 P7-E 恢复动作建议
+- 📋 P7-F CLI + Web/API 对接
 
 **P6-A 知识星球只读导入**（详见 `docs/P6_ZSXQ_CONNECTOR_PLAN.md`）：
 - ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
@@ -725,7 +738,8 @@ tests/                    # 1641 个 pytest 测试
 | P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
 | P4 | PDF 文档入库（P4-A ✅ P4-B ✅ | OCR/Web 计划中） | 进行中 |
 | P5 | 统一搜索 + 轻量知识图谱（✅ 1703 tests, 12 MCP tools） | 已完成 |
-| P6 | ZSXQ 只读订阅导入（P6-A1 ✅ | P6-A2 ✅ | P6-B 候选） | 进行中 |
+| P6 | ZSXQ 只读订阅导入（P6-A1 ✅ | P6-A2 ✅ | P6-S ✅） | ✅ 已完成 |
+| P7 | 用户可靠性 & 诊断（P7-A→F 规划中） | 📋 规划中 |
 
 ## 许可证
 

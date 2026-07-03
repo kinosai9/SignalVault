@@ -3104,29 +3104,61 @@ app.add_typer(zsxq_app, name="zsxq")
 @zsxq_app.command("doctor")
 def zsxq_doctor():
     """检测 zsxq-cli 可用性和登录状态。"""
+    from podcast_research.diagnostics.operation_log import OperationLogManager
     from podcast_research.sources.zsxq_cli import check_cli
 
-    result = check_cli()
-    console.print("\n[bold]ZSXQ CLI Check[/bold]")
+    op = OperationLogManager.start(
+        operation_type="zsxq.doctor",
+        summary="ZSXQ CLI 状态检查",
+    )
 
-    if result["available"]:
-        console.print(f"  CLI: [green]{result['version'] or 'zsxq-cli'}[/green] ✓")
-    else:
-        console.print("  CLI: [red]not found[/red] ✗")
-        console.print(f"  [red]{result['error']}[/red]")
-        return
+    try:
+        result = check_cli()
+        console.print("\n[bold]ZSXQ CLI Check[/bold]")
 
-    if result["logged_in"]:
-        console.print("  Login: [green]logged in[/green] ✓")
-    else:
-        console.print("  Login: [yellow]not logged in[/yellow]")
-        if result["error"]:
-            console.print(f"  [yellow]{result['error']}[/yellow]")
+        if result["available"]:
+            console.print(f"  CLI: [green]{result['version'] or 'zsxq-cli'}[/green] ✓")
+        else:
+            console.print("  CLI: [red]not found[/red] ✗")
+            console.print(f"  [red]{result['error']}[/red]")
+            OperationLogManager.fail(
+                op,
+                error_code="CONFIG_DEP_001",
+                error_detail=result.get("error", ""),
+                summary="zsxq-cli 未安装",
+            )
+            return
 
-    if result["available"] and result["logged_in"]:
-        console.print("\n[green]All checks passed.[/green]")
-    else:
-        console.print("\n[yellow]Some checks failed. See details above.[/yellow]")
+        if result["logged_in"]:
+            console.print("  Login: [green]logged in[/green] ✓")
+            OperationLogManager.succeed(
+                op,
+                summary="ZSXQ CLI 正常，已登录",
+                metadata=result,
+            )
+        else:
+            console.print("  Login: [yellow]not logged in[/yellow]")
+            if result["error"]:
+                console.print(f"  [yellow]{result['error']}[/yellow]")
+            OperationLogManager.fail(
+                op,
+                error_code="AUTH_ZSXQ_001",
+                error_detail=result.get("error", ""),
+                summary="ZSXQ 未登录",
+            )
+
+        if result["available"] and result["logged_in"]:
+            console.print("\n[green]All checks passed.[/green]")
+        else:
+            console.print("\n[yellow]Some checks failed. See details above.[/yellow]")
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="CONFIG_DEP_001",
+            error_detail=str(e)[:500],
+            summary="ZSXQ doctor 检查异常",
+        )
+        raise
 
 
 @zsxq_app.command("groups")
@@ -3259,6 +3291,7 @@ def zsxq_analyze(
 ):
     """导入并分析单个知识星球主题（fetch → eligibility → LLM analysis）。"""
     from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
     from podcast_research.sources.zsxq_analysis import import_and_analyze
 
     init_db()
@@ -3270,32 +3303,59 @@ def zsxq_analyze(
     console.print(f"  Topic: {topic_id}")
     console.print(f"  Provider: {provider}")
 
-    result = import_and_analyze(
-        group_id=group_id,
-        topic_id=topic_id,
-        provider_name=provider,
-        output_dir=output,
-        focus_areas=focus_areas,
-        analysis_depth=depth,
+    op = OperationLogManager.start(
+        operation_type="zsxq.topic.analyze",
+        source_type="zsxq_topic",
+        target_ref=f"group:{group_id}/topic:{topic_id}",
+        summary=f"分析 ZSXQ 主题: {topic_id}",
     )
 
-    if result["success"] and result["analysis"]:
-        a = result["analysis"]
-        console.print("\n[green]Analysis complete![/green]")
-        console.print(f"  Report ID: {a.get('report_id')}")
-        console.print(f"  Views: {a.get('view_count', 0)}")
-        console.print(f"  Entities: {a.get('entity_count', 0)}")
-        if a.get("report_path"):
-            console.print(f"  Report: {a['report_path']}")
-        if a.get("extraction_path"):
-            console.print(f"  Extraction: {a['extraction_path']}")
-    else:
-        reason = ""
-        if result.get("analysis") and result["analysis"].get("reason"):
-            reason = f": {result['analysis']['reason']}"
-        elif result.get("analysis") and not result["analysis"].get("eligible"):
-            reason = f": {result['analysis'].get('reason', 'not eligible')}"
-        console.print(f"\n[red]Analysis failed: {result.get('error', 'unknown error')}{reason}[/red]")
+    try:
+        result = import_and_analyze(
+            group_id=group_id,
+            topic_id=topic_id,
+            provider_name=provider,
+            output_dir=output,
+            focus_areas=focus_areas,
+            analysis_depth=depth,
+        )
+
+        if result["success"] and result["analysis"]:
+            a = result["analysis"]
+            OperationLogManager.succeed(
+                op,
+                summary=f"分析完成, report_id={a.get('report_id')}, views={a.get('view_count', 0)}",
+                metadata={"report_id": a.get("report_id"), "view_count": a.get("view_count", 0)},
+            )
+            console.print("\n[green]Analysis complete![/green]")
+            console.print(f"  Report ID: {a.get('report_id')}")
+            console.print(f"  Views: {a.get('view_count', 0)}")
+            console.print(f"  Entities: {a.get('entity_count', 0)}")
+            if a.get("report_path"):
+                console.print(f"  Report: {a['report_path']}")
+            if a.get("extraction_path"):
+                console.print(f"  Extraction: {a['extraction_path']}")
+        else:
+            reason = ""
+            if result.get("analysis") and result["analysis"].get("reason"):
+                reason = f": {result['analysis']['reason']}"
+            elif result.get("analysis") and not result["analysis"].get("eligible"):
+                reason = f": {result['analysis'].get('reason', 'not eligible')}"
+            OperationLogManager.fail(
+                op,
+                error_code="ANALYSIS_ELIGIBILITY_001",
+                error_detail=result.get("error", ""),
+                summary=f"分析失败: {result.get('error', 'unknown error')}{reason}",
+            )
+            console.print(f"\n[red]Analysis failed: {result.get('error', 'unknown error')}{reason}[/red]")
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="ANALYSIS_PIPELINE_001",
+            error_detail=str(e)[:500],
+            summary=f"分析异常: {topic_id}",
+        )
+        raise
 
     if result.get("review_findings"):
         from podcast_research.sources.review_items import ReviewItemManager
@@ -3307,6 +3367,360 @@ def zsxq_analyze(
         p = result["profile"]
         console.print(f"\n[dim]Topic: {p.topic_title} | Author: {p.author_name} | "
                        f"Chars: {len(p.content_text)} | Eligible: {p.import_eligible}[/dim]")
+
+
+# ---------------------------------------------------------------------------
+# logs 命令组（P7-B：操作日志查询）
+# ---------------------------------------------------------------------------
+
+logs_app = typer.Typer(help="操作日志查询（列表/详情）")
+app.add_typer(logs_app, name="logs")
+
+
+@logs_app.command("list")
+def logs_list(
+    status: str | None = typer.Option(None, "--status", help="过滤状态: started/succeeded/failed/cancelled"),
+    type: str | None = typer.Option(None, "--type", help="过滤操作类型"),
+    limit: int = typer.Option(50, "--limit", "-n", help="返回条数上限"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+):
+    """列出最近的操作日志。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
+
+    init_db()
+    ops = OperationLogManager.list_operations(
+        operation_type=type, status=status, limit=limit,
+    )
+
+    if json_output:
+        import json as _json
+        console.print(_json.dumps(ops, ensure_ascii=False, indent=2, default=str))
+        return
+
+    if not ops:
+        console.print("[dim]暂无操作日志。[/dim]")
+        return
+
+    table = Table(show_lines=False)
+    table.add_column("ID", style="dim")
+    table.add_column("操作")
+    table.add_column("状态")
+    table.add_column("耗时")
+    table.add_column("错误码", style="dim")
+    table.add_column("时间", style="dim")
+
+    for op in ops:
+        status_color = {"succeeded": "green", "failed": "red", "started": "yellow", "cancelled": "dim"}
+        color = status_color.get(op["status"], "white")
+        duration = f"{op['duration_ms'] / 1000:.1f}s" if op.get("duration_ms") else "-"
+        op_id = op["operation_id"][:8]
+        op_type = op["operation_type"]
+        err = op.get("error_code", "") or "-"
+
+        table.add_row(
+            op_id,
+            op_type,
+            f"[{color}]{op['status']}[/{color}]",
+            duration,
+            err,
+            op.get("started_at", "")[:19] if op.get("started_at") else "-",
+        )
+
+    console.print(table)
+    failed_count = sum(1 for o in ops if o.get("status") == "failed")
+    if failed_count > 0:
+        console.print(f"\n[dim]共 {len(ops)} 条，{failed_count} 条失败。"
+                       f"使用 logs show <id> 查看详情和建议操作。[/dim]")
+    else:
+        console.print(f"\n[dim]共 {len(ops)} 条，使用 --json 查看完整详情[/dim]")
+
+
+@logs_app.command("show")
+def logs_show(
+    operation_id: str = typer.Argument(..., help="操作 ID（支持前 8 位前缀匹配）"),
+):
+    """查看单条操作日志详情。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
+
+    init_db()
+
+    # Support prefix matching
+    op = OperationLogManager.get(operation_id)
+    if op is None and len(operation_id) >= 8:
+        ops = OperationLogManager.list_operations(limit=200)
+        for candidate in ops:
+            if candidate["operation_id"].startswith(operation_id):
+                op = candidate
+                break
+
+    if op is None:
+        console.print(f"[red]未找到操作日志: {operation_id}[/red]")
+        raise typer.Exit(1)
+
+    status_color = {"succeeded": "green", "failed": "red", "started": "yellow", "cancelled": "dim"}
+    color = status_color.get(op["status"], "white")
+
+    console.print(f"\n[bold]Operation: {op['operation_type']}[/bold]")
+    console.print(f"  ID:        {op['operation_id']}")
+    console.print(f"  Status:    [{color}]{op['status']}[/{color}]")
+    if op.get("duration_ms"):
+        console.print(f"  Duration:  {op['duration_ms'] / 1000:.2f}s")
+    if op.get("source_type"):
+        console.print(f"  Source:    {op['source_type']}")
+    if op.get("target_ref"):
+        console.print(f"  Target:    {op['target_ref']}")
+    if op.get("summary"):
+        console.print(f"  Summary:   {op['summary']}")
+    if op.get("error_code"):
+        console.print(f"  [red]Error:    {op['error_code']}[/red]")
+        # Look up recovery actions for this error code
+        from podcast_research.diagnostics.summary import actions_for_error_code
+        actions = actions_for_error_code(op["error_code"])
+        if actions:
+            console.print("  [yellow]建议操作:[/yellow]")
+            for a in actions[:3]:
+                console.print(f"    • {a.get('title', '')}: {a.get('user_message', a.get('description', ''))}")
+                if a.get("command"):
+                    console.print(f"      [dim]→ {a['command']}[/dim]")
+    if op.get("error_detail"):
+        console.print(f"  [red]Detail:   {op['error_detail'][:300]}[/red]")
+    console.print(f"  Started:   {op.get('started_at', '')}")
+    console.print(f"  Finished:  {op.get('finished_at', '')}")
+
+
+# ---------------------------------------------------------------------------
+# diagnostics 命令组（P7-C：诊断中心）
+# ---------------------------------------------------------------------------
+
+diagnostics_app = typer.Typer(help="系统诊断（摘要/导出）")
+app.add_typer(diagnostics_app, name="diagnostics")
+
+
+@diagnostics_app.command("summary")
+def diagnostics_summary(
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+):
+    """生成系统健康摘要。"""
+    from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
+    from podcast_research.diagnostics.summary import DiagnosticsCenter
+
+    # Record this as an operation
+    op = OperationLogManager.start(
+        operation_type="system.diagnostics",
+        summary="诊断摘要",
+    )
+
+    try:
+        init_db()
+        summary = DiagnosticsCenter.get_summary()
+
+        OperationLogManager.succeed(
+            op,
+            summary=f"诊断完成: {summary.overall_status}",
+            metadata={"overall_status": summary.overall_status},
+        )
+
+        if json_output:
+            import json as _json
+            data = _sanitize_json_strings(summary.to_dict())
+            # ensure_ascii=True prevents control char issues in CLI output
+            console.print(_json.dumps(data, ensure_ascii=False, indent=2))
+            return
+
+        _print_diagnostics_table(summary)
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="ANALYSIS_PIPELINE_001",
+            error_detail=str(e)[:500],
+            summary="诊断失败",
+        )
+        raise
+
+
+@diagnostics_app.command("bundle")
+def diagnostics_bundle(
+    output: str = typer.Option("", "--output", "-o", help="导出目录（默认 ./diagnostics/）"),
+    limit_logs: int = typer.Option(100, "--limit-logs", help="操作日志条数上限"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出结果"),
+):
+    """导出一键诊断包（脱敏 zip）。"""
+    import json as _json
+
+    from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.bundle import (
+        DiagnosticBundleBuilder,
+        DiagnosticBundleConfig,
+    )
+    from podcast_research.diagnostics.operation_log import OperationLogManager
+
+    op = OperationLogManager.start(
+        operation_type="system.diagnostics",
+        summary="导出诊断包",
+    )
+
+    try:
+        init_db()
+        config = DiagnosticBundleConfig(
+            output_dir=output,
+            limit_logs=limit_logs,
+        )
+        builder = DiagnosticBundleBuilder(config)
+        result = builder.build()
+
+        if result.success:
+            OperationLogManager.succeed(
+                op,
+                summary=f"诊断包导出完成: {result.file_count} 文件",
+                metadata={"bundle_path": result.bundle_path,
+                           "file_count": result.file_count,
+                           "warnings": result.warnings},
+            )
+
+            if json_output:
+                data = _sanitize_json_strings({
+                    "success": True,
+                    "bundle_path": result.bundle_path,
+                    "file_count": result.file_count,
+                    "file_names": result.file_names,
+                    "warnings": result.warnings,
+                    "redaction_summary": result.redaction_summary,
+                })
+                console.print(_json.dumps(data, ensure_ascii=False, indent=2))
+            else:
+                console.print("\n[green]📦 诊断包导出完成[/green]")
+                console.print(f"  路径: {result.bundle_path}")
+                console.print(f"  文件数: {result.file_count}")
+                for name in result.file_names:
+                    console.print(f"    ✅ {name}")
+                if result.warnings:
+                    console.print(f"  [yellow]警告: {len(result.warnings)} 条[/yellow]")
+                if result.redaction_summary:
+                    rd = _sanitize_json_strings(result.redaction_summary)
+                    console.print(f"  [dim]已脱敏: {_json.dumps(rd, ensure_ascii=False)}[/dim]")
+        else:
+            OperationLogManager.fail(
+                op,
+                error_code="ANALYSIS_PIPELINE_001",
+                error_detail=result.error,
+                summary="诊断包导出失败",
+            )
+            console.print(f"[red]导出失败: {result.error}[/red]")
+            if result.warnings:
+                for w in result.warnings:
+                    console.print(f"  [yellow]⚠ {w}[/yellow]")
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="ANALYSIS_PIPELINE_001",
+            error_detail=str(e)[:500],
+            summary="诊断包导出异常",
+        )
+        raise
+
+
+def _sanitize_json_strings(obj):
+    """Recursively replace control characters in strings for safe JSON output."""
+    import re as _re
+    if isinstance(obj, str):
+        return _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', obj)
+    if isinstance(obj, dict):
+        return {k: _sanitize_json_strings(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_json_strings(v) for v in obj]
+    return obj
+
+
+def _print_diagnostics_table(summary) -> None:
+    """Print a human-friendly diagnostics table with actionable guidance."""
+    status_icon = {"ok": "✅", "attention": "⚠️", "blocked": "❌", "unknown": "❓"}
+    status_style = {"ok": "green", "attention": "yellow", "blocked": "red", "unknown": "dim"}
+
+    overall_icon = status_icon.get(summary.overall_status, "❓")
+    overall_label = {"ok": "系统健康", "attention": "需要关注", "blocked": "存在阻断问题"}
+
+    console.print(
+        f"\n[bold]{overall_icon} 系统状态: "
+        f"[{status_style.get(summary.overall_status, 'white')}]"
+        f"{overall_label.get(summary.overall_status, summary.overall_status)}[/]"
+        f"[/bold]\n"
+    )
+
+    # Show user guidance
+    guidance = summary.metadata.get("user_guidance", "")
+    if guidance:
+        console.print(f"  [dim]{guidance}[/dim]\n")
+
+    # Subsystems requiring attention
+    attention_subsystems = [s for s in summary.subsystems if s.status != "ok"]
+    if attention_subsystems:
+        console.print("[bold]需要关注的子系统:[/bold]")
+        for ss in attention_subsystems:
+            icon = status_icon.get(ss.status, "❓")
+            style = status_style.get(ss.status, "white")
+            console.print(f"  {icon} [{style}]{ss.label}[/{style}]: {ss.summary}")
+            for issue in ss.issues[:3]:
+                console.print(f"     └─ {issue}")
+        console.print("")
+
+    # Healthy subsystems (collapsed)
+    healthy = [s for s in summary.subsystems if s.status == "ok"]
+    if healthy:
+        names = " · ".join(s.label for s in healthy)
+        console.print(f"  [dim]✅ 正常: {names}[/dim]\n")
+
+    # Recent failures
+    if summary.recent_failures:
+        console.print("[bold]最近失败:[/bold]")
+        for f in summary.recent_failures[:3]:
+            err_code = f.get('error_code', '')
+            console.print(
+                f"  ❌ {f.get('operation_type', '')} "
+                f"[red][{err_code}][/red] {f.get('summary', '')}"
+            )
+        console.print("")
+
+    # Suggested actions
+    if summary.suggested_actions:
+        console.print("[bold]建议操作:[/bold]")
+        for a in summary.suggested_actions[:6]:
+            user_msg = a.get("user_message", "")
+            console.print(f"  • [bold]{a.get('title', '')}[/bold]: {user_msg or a.get('description', '')}")
+            if a.get("command"):
+                console.print(f"    [dim]→ {a['command']}[/dim]")
+        console.print("")
+
+    # Summary line
+    status_text = f"{summary.blocked_count} blocked, {summary.attention_count} attention"
+    if summary.open_review_count:
+        status_text += f", {summary.open_review_count} open reviews"
+    console.print(f"[dim]{status_text}[/dim]")
+
+    # Blocked guidance
+    if summary.overall_status == "blocked":
+        console.print(
+            "\n[yellow]⚠ 存在阻断性问题。请先处理上方 ❌ 标记的子系统。"
+            "如需远程协助，请运行:[/yellow]"
+        )
+        console.print(
+            "  [dim]podcast-research diagnostics bundle --output ./diagnostics[/dim]\n"
+        )
+
+
+# ---------------------------------------------------------------------------
+# doctor 命令（P7-C：全系统健康检查）
+# ---------------------------------------------------------------------------
+
+
+@app.command("doctor")
+def doctor(
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+):
+    """全系统健康检查（等价于 diagnostics summary）。"""
+    diagnostics_summary(json_output=json_output)
 
 
 # ---------------------------------------------------------------------------
@@ -3322,25 +3736,49 @@ def graph_rebuild():
     """从现有 DB 全量重建知识图谱（幂等）。"""
     from podcast_research.db.knowledge_graph import rebuild_knowledge_graph
     from podcast_research.db.session import get_session, init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
 
     init_db()
-    session = get_session()
-    try:
-        result = rebuild_knowledge_graph(session)
-    finally:
-        session.close()
 
-    console.print("[green]知识图谱重建完成[/green]")
-    console.print(f"  Nodes: {result['nodes']}")
-    console.print(f"  Edges: {result['edges']}")
-    if result.get("node_types"):
-        console.print("  Node types:")
-        for t, c in sorted(result["node_types"].items()):
-            console.print(f"    {t}: {c}")
-    if result.get("edge_types"):
-        console.print("  Edge types:")
-        for t, c in sorted(result["edge_types"].items()):
-            console.print(f"    {t}: {c}")
+    op = OperationLogManager.start(
+        operation_type="graph.rebuild",
+        source_type="",
+        summary="知识图谱重建",
+        metadata={"trigger": "manual"},
+    )
+
+    try:
+        session = get_session()
+        try:
+            result = rebuild_knowledge_graph(session)
+        finally:
+            session.close()
+
+        OperationLogManager.succeed(
+            op,
+            summary=f"图谱重建完成: {result['nodes']} nodes, {result['edges']} edges",
+            metadata=result,
+        )
+
+        console.print("[green]知识图谱重建完成[/green]")
+        console.print(f"  Nodes: {result['nodes']}")
+        console.print(f"  Edges: {result['edges']}")
+        if result.get("node_types"):
+            console.print("  Node types:")
+            for t, c in sorted(result["node_types"].items()):
+                console.print(f"    {t}: {c}")
+        if result.get("edge_types"):
+            console.print("  Edge types:")
+            for t, c in sorted(result["edge_types"].items()):
+                console.print(f"    {t}: {c}")
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="GRAPH_BUILD_001",
+            error_detail=str(e)[:500],
+            summary="图谱重建失败",
+        )
+        raise
 
 
 @graph_app.command("neighborhood")
