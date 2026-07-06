@@ -381,7 +381,7 @@ source_info_override = {
 ### 7.1 zsxq doctor
 
 ```bash
-$ python -m podcast_research zsxq doctor
+$ python -m signalvault zsxq doctor
 
 ZSXQ CLI Check
   CLI: zsxq v1.2.3 (/usr/local/bin/zsxq) ✓
@@ -395,7 +395,7 @@ ZSXQ CLI Check
 
 ```bash
 # 查看本地 group registry（不调用 zsxq-cli）
-$ python -m podcast_research zsxq groups
+$ python -m signalvault zsxq groups
 
 ZSXQ Group Registry (3):
   ID          Name                  Status        Topics   Last Refreshed
@@ -410,7 +410,7 @@ ZSXQ Group Registry (3):
 
 ```bash
 # 刷新授权范围（调用 zsxq-cli）
-$ python -m podcast_research zsxq groups --refresh
+$ python -m signalvault zsxq groups --refresh
 
 Refreshing ZSXQ group authorization...
   Calling zsxq-cli: zsxq group list --json...
@@ -430,7 +430,7 @@ Refreshing ZSXQ group authorization...
 ### 7.3 zsxq import-topic
 
 ```bash
-$ python -m podcast_research zsxq import-topic \
+$ python -m signalvault zsxq import-topic \
     --group-id 12345678 --topic-id 9876543210
 
 📥 Importing topic 9876543210 from 投资研究社区
@@ -447,7 +447,7 @@ $ python -m podcast_research zsxq import-topic \
 ### 7.4 zsxq sync
 
 ```bash
-$ python -m podcast_research zsxq sync \
+$ python -m signalvault zsxq sync \
     --group-id 12345678 --limit 20
 
 Syncing 投资研究社区...
@@ -462,7 +462,7 @@ Syncing 投资研究社区...
 ### 7.5 zsxq analyze
 
 ```bash
-$ python -m podcast_research zsxq analyze \
+$ python -m signalvault zsxq analyze \
     --topic-id 9876543210 --mock --focus "AI芯片"
 
 📥 Fetching topic + 📄 Analyzing...
@@ -474,7 +474,7 @@ $ python -m podcast_research zsxq analyze \
 ## 八、模块结构
 
 ```
-src/podcast_research/sources/
+src/signalvault/sources/
     models.py              ← 扩展：ZsxqGroup, ZsxqTopic, ZsxqSourceProfile
     zsxq_connector.py      ← NEW: zsxq-cli wrapper + parser
     zsxq_profile.py        ← NEW: profile builder + eligibility
@@ -482,10 +482,10 @@ src/podcast_research/sources/
     ingest_jobs.py         ← 扩展：zsxq_topic source_type
     review_items.py        ← 扩展：5 个新 item_type
 
-src/podcast_research/db/
+src/signalvault/db/
     models.py              ← 扩展：ZsxqGroup ORM（如持久化到 SQLite）
 
-src/podcast_research/
+src/signalvault/
     cli.py                 ← 扩展：zsxq 命令组
 
 tests/

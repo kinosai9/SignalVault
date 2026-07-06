@@ -410,8 +410,8 @@ class TestResearchBrief:
         """Active topic ranking uses weighted scoring"""
         from pathlib import Path
 
-        from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.scanner import (
+        from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.scanner import (
             ClaimInfo,
             TopicInfo,
             WorkspaceSnapshot,
@@ -441,8 +441,8 @@ class TestResearchBrief:
         """Research brief uses pure rules, no LLM import"""
         from pathlib import Path
 
-        from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.scanner import WorkspaceSnapshot
+        from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.scanner import WorkspaceSnapshot
 
         snapshot = WorkspaceSnapshot(vault_path=Path("/tmp"))
         brief = generate_brief(snapshot)
@@ -472,7 +472,7 @@ class TestWatchlist:
 
     def test_watchlist_config_load(self, tmp_path):
         """Watchlist config can be loaded from YAML file"""
-        from podcast_research.workspace.watchlist import load_watchlist
+        from signalvault.workspace.watchlist import load_watchlist
 
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -491,7 +491,7 @@ topics:
 
     def test_watchlist_template_created(self, tmp_path):
         """Template is created when config missing"""
-        from podcast_research.workspace.watchlist import ensure_watchlist_template
+        from signalvault.workspace.watchlist import ensure_watchlist_template
 
         vault = tmp_path / "vault"
         path = ensure_watchlist_template(vault)
@@ -501,8 +501,8 @@ topics:
 
     def test_watchlist_direct_update(self, tmp_path):
         """Company with direct claim is marked as direct"""
-        from podcast_research.workspace.scanner import ClaimInfo, WorkspaceSnapshot
-        from podcast_research.workspace.watchlist import generate_watchlist_brief
+        from signalvault.workspace.scanner import ClaimInfo, WorkspaceSnapshot
+        from signalvault.workspace.watchlist import generate_watchlist_brief
 
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -522,8 +522,8 @@ topics:
 
     def test_watchlist_no_evidence(self, tmp_path):
         """Item with no claims/signals returns no_new_evidence"""
-        from podcast_research.workspace.scanner import WorkspaceSnapshot
-        from podcast_research.workspace.watchlist import generate_watchlist_brief
+        from signalvault.workspace.scanner import WorkspaceSnapshot
+        from signalvault.workspace.watchlist import generate_watchlist_brief
 
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -683,41 +683,41 @@ class TestWatchlistSettings:
 
 class TestEntityResolution:
     def test_exact_match_linked(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("NVIDIA", "company", {"NVIDIA", "OpenAI"}, set())
         assert r["match_status"] == "linked"
         assert r["canonical_name"] == "NVIDIA"
 
     def test_alias_match_chinese(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("英伟达", "company", {"NVIDIA", "OpenAI"}, set())
         assert r["match_status"] == "alias"
         assert r["canonical_name"] == "NVIDIA"
 
     def test_fuzzy_match_spaceless(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("Core Weave", "company", {"CoreWeave", "NVIDIA"}, set())
         assert r["match_status"] in ("fuzzy", "alias")  # alias map also catches this
         assert r["canonical_name"] == "CoreWeave"
 
     def test_topic_alias(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("AI Agent", "topic", set(), {"AI Agents", "Enterprise AI"})
         assert r["match_status"] in ("alias", "fuzzy")
 
     def test_theme_with_related_topics(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("Agent 工具链", "theme", set(), {"AI Agents", "Developer Tools"})
         assert r["match_status"] == "custom"
         assert "AI Agents" in r["related_topics"]
 
     def test_unknown_company_missing(self):
-        from podcast_research.workspace.watchlist import resolve_watchlist_name
+        from signalvault.workspace.watchlist import resolve_watchlist_name
         r = resolve_watchlist_name("FakeCo", "company", {"NVIDIA"}, set())
         assert r["match_status"] == "missing"
 
     def test_normalize_spaceless(self):
-        from podcast_research.workspace.watchlist import _normalize
+        from signalvault.workspace.watchlist import _normalize
         assert _normalize("Core Weave") == _normalize("CoreWeave")
         assert _normalize("AI-Agent") == _normalize("AI Agent")
 
@@ -772,7 +772,7 @@ class TestContentNew:
 
         # Mock is_youtube_url to return False (invalid)
         monkeypatch.setattr(
-            "podcast_research.utils.youtube.is_youtube_url", lambda u: False
+            "signalvault.utils.youtube.is_youtube_url", lambda u: False
         )
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -789,7 +789,7 @@ class TestContentNew:
     def test_analyze_redirects_to_job(self, api_client, tmp_path, monkeypatch):
         """POST /content/analyze redirects to unified task page."""
         monkeypatch.setattr(
-            "podcast_research.utils.youtube.is_youtube_url", lambda u: True
+            "signalvault.utils.youtube.is_youtube_url", lambda u: True
         )
 
         vault = tmp_path / "vault"
@@ -824,7 +824,7 @@ class TestContentNew:
     def test_job_status_api(self, api_client, tmp_path, monkeypatch):
         """GET /tasks/{id}/status returns JSON (unified task status)"""
         monkeypatch.setattr(
-            "podcast_research.utils.youtube.is_youtube_url", lambda u: True
+            "signalvault.utils.youtube.is_youtube_url", lambda u: True
         )
 
         vault = tmp_path / "vault"
@@ -928,7 +928,7 @@ class TestKnowledgeSync:
         vault.mkdir(parents=True)
 
         # Create a sync job manually
-        from podcast_research.services.job_service import create_sync_job
+        from signalvault.services.job_service import create_sync_job
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -946,7 +946,7 @@ class TestKnowledgeSync:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_sync_job
+        from signalvault.services.job_service import create_sync_job
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -977,7 +977,7 @@ class TestKnowledgeSync:
 
         # Mock the sync service to succeed instantly
         def mock_sync(report_id, vault_path=None, progress_callback=None):
-            from podcast_research.services.sync_service import SyncResult
+            from signalvault.services.sync_service import SyncResult
             result = SyncResult(
                 report_id=report_id,
                 exported_reports=1,
@@ -993,11 +993,11 @@ class TestKnowledgeSync:
             return result
 
         monkeypatch.setattr(
-            "podcast_research.services.sync_service.sync_report_to_knowledge_base",
+            "signalvault.services.sync_service.sync_report_to_knowledge_base",
             mock_sync,
         )
 
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_sync_job,
             start_sync_job,
         )
@@ -1036,7 +1036,7 @@ class TestKnowledgeSync:
 
         # Mock the sync service to fail
         def mock_sync_fail(report_id, vault_path=None, progress_callback=None):
-            from podcast_research.services.sync_service import SyncResult
+            from signalvault.services.sync_service import SyncResult
             result = SyncResult(report_id=report_id)
             result.error = "报告导出失败，请检查知识库路径是否可写。"
             if progress_callback:
@@ -1044,11 +1044,11 @@ class TestKnowledgeSync:
             return result
 
         monkeypatch.setattr(
-            "podcast_research.services.sync_service.sync_report_to_knowledge_base",
+            "signalvault.services.sync_service.sync_report_to_knowledge_base",
             mock_sync_fail,
         )
 
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_sync_job,
             start_sync_job,
         )
@@ -1082,7 +1082,7 @@ class TestKnowledgeSync:
         vault.mkdir(parents=True)
 
         # Create a sync job and manually set it to success with result_links
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             _set_result_links,
             create_sync_job,
             update_job,
@@ -1112,7 +1112,7 @@ class TestKnowledgeSync:
 
         def mock_sync(report_id, vault_path=None, progress_callback=None):
             call_count[0] += 1
-            from podcast_research.services.sync_service import SyncResult
+            from signalvault.services.sync_service import SyncResult
             result = SyncResult(
                 report_id=report_id,
                 exported_reports=1,
@@ -1124,11 +1124,11 @@ class TestKnowledgeSync:
             return result
 
         monkeypatch.setattr(
-            "podcast_research.services.sync_service.sync_report_to_knowledge_base",
+            "signalvault.services.sync_service.sync_report_to_knowledge_base",
             mock_sync,
         )
 
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_sync_job,
             start_sync_job,
         )
@@ -1200,7 +1200,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job, create_sync_job
+        from signalvault.services.job_service import create_job, create_sync_job
         j1 = create_job("https://youtube.com/watch?v=test", ["AI"])
         j2 = create_sync_job(report_id=1)
 
@@ -1222,7 +1222,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], depth="deep")
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1240,7 +1240,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_sync_job
+        from signalvault.services.job_service import create_sync_job
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1258,7 +1258,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1280,7 +1280,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_sync_job
+        from signalvault.services.job_service import create_sync_job
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1301,14 +1301,14 @@ class TestUnifiedTasks:
 
         # Set long_job threshold to 0 so any started job is immediately long_running
         monkeypatch.setattr(
-            "podcast_research.services.job_service.LONG_JOB_THRESHOLD", 0
+            "signalvault.services.job_service.LONG_JOB_THRESHOLD", 0
         )
         monkeypatch.setattr(
-            "podcast_research.services.job_service.STALE_THRESHOLD", 999999
+            "signalvault.services.job_service.STALE_THRESHOLD", 999999
         )
 
         # Create a job and manually start it with a heartbeat
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
         update_job(job.job_id, status="running", stage="analyzing",
                    message="正在进行 AI 分析")
@@ -1330,13 +1330,13 @@ class TestUnifiedTasks:
         vault.mkdir(parents=True)
 
         monkeypatch.setattr(
-            "podcast_research.services.job_service.LONG_JOB_THRESHOLD", 0
+            "signalvault.services.job_service.LONG_JOB_THRESHOLD", 0
         )
         monkeypatch.setattr(
-            "podcast_research.services.job_service.STALE_THRESHOLD", 999999
+            "signalvault.services.job_service.STALE_THRESHOLD", 999999
         )
 
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
         update_job(job.job_id, status="running", stage="analyzing",
                    message="正在进行 AI 分析")
@@ -1359,13 +1359,13 @@ class TestUnifiedTasks:
 
         # Set stale threshold to 0 so any job is immediately stale
         monkeypatch.setattr(
-            "podcast_research.services.job_service.STALE_THRESHOLD", 0
+            "signalvault.services.job_service.STALE_THRESHOLD", 0
         )
         monkeypatch.setattr(
-            "podcast_research.services.job_service.LONG_JOB_THRESHOLD", 999999
+            "signalvault.services.job_service.LONG_JOB_THRESHOLD", 999999
         )
 
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
         update_job(job.job_id, status="running", stage="analyzing")
 
@@ -1386,17 +1386,17 @@ class TestUnifiedTasks:
 
         def mock_analyze(youtube_url, focus_areas=None, depth="standard",
                          mock=False, progress_callback=None):
-            from podcast_research.services.analyze_service import AnalyzeResult
+            from signalvault.services.analyze_service import AnalyzeResult
             if progress_callback:
                 progress_callback("analyzing", "analyzing")
             return AnalyzeResult(success=True, report_id=42)
 
         monkeypatch.setattr(
-            "podcast_research.services.analyze_service.analyze_youtube_url",
+            "signalvault.services.analyze_service.analyze_youtube_url",
             mock_analyze,
         )
 
-        from podcast_research.services.job_service import create_job, start_job
+        from signalvault.services.job_service import create_job, start_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
         import time
 
@@ -1451,7 +1451,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"])
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1470,7 +1470,7 @@ class TestUnifiedTasks:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_sync_job
+        from signalvault.services.job_service import create_sync_job
         job = create_sync_job(report_id=1)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1509,7 +1509,7 @@ class TestFullFlow:
     def test_flow_full_creates_full_flow_job(self, api_client, tmp_path, monkeypatch):
         """flow_mode=full creates a full_flow job."""
         monkeypatch.setattr(
-            "podcast_research.utils.youtube.is_youtube_url", lambda u: True
+            "signalvault.utils.youtube.is_youtube_url", lambda u: True
         )
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -1526,7 +1526,7 @@ class TestFullFlow:
             assert "/tasks/" in location
             job_id = location.rstrip("/").split("/")[-1]
 
-            from podcast_research.services.job_service import get_job
+            from signalvault.services.job_service import get_job
             job = get_job(job_id)
             assert job is not None
             assert job.job_type == "full_flow"
@@ -1537,7 +1537,7 @@ class TestFullFlow:
     def test_flow_report_only_creates_analysis_job(self, api_client, tmp_path, monkeypatch):
         """flow_mode=report_only creates an analysis job (not full_flow)."""
         monkeypatch.setattr(
-            "podcast_research.utils.youtube.is_youtube_url", lambda u: True
+            "signalvault.utils.youtube.is_youtube_url", lambda u: True
         )
         vault = tmp_path / "vault"
         (vault / "99_System").mkdir(parents=True)
@@ -1553,7 +1553,7 @@ class TestFullFlow:
             location = resp.headers.get("location", "")
             job_id = location.rstrip("/").split("/")[-1]
 
-            from podcast_research.services.job_service import get_job
+            from signalvault.services.job_service import get_job
             job = get_job(job_id)
             assert job is not None
             assert job.job_type == "analysis"
@@ -1570,13 +1570,13 @@ class TestFullFlow:
         # Mock analyze to succeed
         def mock_analyze(youtube_url, focus_areas=None, depth="standard",
                          mock=False, progress_callback=None):
-            from podcast_research.services.analyze_service import AnalyzeResult
+            from signalvault.services.analyze_service import AnalyzeResult
             if progress_callback:
                 progress_callback("analyzing", "analyzing")
             return AnalyzeResult(success=True, report_id=55)
 
         monkeypatch.setattr(
-            "podcast_research.services.analyze_service.analyze_youtube_url",
+            "signalvault.services.analyze_service.analyze_youtube_url",
             mock_analyze,
         )
 
@@ -1584,7 +1584,7 @@ class TestFullFlow:
         sync_called = [False]
         def mock_sync(report_id, vault_path=None, progress_callback=None):
             sync_called[0] = True
-            from podcast_research.services.sync_service import SyncResult
+            from signalvault.services.sync_service import SyncResult
             result = SyncResult(report_id=report_id, exported_reports=1,
                                 brief_updated=True, watchlist_updated=True)
             if progress_callback:
@@ -1593,11 +1593,11 @@ class TestFullFlow:
             return result
 
         monkeypatch.setattr(
-            "podcast_research.services.sync_service.sync_report_to_knowledge_base",
+            "signalvault.services.sync_service.sync_report_to_knowledge_base",
             mock_sync,
         )
 
-        from podcast_research.services.job_service import create_job, start_job
+        from signalvault.services.job_service import create_job, start_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=True)
         assert job.job_type == "full_flow"
 
@@ -1630,18 +1630,18 @@ class TestFullFlow:
 
         def mock_analyze(youtube_url, focus_areas=None, depth="standard",
                          mock=False, progress_callback=None):
-            from podcast_research.services.analyze_service import AnalyzeResult
+            from signalvault.services.analyze_service import AnalyzeResult
             if progress_callback:
                 progress_callback("analyzing", "analyzing")
             return AnalyzeResult(success=True, report_id=42)
 
         monkeypatch.setattr(
-            "podcast_research.services.analyze_service.analyze_youtube_url",
+            "signalvault.services.analyze_service.analyze_youtube_url",
             mock_analyze,
         )
 
         def mock_sync_fail(report_id, vault_path=None, progress_callback=None):
-            from podcast_research.services.sync_service import SyncResult
+            from signalvault.services.sync_service import SyncResult
             result = SyncResult(report_id=report_id)
             result.error = "Vault 不可写"
             if progress_callback:
@@ -1649,11 +1649,11 @@ class TestFullFlow:
             return result
 
         monkeypatch.setattr(
-            "podcast_research.services.sync_service.sync_report_to_knowledge_base",
+            "signalvault.services.sync_service.sync_report_to_knowledge_base",
             mock_sync_fail,
         )
 
-        from podcast_research.services.job_service import create_job, start_job
+        from signalvault.services.job_service import create_job, start_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=True)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1681,7 +1681,7 @@ class TestFullFlow:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=True)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1698,7 +1698,7 @@ class TestFullFlow:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=True)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1715,7 +1715,7 @@ class TestFullFlow:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.services.job_service import create_job
+        from signalvault.services.job_service import create_job
         create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=True)
 
         old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
@@ -1734,17 +1734,17 @@ class TestFullFlow:
 
         def mock_analyze(youtube_url, focus_areas=None, depth="standard",
                          mock=False, progress_callback=None):
-            from podcast_research.services.analyze_service import AnalyzeResult
+            from signalvault.services.analyze_service import AnalyzeResult
             if progress_callback:
                 progress_callback("analyzing", "analyzing")
             return AnalyzeResult(success=True, report_id=88)
 
         monkeypatch.setattr(
-            "podcast_research.services.analyze_service.analyze_youtube_url",
+            "signalvault.services.analyze_service.analyze_youtube_url",
             mock_analyze,
         )
 
-        from podcast_research.services.job_service import create_job, start_job
+        from signalvault.services.job_service import create_job, start_job
         job = create_job("https://youtube.com/watch?v=test", ["AI"], auto_sync=False)
         assert job.job_type == "analysis"
 
@@ -1783,7 +1783,7 @@ class TestFailureUX:
 
     def test_failed_task_hides_spinner(self, api_client):
         """Failed task detail page should not show spinner."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=test",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1797,7 +1797,7 @@ class TestFailureUX:
 
     def test_failed_task_shows_failure_stage(self, api_client):
         """Failed task status shows failed_stage field."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=test2",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1810,7 +1810,7 @@ class TestFailureUX:
 
     def test_sync_failed_after_report_shows_correct_message(self, api_client):
         """sync_failed_after_report shows '报告已生成，但知识库同步失败'."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t3",
                          focus_areas=["AI"], depth="standard", mock=True,
@@ -1826,7 +1826,7 @@ class TestFailureUX:
 
     def test_sync_failed_after_report_has_retry_links(self, api_client):
         """sync_failed_after_report result_links has report and retry_sync."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t4",
                          focus_areas=["AI"], depth="standard", mock=True,
@@ -1842,7 +1842,7 @@ class TestFailureUX:
 
     def test_analysis_failed_has_no_report(self, api_client):
         """analysis_failed: no report_id, failure_kind = analysis_failed."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t5",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1855,7 +1855,7 @@ class TestFailureUX:
 
     def test_task_logs_page_opens(self, api_client):
         """GET /tasks/{id}/logs returns valid HTML."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t6",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1871,7 +1871,7 @@ class TestFailureUX:
 
     def test_job_events_recorded_on_progress(self):
         """Stage change in update_job records a JobEvent."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t7",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1884,7 +1884,7 @@ class TestFailureUX:
 
     def test_job_events_recorded_on_failure(self):
         """Failure records error-level JobEvent."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t8",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1896,7 +1896,7 @@ class TestFailureUX:
 
     def test_logs_page_shows_events(self, api_client):
         """Task logs page shows recorded events in table."""
-        from podcast_research.services.job_service import create_job, update_job
+        from signalvault.services.job_service import create_job, update_job
 
         job = create_job(youtube_url="https://example.com/v=t9",
                          focus_areas=["AI"], depth="standard", mock=True)
@@ -1945,7 +1945,7 @@ class TestVaultSetup:
         assert resp.status_code in (303, 302)
 
         # Verify directories created
-        from podcast_research.workspace.setup import REQUIRED_DIRS
+        from signalvault.workspace.setup import REQUIRED_DIRS
         for d in REQUIRED_DIRS:
             assert (vault / d).is_dir(), f"Missing dir: {d}"
 
@@ -2032,7 +2032,7 @@ class TestVaultSetup:
 
     def test_setup_saves_vault_path_to_config(self, api_client, tmp_path, monkeypatch):
         """POST /setup/vault persists path to user_settings.json."""
-        import podcast_research.config_store as cs
+        import signalvault.config_store as cs
         settings_file = tmp_path / "settings.json"
         monkeypatch.setattr(cs, "_get_settings_path", lambda: settings_file)
         monkeypatch.setattr(cs, "_SETTINGS_PATH", settings_file)
@@ -2051,7 +2051,7 @@ class TestVaultSetup:
     def test_dashboard_with_complete_vault_loads(self, api_client, tmp_path):
         """Dashboard loads normally when vault is complete."""
         vault = tmp_path / "vault"
-        from podcast_research.workspace.setup import REQUIRED_DIRS, REQUIRED_FILES
+        from signalvault.workspace.setup import REQUIRED_DIRS, REQUIRED_FILES
         for d in REQUIRED_DIRS:
             (vault / d).mkdir(parents=True)
         for f in REQUIRED_FILES:
@@ -2113,7 +2113,7 @@ class TestVaultSetup:
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
 
-        from podcast_research.workspace.setup import validate_vault
+        from signalvault.workspace.setup import validate_vault
         result = validate_vault(vault)
 
         assert not result.is_initialized
@@ -2123,12 +2123,12 @@ class TestVaultSetup:
     def test_validate_vault_complete(self, tmp_path):
         """validate_vault returns is_initialized=True for complete vault."""
         vault = tmp_path / "vault"
-        from podcast_research.workspace.setup import (
+        from signalvault.workspace.setup import (
             initialize_vault,
         )
         initialize_vault(vault)
 
-        from podcast_research.workspace.setup import validate_vault
+        from signalvault.workspace.setup import validate_vault
         result = validate_vault(vault)
 
         assert result.is_initialized
@@ -2137,7 +2137,7 @@ class TestVaultSetup:
 
     def test_config_store_persistence(self, tmp_path, monkeypatch):
         """config_store saves and loads vault path correctly."""
-        import podcast_research.config_store as cs
+        import signalvault.config_store as cs
         settings_file = tmp_path / "settings.json"
         monkeypatch.setattr(cs, "_get_settings_path", lambda: settings_file)
         monkeypatch.setattr(cs, "_SETTINGS_PATH", settings_file)
@@ -2150,7 +2150,7 @@ class TestVaultSetup:
 
     def test_config_store_falls_back_to_env(self, tmp_path, monkeypatch):
         """config_store falls back to OBSIDIAN_VAULT_PATH when no settings file."""
-        import podcast_research.config_store as cs
+        import signalvault.config_store as cs
         settings_file = tmp_path / "nonexistent.json"
         monkeypatch.setattr(cs, "_get_settings_path", lambda: settings_file)
         monkeypatch.setattr(cs, "_SETTINGS_PATH", settings_file)
@@ -2186,23 +2186,23 @@ class TestCleanDisplayText:
 
     def test_strips_markdown_bold(self):
         """**bold** → bold."""
-        from podcast_research.utils.display import clean_display_text
+        from signalvault.utils.display import clean_display_text
         assert clean_display_text("This is **bold** text") == "This is bold text"
 
     def test_strips_backticks(self):
         """`code` → code."""
-        from podcast_research.utils.display import clean_display_text
+        from signalvault.utils.display import clean_display_text
         assert clean_display_text("Use `get_session()` to connect") == "Use get_session() to connect"
 
     def test_strips_hashtag(self):
         """#tag → tag."""
-        from podcast_research.utils.display import clean_display_text
+        from signalvault.utils.display import clean_display_text
         result = clean_display_text("Check out #AI #Agents")
         assert "#AI" not in result
 
     def test_truncates_long_text(self):
         """Text over max_len gets truncated with ..."""
-        from podcast_research.utils.display import clean_display_text
+        from signalvault.utils.display import clean_display_text
         long_text = "A" * 300
         result = clean_display_text(long_text, max_len=100)
         assert len(result) <= 103  # max_len + "..."
@@ -2210,7 +2210,7 @@ class TestCleanDisplayText:
 
     def test_preserves_technical_terms(self):
         """Technical terms like API, GPU are preserved."""
-        from podcast_research.utils.display import clean_display_text
+        from signalvault.utils.display import clean_display_text
         result = clean_display_text("GPU demand surges for AI API inference")
         assert "GPU" in result
         assert "API" in result
@@ -2221,31 +2221,31 @@ class TestEntityHygiene:
 
     def test_agent_not_in_core_companies(self):
         """Agent should not appear as a core company."""
-        from podcast_research.workspace.scanner import _NOT_A_COMPANY
+        from signalvault.workspace.scanner import _NOT_A_COMPANY
         assert "agent" in _NOT_A_COMPANY
         assert "ai agent" in _NOT_A_COMPANY
 
     def test_anthropic_not_in_core_topics(self):
         """Anthropic should not appear as a core topic."""
-        from podcast_research.workspace.scanner import _NOT_A_TOPIC
+        from signalvault.workspace.scanner import _NOT_A_TOPIC
         assert "anthropic" in _NOT_A_TOPIC
         assert "openai" in _NOT_A_TOPIC
 
     def test_model_maps_to_ai_models(self):
         """'model' maps to 'AI Models' canonical."""
-        from podcast_research.llm_wiki.taxonomy import normalize_topic_name
+        from signalvault.llm_wiki.taxonomy import normalize_topic_name
         result = normalize_topic_name("model")
         assert result == "AI Models"
 
     def test_enterprise_maps_to_enterprise_ai(self):
         """'enterprise' → 'Enterprise AI'."""
-        from podcast_research.llm_wiki.taxonomy import normalize_topic_name
+        from signalvault.llm_wiki.taxonomy import normalize_topic_name
         result = normalize_topic_name("enterprise")
         assert result == "Enterprise AI"
 
     def test_market_maps_to_public_markets(self):
         """'market' → 'Public Markets'."""
-        from podcast_research.llm_wiki.taxonomy import normalize_topic_name
+        from signalvault.llm_wiki.taxonomy import normalize_topic_name
         result = normalize_topic_name("market")
         assert result == "Public Markets"
 
@@ -2255,12 +2255,12 @@ class TestExplanatoryResearchBrief:
 
     def test_summary_contains_context_not_just_counts(self, tmp_path):
         """Summary bullet should contain topic context, not just numbers."""
-        from podcast_research.workspace.research_brief import (
+        from signalvault.workspace.research_brief import (
             ResearchBrief,
             TopicInsight,
             _build_summary,
         )
-        from podcast_research.workspace.scanner import WorkspaceSnapshot
+        from signalvault.workspace.scanner import WorkspaceSnapshot
 
         snapshot = WorkspaceSnapshot(vault_path=tmp_path)
         brief = ResearchBrief(generated_at="2026-01-01")
@@ -2284,12 +2284,12 @@ class TestExplanatoryResearchBrief:
 
     def test_brief_uses_clean_display_text(self, tmp_path):
         """Brief summary bullets should not contain markdown artifacts."""
-        from podcast_research.workspace.research_brief import (
+        from signalvault.workspace.research_brief import (
             ResearchBrief,
             TopicInsight,
             _build_summary,
         )
-        from podcast_research.workspace.scanner import WorkspaceSnapshot
+        from signalvault.workspace.scanner import WorkspaceSnapshot
 
         snapshot = WorkspaceSnapshot(vault_path=tmp_path)
         brief = ResearchBrief(generated_at="2026-01-01")
@@ -2312,7 +2312,7 @@ class TestWatchlistBriefSections:
 
     def test_direct_items_labeled_as_new_evidence(self):
         """Direct items show '本轮新增' label."""
-        from podcast_research.workspace.watchlist import (
+        from signalvault.workspace.watchlist import (
             WatchlistItemBrief,
             render_watchlist_markdown,
         )
@@ -2327,7 +2327,7 @@ class TestWatchlistBriefSections:
 
     def test_observations_labeled(self):
         """Observations show '需要继续观察' label."""
-        from podcast_research.workspace.watchlist import (
+        from signalvault.workspace.watchlist import (
             WatchlistItemBrief,
             render_watchlist_markdown,
         )
@@ -2343,7 +2343,7 @@ class TestWatchlistBriefSections:
 
     def test_no_new_evidence_shows_notice(self):
         """no_new_evidence items show notice text."""
-        from podcast_research.workspace.watchlist import (
+        from signalvault.workspace.watchlist import (
             WatchlistItemBrief,
             render_watchlist_markdown,
         )

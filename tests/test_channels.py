@@ -5,34 +5,34 @@
 # --- ChannelVideoAdapter tests ---
 
 def test_parse_channel_id_handle():
-    from podcast_research.cli import _parse_channel_id
+    from signalvault.cli import _parse_channel_id
     assert _parse_channel_id("https://www.youtube.com/@allin") == "@allin"
 
 
 def test_parse_channel_id_handle_with_trailing_slash():
-    from podcast_research.cli import _parse_channel_id
+    from signalvault.cli import _parse_channel_id
     assert _parse_channel_id("https://www.youtube.com/@allin/") == "@allin"
 
 
 def test_parse_channel_id_handle_with_videos():
-    from podcast_research.cli import _parse_channel_id
+    from signalvault.cli import _parse_channel_id
     assert _parse_channel_id("https://www.youtube.com/@allin/videos") == "@allin"
 
 
 def test_parse_channel_id_channel():
-    from podcast_research.cli import _parse_channel_id
+    from signalvault.cli import _parse_channel_id
     assert _parse_channel_id("https://www.youtube.com/channel/UCESLZhusAkFfsNsApnjF_Cg") == "UCESLZhusAkFfsNsApnjF_Cg"
 
 
 def test_parse_channel_id_c():
-    from podcast_research.cli import _parse_channel_id
+    from signalvault.cli import _parse_channel_id
     result = _parse_channel_id("https://www.youtube.com/c/SomeChannel")
     assert "SomeChannel" in result
 
 
 def test_channel_video_adapter_mock(monkeypatch):
     """mock yt-dlp 输出，验证 adapter 返回正确结构。"""
-    from podcast_research.adapters.channel_video_adapter import ChannelVideoAdapter
+    from signalvault.adapters.channel_video_adapter import ChannelVideoAdapter
 
     class MockYDL:
         def __init__(self, opts=None):
@@ -65,7 +65,7 @@ def test_channel_video_adapter_mock(monkeypatch):
 # --- Repository tests ---
 
 def test_add_channel(db_session):
-    from podcast_research.db.channel_repository import add_channel, list_channels
+    from signalvault.db.channel_repository import add_channel, list_channels
 
     cid = add_channel(db_session, "@test", "https://www.youtube.com/@test", "Test")
     db_session.commit()
@@ -77,7 +77,7 @@ def test_add_channel(db_session):
 
 
 def test_add_channel_dedup(db_session):
-    from podcast_research.db.channel_repository import add_channel
+    from signalvault.db.channel_repository import add_channel
 
     cid1 = add_channel(db_session, "@test", "https://www.youtube.com/@test", "Test")
     db_session.commit()
@@ -87,7 +87,7 @@ def test_add_channel_dedup(db_session):
 
 
 def test_upsert_videos(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         add_channel,
         list_channel_videos,
         upsert_videos,
@@ -116,7 +116,7 @@ def test_upsert_videos(db_session):
 
 
 def test_mark_video_status(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         add_channel,
         get_video,
         mark_video_status,
@@ -138,7 +138,7 @@ def test_mark_video_status(db_session):
 
 
 def test_mark_video_status_not_found(db_session):
-    from podcast_research.db.channel_repository import mark_video_status
+    from signalvault.db.channel_repository import mark_video_status
     ok = mark_video_status(db_session, "nonexistent", "analyzed")
     assert not ok
 
@@ -148,7 +148,7 @@ def test_mark_video_status_not_found(db_session):
 def test_cli_channels_add(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["channels", "add", "https://www.youtube.com/@allin", "--name", "All-In Podcast"])
@@ -159,7 +159,7 @@ def test_cli_channels_add(db_session):
 def test_cli_channels_list(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     # add first
     runner = CliRunner()
@@ -173,7 +173,7 @@ def test_cli_channels_list(db_session):
 def test_cli_channels_list_empty(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["channels", "list"])
@@ -183,7 +183,7 @@ def test_cli_channels_list_empty(db_session):
 def test_cli_channels_refresh(monkeypatch, db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     # add channel first
     runner = CliRunner()
@@ -215,7 +215,7 @@ def test_cli_channels_refresh(monkeypatch, db_session):
 def test_cli_channels_videos(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "add", "https://www.youtube.com/@allin", "--name", "Test"])
@@ -227,7 +227,7 @@ def test_cli_channels_videos(db_session):
 def test_cli_channels_analyze_video_dry_run(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     # add channel
@@ -241,8 +241,8 @@ def test_cli_channels_analyze_video_dry_run(db_session):
 def test_cli_channels_analyze_video_already_analyzed(db_session, monkeypatch):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
-    from podcast_research.db.channel_repository import (
+    from signalvault.cli import app
+    from signalvault.db.channel_repository import (
         add_channel,
         mark_video_status,
         upsert_videos,
@@ -273,7 +273,7 @@ def test_channels_migration_adds_new_columns(db_session):
 
 
 def test_add_channel_with_tags(db_session):
-    from podcast_research.db.channel_repository import add_channel, get_channel
+    from signalvault.db.channel_repository import add_channel, get_channel
 
     cid = add_channel(db_session, "@test2", "https://example.com", "Test2",
                       tags=["ai", "tech"], priority="core",
@@ -292,7 +292,7 @@ def test_add_channel_with_tags(db_session):
 
 def test_add_channel_default_values(db_session):
     """未传新字段时使用默认值。"""
-    from podcast_research.db.channel_repository import add_channel, get_channel
+    from signalvault.db.channel_repository import add_channel, get_channel
 
     cid = add_channel(db_session, "@test_defaults", "https://example.com", "Test")
     db_session.commit()
@@ -307,7 +307,7 @@ def test_add_channel_default_values(db_session):
 
 
 def test_seed_tech_ai_adds_4_channels(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -322,7 +322,7 @@ def test_seed_tech_ai_adds_4_channels(db_session):
 
 
 def test_seed_tech_ai_idempotent(db_session):
-    from podcast_research.db.channel_repository import seed_default_channels
+    from signalvault.db.channel_repository import seed_default_channels
 
     # first
     r1 = seed_default_channels(db_session, channel_pack="tech_ai")
@@ -338,7 +338,7 @@ def test_seed_tech_ai_idempotent(db_session):
 
 def test_seed_heals_existing_default_channel(db_session):
     """旧 add_channel（空 tags + secondary priority）在 seed 时自动补齐配置。"""
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         add_channel,
         get_channel,
         seed_default_channels,
@@ -365,7 +365,7 @@ def test_seed_heals_existing_default_channel(db_session):
 
 
 def test_list_channels_filter_by_tag(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -381,7 +381,7 @@ def test_list_channels_filter_by_tag(db_session):
 
 
 def test_list_channels_filter_by_priority(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -394,7 +394,7 @@ def test_list_channels_filter_by_priority(db_session):
 
 
 def test_list_channels_filter_by_tag_and_priority(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -408,7 +408,7 @@ def test_list_channels_filter_by_tag_and_priority(db_session):
 
 
 def test_seed_channels_have_default_focus(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -422,7 +422,7 @@ def test_seed_channels_have_default_focus(db_session):
 
 
 def test_seed_channels_have_tags(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         list_channels,
         seed_default_channels,
     )
@@ -437,7 +437,7 @@ def test_seed_channels_have_tags(db_session):
 
 
 def test_update_channel_tags_add(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         get_channel,
         seed_default_channels,
         update_channel_tags,
@@ -458,7 +458,7 @@ def test_update_channel_tags_add(db_session):
 
 
 def test_update_channel_tags_remove(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         get_channel,
         seed_default_channels,
         update_channel_tags,
@@ -478,7 +478,7 @@ def test_update_channel_tags_remove(db_session):
 
 
 def test_update_channel_tags_set(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         get_channel,
         seed_default_channels,
         update_channel_tags,
@@ -497,14 +497,14 @@ def test_update_channel_tags_set(db_session):
 
 
 def test_update_channel_tags_nonexistent(db_session):
-    from podcast_research.db.channel_repository import update_channel_tags
+    from signalvault.db.channel_repository import update_channel_tags
 
     ok = update_channel_tags(db_session, 9999, add=["test"])
     assert not ok
 
 
 def test_get_channel_defaults(db_session):
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         get_channel_defaults,
         seed_default_channels,
     )
@@ -525,7 +525,7 @@ def test_get_channel_defaults(db_session):
 def test_cli_channels_seed_tech_ai(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -536,7 +536,7 @@ def test_cli_channels_seed_tech_ai(db_session):
 def test_cli_channels_list_tag(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -548,7 +548,7 @@ def test_cli_channels_list_tag(db_session):
 def test_cli_channels_list_priority(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -560,7 +560,7 @@ def test_cli_channels_list_priority(db_session):
 def test_cli_channels_tag_add(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -573,7 +573,7 @@ def test_cli_channels_tag_add(db_session):
 def test_cli_channels_tag_remove(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -585,7 +585,7 @@ def test_cli_channels_tag_remove(db_session):
 def test_cli_channels_tag_set(db_session):
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     runner.invoke(app, ["channels", "seed-tech-ai"])
@@ -599,7 +599,7 @@ def test_cli_channels_tag_set(db_session):
 
 def test_get_channel_video_by_video_id_returns_joined_metadata(db_session):
     """联表查询返回 channel + channel_video 完整元数据。"""
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         add_channel,
         get_channel_video_by_video_id,
         upsert_videos,
@@ -629,7 +629,7 @@ def test_get_channel_video_by_video_id_returns_joined_metadata(db_session):
 
 def test_get_channel_video_by_video_id_not_found(db_session):
     """未注册的 video_id 返回 None。"""
-    from podcast_research.db.channel_repository import get_channel_video_by_video_id
+    from signalvault.db.channel_repository import get_channel_video_by_video_id
 
     meta = get_channel_video_by_video_id(db_session, "nonexistent_id")
     assert meta is None
@@ -637,7 +637,7 @@ def test_get_channel_video_by_video_id_not_found(db_session):
 
 def test_source_info_override_fills_empty_fields():
     """source_info_override 的非空值覆盖 source_info 中的空字段。"""
-    from podcast_research.analysis.pipeline import _merge_source_info_override
+    from signalvault.analysis.pipeline import _merge_source_info_override
 
     source_info = {
         "source_type": "youtube",
@@ -668,7 +668,7 @@ def test_source_info_override_fills_empty_fields():
 
 def test_source_info_override_does_not_overwrite_existing():
     """override 不覆盖已有非空值。"""
-    from podcast_research.analysis.pipeline import _merge_source_info_override
+    from signalvault.analysis.pipeline import _merge_source_info_override
 
     source_info = {
         "source_type": "youtube",
@@ -690,8 +690,8 @@ def test_source_info_override_does_not_overwrite_existing():
 
 def test_report_markdown_shows_channel_metadata():
     """Markdown 报告数据来源部分展示频道名和视频标题。"""
-    from podcast_research.analysis.models import ExtractionResult
-    from podcast_research.llm.mock_provider import MockLLMProvider
+    from signalvault.analysis.models import ExtractionResult
+    from signalvault.llm.mock_provider import MockLLMProvider
 
     provider = MockLLMProvider()
     extraction = ExtractionResult(
@@ -730,8 +730,8 @@ def test_report_markdown_shows_channel_metadata():
 
 def test_report_markdown_no_channel_metadata_still_works():
     """没有频道元数据时报告正常渲染（不崩溃）。"""
-    from podcast_research.analysis.models import ExtractionResult
-    from podcast_research.llm.mock_provider import MockLLMProvider
+    from signalvault.analysis.models import ExtractionResult
+    from signalvault.llm.mock_provider import MockLLMProvider
 
     provider = MockLLMProvider()
     extraction = ExtractionResult(
@@ -760,7 +760,7 @@ def test_normal_youtube_url_path_unaffected(db_session, tmp_path, monkeypatch):
 
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
@@ -771,7 +771,7 @@ def test_normal_youtube_url_path_unaffected(db_session, tmp_path, monkeypatch):
         {"text": "宁德时代需求增长", "start": 3.0, "duration": 4.0},
     ]
 
-    with patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi") as mock_api_class:
+    with patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi") as mock_api_class:
         mock_transcript = MagicMock()
         mock_transcript.language_code = "zh-Hans"
         mock_transcript.is_generated = False

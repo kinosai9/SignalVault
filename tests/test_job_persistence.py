@@ -2,7 +2,7 @@
 
 import re
 
-from podcast_research.services.job_service import (
+from signalvault.services.job_service import (
     AnalysisJob,
     _compute_failure_kind,
     _compute_step_list,
@@ -24,11 +24,11 @@ def _strip_ansi(text: str) -> str:
 
 def test_create_job_persists_to_db(tmp_path, monkeypatch):
     """P2-O.2: Creating a job writes to the jobs table."""
-    from podcast_research.db.models import Job as JobORM
-    from podcast_research.db.session import get_session, init_db, reset_engine
+    from signalvault.db.models import Job as JobORM
+    from signalvault.db.session import get_session, init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -48,8 +48,8 @@ def test_create_job_persists_to_db(tmp_path, monkeypatch):
 
 def test_job_events_persisted_on_progress(db_session, monkeypatch):
     """P2-O.2: Progress update writes a job_event row to DB."""
-    from podcast_research.db.models import JobEvent as JobEventORM
-    from podcast_research.db.session import get_session
+    from signalvault.db.models import JobEvent as JobEventORM
+    from signalvault.db.session import get_session
 
     # Use temp DB path but reuse seeded_db session for simplicity
     # Create job and update stage several times
@@ -79,8 +79,8 @@ def test_job_events_persisted_on_progress(db_session, monkeypatch):
 
 def test_failure_writes_error_summary(db_session, monkeypatch):
     """P2-O.2: Failure records error_summary and failure_kind on Job row."""
-    from podcast_research.db.models import Job as JobORM
-    from podcast_research.db.session import get_session
+    from signalvault.db.models import Job as JobORM
+    from signalvault.db.session import get_session
 
     job = create_job("https://youtube.com/watch?v=fail1", ["AI"])
 
@@ -269,13 +269,13 @@ def test_channel_video_last_job_id_written_and_retained(
     db_session, monkeypatch, tmp_path
 ):
     """P2-O.2: ChannelVideo.last_job_id is written on job completion and retained after retry success."""
-    from podcast_research.db.channel_repository import (
+    from signalvault.db.channel_repository import (
         add_channel,
         get_video,
         upsert_videos,
     )
-    from podcast_research.db.models import ChannelVideo
-    from podcast_research.db.session import get_session
+    from signalvault.db.models import ChannelVideo
+    from signalvault.db.session import get_session
 
     # Set up a channel + video
     session = get_session()
@@ -367,10 +367,10 @@ def test_step_list_transcript_failed():
 
 def test_get_job_falls_back_to_db(tmp_path, monkeypatch):
     """P2-O.2: get_job reads from DB when job is not in memory."""
-    from podcast_research.db.session import init_db, reset_engine
+    from signalvault.db.session import init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -379,7 +379,7 @@ def test_get_job_falls_back_to_db(tmp_path, monkeypatch):
     update_job(job.job_id, status="success", stage="success", message="完成")
 
     # Remove from in-memory to simulate restart
-    from podcast_research.services import job_service
+    from signalvault.services import job_service
 
     with job_service._lock:
         job_service._JOBS.clear()
@@ -397,10 +397,10 @@ def test_get_job_falls_back_to_db(tmp_path, monkeypatch):
 
 def test_list_jobs_includes_db_jobs(tmp_path, monkeypatch):
     """P2-O.2: list_jobs merges in-memory and DB jobs."""
-    from podcast_research.db.session import init_db, reset_engine
+    from signalvault.db.session import init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -409,7 +409,7 @@ def test_list_jobs_includes_db_jobs(tmp_path, monkeypatch):
     update_job(job.job_id, status="success", stage="success", message="完成")
 
     # Clear in-memory
-    from podcast_research.services import job_service
+    from signalvault.services import job_service
 
     with job_service._lock:
         job_service._JOBS.clear()

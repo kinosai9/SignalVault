@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from podcast_research.sources.zsxq_models import (
+from signalvault.sources.zsxq_models import (
     ZsxqGroup,
     ZsxqSourceProfile,
     ZsxqTopic,
@@ -55,19 +55,19 @@ class TestZsxqModels:
 
 class TestGroupRegistry:
     def test_list_empty_registry(self):
-        from podcast_research.sources.zsxq_registry import list_registry
+        from signalvault.sources.zsxq_registry import list_registry
         groups = list_registry()
         assert isinstance(groups, list)
 
     @pytest.fixture(autouse=True)
     def _isolate_registry(self, tmp_path, monkeypatch):
         """Isolate registry file to temp dir."""
-        from podcast_research.sources import zsxq_registry
+        from signalvault.sources import zsxq_registry
         tmp_file = tmp_path / "zsxq_groups.json"
         monkeypatch.setattr(zsxq_registry, "REGISTRY_FILE", tmp_file)
 
     def test_refresh_adds_new_groups(self):
-        from podcast_research.sources.zsxq_registry import (
+        from signalvault.sources.zsxq_registry import (
             list_registry,
             refresh_registry,
         )
@@ -85,7 +85,7 @@ class TestGroupRegistry:
         assert all(g.access_status == "active" for g in groups)
 
     def test_refresh_unchanged(self):
-        from podcast_research.sources.zsxq_registry import refresh_registry
+        from signalvault.sources.zsxq_registry import refresh_registry
         cli_groups = [{"group_id": "111", "name": "投资研究", "topic_count": 100}]
         refresh_registry(cli_groups)
         changes = refresh_registry(cli_groups)
@@ -93,7 +93,7 @@ class TestGroupRegistry:
         assert changes["added"] == 0
 
     def test_refresh_deactivated(self):
-        from podcast_research.sources.zsxq_registry import (
+        from signalvault.sources.zsxq_registry import (
             list_registry,
             refresh_registry,
         )
@@ -106,7 +106,7 @@ class TestGroupRegistry:
         assert groups[0].access_status == "inaccessible"
 
     def test_refresh_reactivated(self):
-        from podcast_research.sources.zsxq_registry import (
+        from signalvault.sources.zsxq_registry import (
             list_registry,
             refresh_registry,
         )
@@ -119,7 +119,7 @@ class TestGroupRegistry:
         assert groups[0].topic_count == 200  # updated
 
     def test_historical_data_preserved(self):
-        from podcast_research.sources.zsxq_registry import (
+        from signalvault.sources.zsxq_registry import (
             list_registry,
             refresh_registry,
         )
@@ -137,7 +137,7 @@ class TestGroupRegistry:
 
 class TestSourceProfile:
     def test_build_profile_eligible(self):
-        from podcast_research.sources.zsxq_import import build_zsxq_source_profile
+        from signalvault.sources.zsxq_import import build_zsxq_source_profile
         topic = ZsxqTopic(
             group_id="111", group_name="Test", topic_id="t1",
             topic_title="Hello World" * 20,  # 220 chars
@@ -149,7 +149,7 @@ class TestSourceProfile:
         assert profile.source_type == "zsxq_topic"
 
     def test_build_profile_ineligible_short(self):
-        from podcast_research.sources.zsxq_import import build_zsxq_source_profile
+        from signalvault.sources.zsxq_import import build_zsxq_source_profile
         topic = ZsxqTopic(
             group_id="111", topic_id="t1",
             content_text="Hi", content_hash="abc", parse_quality="good",
@@ -158,7 +158,7 @@ class TestSourceProfile:
         assert profile.import_eligible is False
 
     def test_build_profile_ineligible_minimal_quality(self):
-        from podcast_research.sources.zsxq_import import build_zsxq_source_profile
+        from signalvault.sources.zsxq_import import build_zsxq_source_profile
         topic = ZsxqTopic(
             group_id="111", topic_id="t1",
             content_text="A" * 300, content_hash="abc",
@@ -187,13 +187,13 @@ MOCK_TOPIC_JSON = json.dumps({
 
 class TestIngestJobs:
     def test_zsxq_topic_job_key(self):
-        from podcast_research.sources.ingest_jobs import _make_job_key
+        from signalvault.sources.ingest_jobs import _make_job_key
         key = _make_job_key("zsxq_topic", source_hash="abc123")
         assert key.startswith("zsxq_topic:")
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_import_topic_creates_job(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_models import compute_content_hash
+        from signalvault.sources.zsxq_models import compute_content_hash
 
         text = "全球 AI 芯片需求持续增长。NVIDIA 数据中心 GPU 市场份额 82%。"
         mock_fetch.return_value = ZsxqTopic(
@@ -206,16 +206,16 @@ class TestIngestJobs:
             tags=["AI", "芯片"],
         )
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         result = import_topic_to_ingest("111", "t1", session=db_session)
         assert result["success"] is True
         assert result["profile"] is not None
         assert result["job"] is not None
         assert result["job"]["source_type"] == "zsxq_topic"
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_duplicate_topic_no_duplicate_job(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_models import compute_content_hash
+        from signalvault.sources.zsxq_models import compute_content_hash
 
         text = "Test content for dedup check. " * 10
         mock_fetch.return_value = ZsxqTopic(
@@ -225,7 +225,7 @@ class TestIngestJobs:
             char_count=len(text), parse_quality="good",
         )
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         r1 = import_topic_to_ingest("111", "t1", session=db_session)
         assert r1["success"] is True
 
@@ -240,41 +240,41 @@ class TestIngestJobs:
 
 
 class TestErrorHandling:
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_cli_missing_error(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_cli import ZsxqCliMissingError
+        from signalvault.sources.zsxq_cli import ZsxqCliMissingError
         mock_fetch.side_effect = ZsxqCliMissingError("zsxq-cli not found")
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         result = import_topic_to_ingest("111", "t1", session=db_session)
         assert result["success"] is False
         assert result["error_type"] == "zsxq_cli_missing"
         assert len(result["review_findings"]) > 0
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_auth_required_error(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_cli import ZsxqAuthRequiredError
+        from signalvault.sources.zsxq_cli import ZsxqAuthRequiredError
         mock_fetch.side_effect = ZsxqAuthRequiredError("Not logged in")
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         result = import_topic_to_ingest("111", "t1", session=db_session)
         assert result["error_type"] == "zsxq_auth_required"
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_permission_denied_error(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_cli import ZsxqPermissionDeniedError
+        from signalvault.sources.zsxq_cli import ZsxqPermissionDeniedError
         mock_fetch.side_effect = ZsxqPermissionDeniedError("Access denied")
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         result = import_topic_to_ingest("111", "t1", session=db_session)
         assert result["error_type"] == "zsxq_permission_denied"
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_parse_error(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_cli import ZsxqParseError
+        from signalvault.sources.zsxq_cli import ZsxqParseError
         mock_fetch.side_effect = ZsxqParseError("Invalid JSON")
 
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
         result = import_topic_to_ingest("111", "t1", session=db_session)
         assert result["error_type"] == "zsxq_parse_failed"
 
@@ -286,20 +286,20 @@ class TestErrorHandling:
 
 class TestReviewItems:
     def test_zsxq_item_types_in_valid(self):
-        from podcast_research.sources.review_items import VALID_ITEM_TYPES
+        from signalvault.sources.review_items import VALID_ITEM_TYPES
         assert "zsxq_cli_missing" in VALID_ITEM_TYPES
         assert "zsxq_auth_required" in VALID_ITEM_TYPES
         assert "zsxq_permission_denied" in VALID_ITEM_TYPES
         assert "zsxq_parse_failed" in VALID_ITEM_TYPES
         assert "zsxq_attachment_unsupported" in VALID_ITEM_TYPES
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_error_writes_review(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_cli import ZsxqCliMissingError
+        from signalvault.sources.zsxq_cli import ZsxqCliMissingError
         mock_fetch.side_effect = ZsxqCliMissingError("not found")
 
-        from podcast_research.sources.review_items import ReviewItemManager
-        from podcast_research.sources.zsxq_import import import_topic_to_ingest
+        from signalvault.sources.review_items import ReviewItemManager
+        from signalvault.sources.zsxq_import import import_topic_to_ingest
 
         result = import_topic_to_ingest("111", "t1", session=db_session)
         findings = result["review_findings"]
@@ -316,7 +316,7 @@ class TestReviewItems:
 
 class TestCliCheck:
     def test_check_cli_returns_structure(self):
-        from podcast_research.sources.zsxq_cli import check_cli
+        from signalvault.sources.zsxq_cli import check_cli
         result = check_cli()
         assert "available" in result
         assert "version" in result
@@ -325,7 +325,7 @@ class TestCliCheck:
 
     @patch("shutil.which", return_value=None)
     def test_check_cli_not_found(self, mock_which):
-        from podcast_research.sources.zsxq_cli import check_cli
+        from signalvault.sources.zsxq_cli import check_cli
         result = check_cli()
         assert result["available"] is False
         assert "not found" in result.get("error", "").lower()
@@ -340,7 +340,7 @@ class TestCliZsxq:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 

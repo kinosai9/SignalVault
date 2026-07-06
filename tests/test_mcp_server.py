@@ -15,10 +15,10 @@ import json
 
 import pytest
 
-from podcast_research.mcp_server.server import create_mcp_server
+from signalvault.mcp_server.server import create_mcp_server
 
 # ── Core query function imports (sync, testable without MCP dependency) ─────
-from podcast_research.mcp_server.tools import (
+from signalvault.mcp_server.tools import (
     _query_get_entity_profile,
     _query_get_report,
     _query_list_channels,
@@ -53,12 +53,12 @@ class TestMCPServerSmoke:
         """Server can be created with a seeded DB."""
         server = create_mcp_server()
         assert server is not None
-        # The server should have the podcast-research name
-        assert server.name == "podcast-research"
+        # The server should have the signalvault name
+        assert server.name == "signalvault"
 
     def test_all_tools_registered(self, seeded_db):
         """9 tools are registered on the server (8 original + unified_search)."""
-        from podcast_research.mcp_server import TOOLS
+        from signalvault.mcp_server import TOOLS
         assert len(TOOLS) == 12
         tool_names = {t.name for t in TOOLS}
         expected = {
@@ -79,7 +79,7 @@ class TestMCPServerSmoke:
 
     def test_no_write_tools_exposed(self, seeded_db):
         """Verify no tool names contain write/accept/skip/resolve/retry/run/modify."""
-        from podcast_research.mcp_server import TOOLS
+        from signalvault.mcp_server import TOOLS
         write_keywords = [
             "accept", "skip", "resolve", "retry", "run", "modify",
             "create", "delete", "update", "write", "insert", "drop",
@@ -94,7 +94,7 @@ class TestMCPServerSmoke:
 
     def test_tool_descriptions_are_non_empty(self, seeded_db):
         """All tools have meaningful descriptions."""
-        from podcast_research.mcp_server import TOOLS
+        from signalvault.mcp_server import TOOLS
         for tool in TOOLS:
             assert tool.description, f"Tool '{tool.name}' has empty description"
             assert len(tool.description) > 10, (
@@ -559,7 +559,7 @@ class TestMCPReadOnly:
 
     def test_tools_dont_modify_db(self, seeded_db):
         """Running queries doesn't change report counts."""
-        from podcast_research.db.models import Report
+        from signalvault.db.models import Report
         session = seeded_db
         count_before = session.query(Report).count()
 
@@ -578,7 +578,7 @@ class TestMCPReadOnly:
 
     def test_tool_names_are_read_only(self, seeded_db):
         """Tool names imply read-only operations."""
-        from podcast_research.mcp_server import TOOLS
+        from signalvault.mcp_server import TOOLS
         read_prefixes = ["search_", "get_", "list_", "unified_"]
         for tool in TOOLS:
             assert any(

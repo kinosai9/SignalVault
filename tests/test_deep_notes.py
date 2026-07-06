@@ -23,14 +23,14 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.adapters.external_html_notes import (
+from signalvault.adapters.external_html_notes import (
     NormalizedEpisodeSegment,
     NormalizedQuote,
     NormalizedSourceDocument,
     NormalizedSpeakerTurn,
     NormalizedSpeakerViewpoint,
 )
-from podcast_research.exporters.deep_notes import (
+from signalvault.exporters.deep_notes import (
     _build_deep_notes_frontmatter,
     _generate_filename,
     build_deep_notes_body,
@@ -205,7 +205,7 @@ class TestSourceLinks:
 
     def test_body_has_attribution_footer(self, sample_doc: NormalizedSourceDocument) -> None:
         body = build_deep_notes_body(sample_doc)
-        assert "podcast-research P2-S.2" in body
+        assert "signalvault P2-S.2" in body
         assert "外部衍生信息源" in body
 
 

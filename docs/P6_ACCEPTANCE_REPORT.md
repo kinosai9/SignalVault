@@ -50,32 +50,32 @@ ZSXQ Topic (zsxq-cli)
 
 ```bash
 # ── Doctor ──────────────────────────────────────────────────
-python -m podcast_research zsxq doctor
+python -m signalvault zsxq doctor
 # 检测 zsxq-cli 可用性、版本、登录状态
 
 # ── Group Registry ──────────────────────────────────────────
-python -m podcast_research zsxq groups
+python -m signalvault zsxq groups
 # 列出本地 group registry（含 access_status）
 
-python -m podcast_research zsxq groups --refresh
+python -m signalvault zsxq groups --refresh
 # 调用 zsxq-cli 刷新授权星球列表
 # 返回: +added / ↻reactivated / −deactivated / =unchanged
 
 # ── Import ──────────────────────────────────────────────────
-python -m podcast_research zsxq import-topic --group-id <id> --topic-id <id>
+python -m signalvault zsxq import-topic --group-id <id> --topic-id <id>
 # 导入单个主题为 ingest_job（不进入 LLM 分析）
 
-python -m podcast_research zsxq sync --group-id <id> --limit 20
+python -m signalvault zsxq sync --group-id <id> --limit 20
 # 批量导入星球最新主题
 
 # ── Analyze ─────────────────────────────────────────────────
-python -m podcast_research zsxq analyze --group-id <id> --topic-id <id>
+python -m signalvault zsxq analyze --group-id <id> --topic-id <id>
 # 导入 + eligibility + LLM 分析（默认 mock）
 
-python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --mock --focus "AI芯片"
+python -m signalvault zsxq analyze --group-id <id> --topic-id <id> --mock --focus "AI芯片"
 # Mock 模式 + 指定关注点
 
-python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --output ./reports
+python -m signalvault zsxq analyze --group-id <id> --topic-id <id> --output ./reports
 # 指定报告输出目录
 ```
 

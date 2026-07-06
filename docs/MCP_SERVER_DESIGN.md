@@ -5,7 +5,7 @@
 ## 一、目标
 
 用 Python `mcp` 包实现轻量只读 MCP Server，让 Claude Code / Codex 等 MCP 客户端
-可以直接查询 podcast_research 的知识库（报告、观点、信号、实体、频道、review items）。
+可以直接查询 signalvault 的知识库（报告、观点、信号、实体、频道、review items）。
 
 ## 二、技术选型
 
@@ -14,12 +14,12 @@
 | MCP SDK | `mcp>=1.0` (Python) | 官方 Python SDK，轻量 |
 | Transport | stdio | 兼容所有 MCP 客户端 |
 | 数据源 | SQLite | 复用现有 DB |
-| 启动方式 | `python -m podcast_research mcp-serve` | 与现有 CLI 一致 |
+| 启动方式 | `python -m signalvault mcp-serve` | 与现有 CLI 一致 |
 
 ## 三、代码结构
 
 ```
-src/podcast_research/mcp_server/
+src/signalvault/mcp_server/
     __init__.py       # 导出 create_mcp_server(), run_mcp_server(), TOOLS, handle_call_tool
     server.py         # Server 创建 + stdio runner
     tools.py          # 8 个 Tool 定义 + 查询函数 + handle_call_tool 分发器
@@ -148,14 +148,14 @@ server.py: create_mcp_server()
 ### 5.1 CLI 启动
 
 ```bash
-# 使用默认数据库路径（data/podcast_analyst.db）
-python -m podcast_research mcp-serve
+# 使用默认数据库路径（data/signalvault.db）
+python -m signalvault mcp-serve
 
 # 指定数据库路径（覆盖 .env 中的 DB_PATH）
-python -m podcast_research mcp-serve --db-path /path/to/podcast_analyst.db
+python -m signalvault mcp-serve --db-path /path/to/signalvault.db
 ```
 
-`--db-path` 参数可选。不传时使用 `config.py` 中的 `DB_PATH`（默认 `data/podcast_analyst.db`）。
+`--db-path` 参数可选。不传时使用 `config.py` 中的 `DB_PATH`（默认 `data/signalvault.db`）。
 
 启动后 MCP server 在 stdio 上等待 JSON-RPC 请求，不监听任何网络端口。stderr 输出启动日志，stdout 用于 MCP 协议通信。
 
@@ -166,9 +166,9 @@ python -m podcast_research mcp-serve --db-path /path/to/podcast_analyst.db
 ```json
 {
     "mcpServers": {
-        "podcast-research": {
+        "signalvault": {
             "command": "python",
-            "args": ["-m", "podcast_research", "mcp-serve"]
+            "args": ["-m", "signalvault", "mcp-serve"]
         }
     }
 }
@@ -189,11 +189,11 @@ Codex CLI 的 MCP 配置与 Claude Desktop 相同格式，在 Codex 配置文件
 ```json
 {
     "mcpServers": {
-        "podcast-research": {
+        "signalvault": {
             "command": "python",
-            "args": ["-m", "podcast_research", "mcp-serve"],
+            "args": ["-m", "signalvault", "mcp-serve"],
             "env": {
-                "DB_PATH": "/absolute/path/to/data/podcast_analyst.db"
+                "DB_PATH": "/absolute/path/to/data/signalvault.db"
             }
         }
     }
@@ -205,11 +205,11 @@ Codex CLI 的 MCP 配置与 Claude Desktop 相同格式，在 Codex 配置文件
 ```json
 {
     "mcpServers": {
-        "podcast-research": {
+        "signalvault": {
             "command": "python",
-            "args": ["-m", "podcast_research", "mcp-serve"],
+            "args": ["-m", "signalvault", "mcp-serve"],
             "env": {
-                "DB_PATH": "/absolute/path/to/data/podcast_analyst.db"
+                "DB_PATH": "/absolute/path/to/data/signalvault.db"
             }
         }
     }

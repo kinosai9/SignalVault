@@ -5,17 +5,17 @@
 # --- Generic target detection ---
 
 def test_is_generic_target_broad_market():
-    from podcast_research.evaluation import is_generic_target
+    from signalvault.evaluation import is_generic_target
     assert is_generic_target("Broad Market") is True
 
 
 def test_is_generic_target_economy():
-    from podcast_research.evaluation import is_generic_target
+    from signalvault.evaluation import is_generic_target
     assert is_generic_target("Economy") is True
 
 
 def test_is_generic_target_specific():
-    from podcast_research.evaluation import is_generic_target
+    from signalvault.evaluation import is_generic_target
     assert is_generic_target("NVIDIA") is False
     assert is_generic_target("宁德时代") is False
     assert is_generic_target("港股红利ETF") is False
@@ -23,7 +23,7 @@ def test_is_generic_target_specific():
 
 def test_generic_target_list_complete():
     """确认泛化标的清单覆盖所有 10 个预定义值。"""
-    from podcast_research.evaluation import GENERIC_TARGETS
+    from signalvault.evaluation import GENERIC_TARGETS
     expected = {
         "Broad Market", "Economy", "Investors", "Consumers", "Society",
         "AI Industry", "Technology Sector", "Market", "Companies", "Startups",
@@ -35,7 +35,7 @@ def test_generic_target_list_complete():
 
 def test_compute_basic_stats(seeded_db):
     """从 seeded reports 计算统计，验证关键字段非零。"""
-    from podcast_research.evaluation import eval_all_reports
+    from signalvault.evaluation import eval_all_reports
 
     results = eval_all_reports()
     assert len(results) == 3  # seeded_db has 3 reports
@@ -62,7 +62,7 @@ def test_compute_basic_stats(seeded_db):
 
 def test_evidence_distribution(seeded_db):
     """evidence_type_distribution 正确计数。"""
-    from podcast_research.evaluation import eval_all_reports
+    from signalvault.evaluation import eval_all_reports
 
     results = eval_all_reports()
     # At least one report should have evidence distribution
@@ -76,7 +76,7 @@ def test_evidence_distribution(seeded_db):
 
 def test_generic_target_count_zero_for_seeded(seeded_db):
     """seeded data 中的标的 (宁德时代, 港股红利ETF, NVIDIA) 都不是泛化标的。"""
-    from podcast_research.evaluation import eval_all_reports
+    from signalvault.evaluation import eval_all_reports
 
     results = eval_all_reports()
     total_generic = sum(r["generic_target_count"] for r in results)
@@ -87,7 +87,7 @@ def test_generic_target_detection_in_stats():
     """当 target_name 包含泛化对象时计数。"""
     from unittest.mock import MagicMock
 
-    from podcast_research.evaluation import compute_report_stats
+    from signalvault.evaluation import compute_report_stats
 
     # Create mock view records with generic targets
     view1 = MagicMock()
@@ -145,7 +145,7 @@ def test_cli_eval_reports(seeded_db):
     """eval reports 读取 seeded reports 并输出表格。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["eval", "reports"])
@@ -158,7 +158,7 @@ def test_cli_eval_reports_channel_filter(seeded_db):
     """eval reports --channel 过滤。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     # seeded_db has no channel_name set (pre-P2-A2.1), so filtering for anything
@@ -173,7 +173,7 @@ def test_cli_eval_export_csv(seeded_db, tmp_path):
     """eval export 生成 CSV 到 tmp_path。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     csv_path = tmp_path / "eval.csv"
     runner = CliRunner()
@@ -196,7 +196,7 @@ def test_cli_eval_summary_md(seeded_db, tmp_path):
     """eval summary 生成 Markdown 总结到 tmp_path。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     md_path = tmp_path / "summary.md"
     runner = CliRunner()
@@ -215,7 +215,7 @@ def test_cli_eval_export_empty_graceful(tmp_path):
     """eval export 在无报告时不崩溃。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     csv_path = tmp_path / "empty.csv"
     runner = CliRunner()
@@ -228,7 +228,7 @@ def test_cli_eval_export_empty_graceful(tmp_path):
 
 def test_summary_md_no_reports():
     """generate_summary_md 空列表时不崩溃。"""
-    from podcast_research.evaluation import generate_summary_md
+    from signalvault.evaluation import generate_summary_md
 
     md = generate_summary_md([])
     assert "No reports" in md

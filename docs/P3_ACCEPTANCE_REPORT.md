@@ -4,7 +4,7 @@
 
 ## 一、P3 目标回顾
 
-把 podcast_research 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。
+把 signalvault 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。
 
 P2 解决了"能处理什么"，P3 解决：
 - 运行时出问题怎么办（ingest_jobs 持久化）
@@ -63,27 +63,27 @@ P2 解决了"能处理什么"，P3 解决：
 
 ```
 # 摄入队列（4 条）
-python -m podcast_research ingest list [--type/--status/--limit]
-python -m podcast_research ingest show <job_id>
-python -m podcast_research ingest retry <job_id>
-python -m podcast_research ingest resume
+python -m signalvault ingest list [--type/--status/--limit]
+python -m signalvault ingest show <job_id>
+python -m signalvault ingest retry <job_id>
+python -m signalvault ingest resume
 
 # Vault 健康检查（1 条）
-python -m podcast_research vault-lint --vault <path> [--rules/--exclude/--json/--write-review]
+python -m signalvault vault-lint --vault <path> [--rules/--exclude/--json/--write-review]
 
 # 审核队列（5 条）
-python -m podcast_research review list [--type/--status/--limit]
-python -m podcast_research review show <item_id>
-python -m podcast_research review accept <item_id> [--note]
-python -m podcast_research review skip <item_id> [--note]
-python -m podcast_research review resolve <item_id> [--note]
+python -m signalvault review list [--type/--status/--limit]
+python -m signalvault review show <item_id>
+python -m signalvault review accept <item_id> [--note]
+python -m signalvault review skip <item_id> [--note]
+python -m signalvault review resolve <item_id> [--note]
 
 # MCP Server（1 条）
-python -m podcast_research mcp-serve [--db-path <path>]
+python -m signalvault mcp-serve [--db-path <path>]
 
 # 已有命令（2 条，P3 修改）
-python -m podcast_research serve          # 原有，无变更
-python -m podcast_research reports *      # 原有，无变更
+python -m signalvault serve          # 原有，无变更
+python -m signalvault reports *      # 原有，无变更
 ```
 
 ## 四、MCP Tools 清单（8 个，全部只读）
@@ -161,6 +161,6 @@ tests/test_mcp_server.py          — 71 tests (P3-D)
 
 **P3-A/B/C/D 全部验收通过。P3-S 收口完成。**
 
-P3 交付了四项可独立运行、可串联协作的子系统，将 podcast_research 从纯流水线升级为具备持久化恢复、质量审计、人工审核队列和 Agent 可查询能力的知识库后端。
+P3 交付了四项可独立运行、可串联协作的子系统，将 signalvault 从纯流水线升级为具备持久化恢复、质量审计、人工审核队列和 Agent 可查询能力的知识库后端。
 
 1563 tests 全绿，ruff clean，所有 CLI 命令可用，所有 MCP tool 可被 Claude Code/Codex 发现和调用。

@@ -283,14 +283,14 @@ PDF → extract_pdf() (P4-A)
 
 ```
 # PDF 预览（不写入）
-python -m podcast_research pdf preview <file.pdf>
-python -m podcast_research pdf preview <file.pdf> --json
+python -m signalvault pdf preview <file.pdf>
+python -m signalvault pdf preview <file.pdf> --json
 
 # PDF 导入（preview → confirm 两步，复用现有文件导入模式）
-python -m podcast_research pdf import <file.pdf>
-python -m podcast_research pdf import <file.pdf> --focus "新能源,AI投资" --depth deep
-python -m podcast_research pdf import <file.pdf> --no-mock  # 真实 LLM 分析
-python -m podcast_research pdf import <file.pdf> --ocr       # 强制 OCR
+python -m signalvault pdf import <file.pdf>
+python -m signalvault pdf import <file.pdf> --focus "新能源,AI投资" --depth deep
+python -m signalvault pdf import <file.pdf> --no-mock  # 真实 LLM 分析
+python -m signalvault pdf import <file.pdf> --ocr       # 强制 OCR
 ```
 
 CLI 命令组：`pdf`（新增 typer subgroup，与 `ingest`、`review`、`channels` 平级）

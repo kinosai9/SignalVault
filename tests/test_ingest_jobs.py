@@ -8,8 +8,8 @@ import json
 
 import pytest
 
-from podcast_research.db.models import IngestJob
-from podcast_research.db.session import get_session, init_db, reset_engine
+from signalvault.db.models import IngestJob
+from signalvault.db.session import get_session, init_db, reset_engine
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Fixtures
@@ -20,7 +20,7 @@ from podcast_research.db.session import get_session, init_db, reset_engine
 def _isolate_db(tmp_path, monkeypatch):
     """Isolate DB to temp file so tests don't touch real data."""
     db_path = tmp_path / "test_ingest.db"
-    import podcast_research.config as cfg
+    import signalvault.config as cfg
     monkeypatch.setattr(cfg, "DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
@@ -31,7 +31,7 @@ def _isolate_db(tmp_path, monkeypatch):
 @pytest.fixture
 def manager():
     """Return the IngestJobManager class (stateless, no init needed)."""
-    from podcast_research.sources.ingest_jobs import IngestJobManager
+    from signalvault.sources.ingest_jobs import IngestJobManager
     return IngestJobManager
 
 
@@ -579,7 +579,7 @@ class TestDualWriteConsistency:
 
     def test_preview_write_also_creates_job(self, manager):
         """When preview is created, both _preview_store and ingest_jobs have it."""
-        import podcast_research.web.routes as routes_mod
+        import signalvault.web.routes as routes_mod
 
         # Simulate preview creation
         preview_id = "dw_test_001"
@@ -598,7 +598,7 @@ class TestDualWriteConsistency:
 
     def test_confirm_clears_both(self, manager):
         """When confirmed, both memory store and ingest_jobs reflect the change."""
-        import podcast_research.web.routes as routes_mod
+        import signalvault.web.routes as routes_mod
 
         preview_id = "dw_test_002"
         routes_mod._preview_store[preview_id] = object()
@@ -621,8 +621,8 @@ class TestDualWriteConsistency:
 
     def test_dashboard_falls_back_to_ingest_jobs(self, tmp_path, manager):
         """When memory store is empty, dashboard uses ingest_jobs."""
-        import podcast_research.web.routes as routes_mod
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        import signalvault.web.routes as routes_mod
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         # Clear memory stores
         routes_mod._preview_store.clear()
@@ -650,7 +650,7 @@ class TestCLI:
         """ingest list on empty DB should not crash."""
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "list"])
         assert result.exit_code == 0
@@ -660,7 +660,7 @@ class TestCLI:
         manager.create_job(source_type="url_import", source_url="https://cli-test.com")
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "list"])
         assert result.exit_code == 0
@@ -670,7 +670,7 @@ class TestCLI:
         """ingest show on nonexistent job returns error."""
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "show", "99999"])
         assert result.exit_code != 0
@@ -685,7 +685,7 @@ class TestCLI:
         assert job is not None
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "show", str(job["id"])])
         assert result.exit_code == 0
@@ -702,7 +702,7 @@ class TestCLI:
         manager.mark_failed("retrycli", "CLI test failure")
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "retry", str(job["id"])])
         assert result.exit_code == 0
@@ -713,7 +713,7 @@ class TestCLI:
         manager.create_job(source_type="url_import", source_url="https://resume2.com")
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         runner = CliRunner()
         result = runner.invoke(app, ["ingest", "resume"])
         assert result.exit_code == 0
@@ -757,7 +757,7 @@ class TestEdgeCases:
     def test_create_job_invalid_source_type(self, manager):
         """Invalid source_type should raise ValueError."""
         with pytest.raises(ValueError, match="Unknown source_type"):
-            from podcast_research.sources.ingest_jobs import _make_job_key
+            from signalvault.sources.ingest_jobs import _make_job_key
             _make_job_key("invalid_type", source_url="https://x.com")
 
     def test_multiple_confirms_same_preview_id(self, manager):

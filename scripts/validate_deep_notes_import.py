@@ -15,10 +15,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from podcast_research.adapters.allin_zh_notes import SITE_BASE, AllInZHNotesAdapter
-from podcast_research.db.repository import find_report_by_video_id
-from podcast_research.db.session import get_session, init_db
-from podcast_research.exporters.deep_notes import (
+from signalvault.adapters.allin_zh_notes import SITE_BASE, AllInZHNotesAdapter
+from signalvault.db.repository import find_report_by_video_id
+from signalvault.db.session import get_session, init_db
+from signalvault.exporters.deep_notes import (
     check_document_health,
     export_deep_note,
 )

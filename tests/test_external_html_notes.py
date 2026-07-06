@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import pytest
 
-from podcast_research.adapters.allin_zh_notes import SITE_BASE, AllInZHNotesAdapter
-from podcast_research.adapters.external_html_notes import (
+from signalvault.adapters.allin_zh_notes import SITE_BASE, AllInZHNotesAdapter
+from signalvault.adapters.external_html_notes import (
     ExternalEpisodeEntry,
     NormalizedEpisodeSegment,
     NormalizedQuote,
@@ -414,8 +414,8 @@ class TestDedupe:
 
     def test_find_report_by_video_id(self, seeded_db) -> None:
         """Verify find_report_by_video_id works for dedup."""
-        from podcast_research.db.repository import find_report_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import find_report_by_video_id
+        from signalvault.db.session import get_session
 
         session = get_session()
         try:

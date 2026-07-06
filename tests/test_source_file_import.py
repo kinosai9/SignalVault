@@ -34,7 +34,7 @@ class TestProfileUploadedFile:
     """Tests for profile_uploaded_file()."""
 
     def test_txt_file_supported(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         path = _make_temp_file(".txt", "Hello world. " * 50)
         try:
@@ -46,7 +46,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_md_file_supported(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         path = _make_temp_file(".md", "# Title\n\nSome content. " * 30)
         try:
@@ -57,7 +57,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_html_file_supported(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         content = "<html><body><h1>Title</h1><p>Paragraph. " * 20 + "</p></body></html>"
         path = _make_temp_file(".html", content)
@@ -69,7 +69,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_pdf_file_rejected(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         path = _make_temp_file(".pdf", "%PDF-1.4 fake content")
         try:
@@ -81,7 +81,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_unknown_extension_rejected(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         path = _make_temp_file(".xyz", "some content here")
         try:
@@ -92,7 +92,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_oversized_file_rejected(self):
-        from podcast_research.sources.file_profile import (
+        from signalvault.sources.file_profile import (
             MAX_UPLOAD_BYTES,
             profile_uploaded_file,
         )
@@ -108,7 +108,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_content_hash_stable(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "This is stable content for hashing." * 10
         path = _make_temp_file(".txt", text)
@@ -122,7 +122,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_parse_quality_good_for_sufficient_text(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "A" * 1200 + "\n\nB" * 100 + "\n\nC" * 100 + "\n\nD" * 100
         path = _make_temp_file(".txt", text)
@@ -133,7 +133,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_parse_quality_degraded_for_short_text(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         # Between 50 and 200 chars → degraded
         text = "A" * 80 + "\n" + "B" * 60
@@ -145,7 +145,7 @@ class TestProfileUploadedFile:
             path.unlink(missing_ok=True)
 
     def test_parse_quality_minimal_for_very_short_text(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "hi"
         path = _make_temp_file(".txt", text)
@@ -165,7 +165,7 @@ class TestEncodingDetection:
     """Tests for encoding detection in file profiling."""
 
     def test_utf8_text_extraction(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "中文字符测试 Content extraction test. " * 30
         path = _make_temp_file(".txt", text, encoding="utf-8")
@@ -178,7 +178,7 @@ class TestEncodingDetection:
             path.unlink(missing_ok=True)
 
     def test_utf8sig_text_extraction(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "BOM test content. " * 40
         path = _make_temp_file(".txt", "﻿" + text, encoding="utf-8-sig")
@@ -191,7 +191,7 @@ class TestEncodingDetection:
             path.unlink(missing_ok=True)
 
     def test_gb18030_text_extraction(self):
-        from podcast_research.sources.file_profile import profile_uploaded_file
+        from signalvault.sources.file_profile import profile_uploaded_file
 
         text = "GB18030 编码的中文测试文本。" * 40
         # Write using gb18030 encoding (binary mode)
@@ -215,7 +215,7 @@ class TestContentExtraction:
     """Tests for extract_text_from_uploaded_file()."""
 
     def test_txt_content_extraction(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -232,7 +232,7 @@ class TestContentExtraction:
             path.unlink(missing_ok=True)
 
     def test_md_first_h1_as_title(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -247,7 +247,7 @@ class TestContentExtraction:
             path.unlink(missing_ok=True)
 
     def test_md_title_from_filename_fallback(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -261,7 +261,7 @@ class TestContentExtraction:
             path.unlink(missing_ok=True)
 
     def test_html_title_extraction(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -284,7 +284,7 @@ class TestContentExtraction:
             path.unlink(missing_ok=True)
 
     def test_html_script_style_removed(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -313,7 +313,7 @@ class TestContentExtraction:
             path.unlink(missing_ok=True)
 
     def test_html_header_nav_footer_removed(self):
-        from podcast_research.sources.file_content_extractor import (
+        from signalvault.sources.file_content_extractor import (
             extract_text_from_uploaded_file,
         )
 
@@ -349,11 +349,11 @@ class TestFileImportEligibility:
     """Tests for evaluate_file_import_eligibility()."""
 
     def test_short_content_not_eligible(self):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             evaluate_file_import_eligibility,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="short.txt",
@@ -375,11 +375,11 @@ class TestFileImportEligibility:
         assert eligibility.ineligible_reason is not None
 
     def test_normal_text_eligible(self):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             evaluate_file_import_eligibility,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="report.md",
@@ -402,11 +402,11 @@ class TestFileImportEligibility:
         assert eligibility.recommended_archive_type.value == "source_archive"  # FileArchiveType enum
 
     def test_unsupported_file_not_eligible(self):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             evaluate_file_import_eligibility,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="test.pdf",
@@ -420,11 +420,11 @@ class TestFileImportEligibility:
         assert eligibility.import_eligible is False
 
     def test_no_hash_not_eligible(self):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             evaluate_file_import_eligibility,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="test.txt",
@@ -439,11 +439,11 @@ class TestFileImportEligibility:
         assert eligibility.import_eligible is False
 
     def test_minimal_quality_not_eligible(self):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             evaluate_file_import_eligibility,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="test.txt",
@@ -467,7 +467,7 @@ class TestFileConflictDetection:
     """Tests for ConflictDetector.detect_for_file()."""
 
     def test_no_conflicts_in_empty_vault(self, tmp_path):
-        from podcast_research.sources.conflict_detector import ConflictDetector
+        from signalvault.sources.conflict_detector import ConflictDetector
 
         # tmp_path is an empty directory
         conflicts = ConflictDetector(tmp_path).detect_for_file(
@@ -478,7 +478,7 @@ class TestFileConflictDetection:
         assert conflicts == []
 
     def test_same_content_hash_detected(self, tmp_path):
-        from podcast_research.sources.conflict_detector import (
+        from signalvault.sources.conflict_detector import (
             ConflictDetector,
         )
 
@@ -501,7 +501,7 @@ class TestFileConflictDetection:
         assert any(c.severity == "blocker" for c in conflicts)
 
     def test_same_filename_detected(self, tmp_path):
-        from podcast_research.sources.conflict_detector import (
+        from signalvault.sources.conflict_detector import (
             ConflictDetector,
         )
 
@@ -519,7 +519,7 @@ class TestFileConflictDetection:
         assert any(c.conflict_type == "same_filename" for c in conflicts)
 
     def test_same_title_detected(self, tmp_path):
-        from podcast_research.sources.conflict_detector import (
+        from signalvault.sources.conflict_detector import (
             ConflictDetector,
         )
 
@@ -539,11 +539,11 @@ class TestFileConflictDetection:
         assert any(c.conflict_type == "same_title" for c in conflicts)
 
     def test_duplicate_content_recommends_skip(self, tmp_path):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             build_file_import_preview,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         # Create existing file with known hash
         archive_dir = tmp_path / "01_Reports" / "SourceArchive"
@@ -575,11 +575,11 @@ class TestFileConflictDetection:
         assert not any(a.value == "confirm_archive" for a in preview.available_actions)
 
     def test_non_duplicate_defaults_to_source_archive(self, tmp_path):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             build_file_import_preview,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="unique.md",
@@ -611,11 +611,11 @@ class TestFileImportPreview:
     """Tests for build_file_import_preview()."""
 
     def test_preview_no_vault_writes(self, tmp_path):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             build_file_import_preview,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="test.txt",
@@ -659,11 +659,11 @@ class TestFileImportPreview:
         assert len(preview.available_actions) >= 1
 
     def test_unsupported_preview_disables_confirm(self, tmp_path):
-        from podcast_research.sources.file_content_extractor import ExtractedFileContent
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_content_extractor import ExtractedFileContent
+        from signalvault.sources.file_import_preview import (
             build_file_import_preview,
         )
-        from podcast_research.sources.models import UploadedFileProfile
+        from signalvault.sources.models import UploadedFileProfile
 
         profile = UploadedFileProfile(
             original_filename="test.pdf",
@@ -689,10 +689,10 @@ class TestConfirmFileImport:
     """Tests for confirm_file_import()."""
 
     def test_confirm_writes_to_source_archive(self, tmp_path):
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_import_preview import (
             confirm_file_import,
         )
-        from podcast_research.sources.models import ActionEnum, FileImportPreview
+        from signalvault.sources.models import ActionEnum, FileImportPreview
 
         text = "Content to be archived. " * 50
         preview = FileImportPreview(
@@ -724,10 +724,10 @@ class TestConfirmFileImport:
         assert "confirm_test_hash" in written
 
     def test_confirm_frontmatter_has_required_fields(self, tmp_path):
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_import_preview import (
             confirm_file_import,
         )
-        from podcast_research.sources.models import FileImportPreview
+        from signalvault.sources.models import FileImportPreview
 
         preview = FileImportPreview(
             filename="analysis.md",
@@ -768,10 +768,10 @@ class TestConfirmFileImport:
             assert field in content, f"Missing frontmatter field: {field}"
 
     def test_filename_sanitized(self, tmp_path):
-        from podcast_research.sources.file_import_preview import (
+        from signalvault.sources.file_import_preview import (
             confirm_file_import,
         )
-        from podcast_research.sources.models import FileImportPreview
+        from signalvault.sources.models import FileImportPreview
 
         preview = FileImportPreview(
             filename="evil<script>.md",
@@ -976,7 +976,7 @@ class TestExistingSourceImportsUnaffected:
 
     def test_models_import_unchanged(self):
         """All existing model classes are still importable."""
-        from podcast_research.sources.models import (
+        from signalvault.sources.models import (
             ConflictInfo,
             ImportPreview,
         )
@@ -989,7 +989,7 @@ class TestExistingSourceImportsUnaffected:
 
     def test_exports_unchanged(self):
         """Existing exports in sources.__init__ are still accessible."""
-        from podcast_research.sources import (
+        from signalvault.sources import (
             TRACKABLE_ADAPTER_ALLOWLIST,
             ActionEnum,
             ConflictDetector,
@@ -1021,7 +1021,7 @@ class TestExistingSourceImportsUnaffected:
 
     def test_new_exports_available(self):
         """New P2-S.3.3 exports are accessible."""
-        from podcast_research.sources import (
+        from signalvault.sources import (
             ALLOWED_TEXT_EXTENSIONS,
             MAX_UPLOAD_BYTES,
             ConflictDetector,

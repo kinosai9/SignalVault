@@ -15,7 +15,7 @@ _import_results_store: dict[int, list[dict]] # 内存，刷新即清
 
 ### 痛點
 
-1. **重启丢失**：`python -m podcast_research serve` 重启后所有待确认预览消失
+1. **重启丢失**：`python -m signalvault serve` 重启后所有待确认预览消失
 2. **无状态追踪**：无法知道"这个 URL 三天前预览过，用户当时跳过了"
 3. **无去重**：同一 URL 多次预览生成多个 ImportPreview，浪费 LLM 调用
 4. **无统计**：无法统计摄入成功率、失败原因分布、平均确认时间
@@ -120,19 +120,19 @@ confirmed_*/skipped/expired 为终端状态，不可再转换
 
 ```bash
 # 列出所有待确认的摄入任务
-python -m podcast_research ingest list --status pending_preview
+python -m signalvault ingest list --status pending_preview
 
 # 按类型过滤
-python -m podcast_research ingest list --type url_import --limit 20
+python -m signalvault ingest list --type url_import --limit 20
 
 # 查看任务详情
-python -m podcast_research ingest show 1
+python -m signalvault ingest show 1
 
 # 重试失败的任务（重置为 pending_preview，最多 3 次）
-python -m podcast_research ingest retry 1
+python -m signalvault ingest retry 1
 
 # 服务重启后查看恢复摘要
-python -m podcast_research ingest resume
+python -m signalvault ingest resume
 ```
 
 ## 四、代码变更

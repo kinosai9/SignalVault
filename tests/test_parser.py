@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.analysis.models import SubtitleSegment
-from podcast_research.subtitles.parser import (
+from signalvault.analysis.models import SubtitleSegment
+from signalvault.subtitles.parser import (
     _normalize_vtt_time,
     _parse_vtt,
     detect_format,
@@ -56,7 +56,7 @@ def test_parse_srt_timestamps() -> None:
 # --- TXT parsing ---
 
 def test_parse_txt() -> None:
-    from podcast_research.subtitles.parser import _parse_txt
+    from signalvault.subtitles.parser import _parse_txt
     segments = _parse_txt("第一行\n第二行\n第三行")
     assert len(segments) == 3
     assert segments[0].text == "第一行"

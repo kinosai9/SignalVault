@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from podcast_research.sources.zsxq_models import (
+from signalvault.sources.zsxq_models import (
     ZsxqSourceProfile,
     ZsxqTopic,
     compute_content_hash,
@@ -85,7 +85,7 @@ def _make_profile(topic: ZsxqTopic | None = None, **overrides) -> ZsxqSourceProf
 
 class TestTopicToSegments:
     def test_normal_topic_produces_one_segment(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         topic = _make_topic(content="AI芯片投资分析报告。NVIDIA前景看好。")
         segments = _topic_to_segments(topic)
@@ -97,28 +97,28 @@ class TestTopicToSegments:
         assert segments[0].end_time == ""
 
     def test_empty_content_produces_no_segments(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         topic = _make_topic(content="")
         segments = _topic_to_segments(topic)
         assert len(segments) == 0
 
     def test_whitespace_only_content_produces_no_segments(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         topic = _make_topic(content="   \n  \t  ")
         segments = _topic_to_segments(topic)
         assert len(segments) == 0
 
     def test_segment_id_includes_topic_id(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         topic = _make_topic(topic_id="T123456", content="Some content here for testing.")
         segments = _topic_to_segments(topic)
         assert segments[0].segment_id == "zsxq_T123456"
 
     def test_long_content_is_not_split(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         long_text = "投资分析内容。" * 500
         topic = _make_topic(content=long_text)
@@ -135,7 +135,7 @@ class TestTopicToSegments:
 
 class TestEligibility:
     def test_eligible_topic_passes(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -145,7 +145,7 @@ class TestEligibility:
         assert reason == "ok"
 
     def test_empty_content_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -156,7 +156,7 @@ class TestEligibility:
         assert any(f["rule"] == "zsxq_content_too_short" for f in findings)
 
     def test_short_content_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -166,7 +166,7 @@ class TestEligibility:
         assert "文本过短" in reason
 
     def test_inactive_group_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -177,7 +177,7 @@ class TestEligibility:
         assert any(f["rule"] == "zsxq_analysis_skipped" for f in findings)
 
     def test_attachment_only_topic_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -190,7 +190,7 @@ class TestEligibility:
         assert "附件" in reason
 
     def test_minimal_quality_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -200,7 +200,7 @@ class TestEligibility:
         assert "解析质量" in reason
 
     def test_missing_topic_id_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -210,7 +210,7 @@ class TestEligibility:
         assert any(f["rule"] == "zsxq_evidence_missing" for f in findings)
 
     def test_missing_group_id_not_eligible(self):
-        from podcast_research.sources.zsxq_analysis import (
+        from signalvault.sources.zsxq_analysis import (
             _check_zsxq_analysis_eligibility,
         )
 
@@ -226,7 +226,7 @@ class TestEligibility:
 
 class TestBuildSourceInfo:
     def test_source_info_contains_all_zsxq_fields(self):
-        from podcast_research.sources.zsxq_analysis import build_zsxq_analysis_source
+        from signalvault.sources.zsxq_analysis import build_zsxq_analysis_source
 
         profile = _make_profile()
         source_info, episode_extra = build_zsxq_analysis_source(profile)
@@ -238,7 +238,7 @@ class TestBuildSourceInfo:
         assert source_info["zsxq_group_name"] == "投资研究社"
 
     def test_episode_extra_has_zsxq_source(self):
-        from podcast_research.sources.zsxq_analysis import build_zsxq_analysis_source
+        from signalvault.sources.zsxq_analysis import build_zsxq_analysis_source
 
         profile = _make_profile()
         _, episode_extra = build_zsxq_analysis_source(profile)
@@ -248,7 +248,7 @@ class TestBuildSourceInfo:
         assert episode_extra["language"] == "zh"
 
     def test_source_url_preserved(self):
-        from podcast_research.sources.zsxq_analysis import build_zsxq_analysis_source
+        from signalvault.sources.zsxq_analysis import build_zsxq_analysis_source
 
         profile = _make_profile()
         profile.source_url = "https://zsxq.com/t/custom789"
@@ -265,9 +265,9 @@ class TestBuildSourceInfo:
 class TestAnalyzeZsxqTopic:
     """Test analyze_zsxq_topic with mocked _run_pipeline."""
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_eligible_topic_runs_pipeline(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 42,
@@ -294,9 +294,9 @@ class TestAnalyzeZsxqTopic:
         assert call_kwargs["episode_extra"]["source"] == "zsxq_topic"
         assert len(call_kwargs["segments"]) == 1
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_ineligible_topic_skips_pipeline(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         profile = _make_profile(content_text="太短")
         result = analyze_zsxq_topic(profile, provider_name="mock")
@@ -305,10 +305,10 @@ class TestAnalyzeZsxqTopic:
         assert result["eligible"] is False
         mock_pipeline.assert_not_called()
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_report_metadata_contains_group_topic(self, mock_pipeline):
         """Verify source_info passed to pipeline includes ZSXQ metadata."""
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 1, "report_path": "", "extraction_path": "",
@@ -333,7 +333,7 @@ class TestAnalyzeZsxqTopic:
 
     def test_source_profile_in_result(self):
         """Verify result includes source_profile dict."""
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         profile = _make_profile(content_text="太短")
         result = analyze_zsxq_topic(profile, provider_name="mock")
@@ -344,9 +344,9 @@ class TestAnalyzeZsxqTopic:
         assert sp["topic_id"] == "T001"
         assert sp["source_type"] == "zsxq_topic"
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_focus_areas_default(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 1, "report_path": "", "extraction_path": "",
@@ -367,14 +367,14 @@ class TestAnalyzeZsxqTopic:
 
 class TestReviewItems:
     def test_new_item_types_in_valid(self):
-        from podcast_research.sources.review_items import VALID_ITEM_TYPES
+        from signalvault.sources.review_items import VALID_ITEM_TYPES
         assert "zsxq_analysis_skipped" in VALID_ITEM_TYPES
         assert "zsxq_content_too_short" in VALID_ITEM_TYPES
         assert "zsxq_evidence_missing" in VALID_ITEM_TYPES
 
     def test_review_items_written_for_ineligible(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.review_items import ReviewItemManager
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         profile = _make_profile(content_text="")  # empty → review item
         result = analyze_zsxq_topic(
@@ -390,8 +390,8 @@ class TestReviewItems:
         assert len(items) >= 1
 
     def test_review_items_not_written_when_flag_off(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.review_items import ReviewItemManager
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         profile = _make_profile(content_text="")  # empty
         result = analyze_zsxq_topic(profile, provider_name="mock", write_review=False)
@@ -410,9 +410,9 @@ class TestReviewItems:
 class TestEvidenceTraceability:
     """Verify ZSXQ evidence can be traced back to source."""
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_evidence_source_type_is_zsxq(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 10, "report_path": "", "extraction_path": "",
@@ -427,9 +427,9 @@ class TestEvidenceTraceability:
         assert source_info["source_type"] == "zsxq_topic"
         assert source_info["source_url"] == "https://zsxq.com/t/ev123"
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_topic_id_traceable_in_source_info(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 11, "report_path": "", "extraction_path": "",
@@ -443,9 +443,9 @@ class TestEvidenceTraceability:
         assert source_info["zsxq_group_id"] == "G_TRACE"
         assert source_info["zsxq_topic_id"] == "T_TRACE"
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_content_hash_passed_to_pipeline(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 12, "report_path": "", "extraction_path": "",
@@ -465,10 +465,10 @@ class TestEvidenceTraceability:
 
 
 class TestImportAndAnalyze:
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_full_flow_success(self, mock_fetch, mock_pipeline, db_session):
-        from podcast_research.sources.zsxq_analysis import import_and_analyze
+        from signalvault.sources.zsxq_analysis import import_and_analyze
 
         text = ("全球AI芯片需求持续增长。NVIDIA在数据中心GPU市场保持主导地位。" * 10)
         mock_fetch.return_value = _make_topic(
@@ -492,10 +492,10 @@ class TestImportAndAnalyze:
         assert result["analysis"]["view_count"] == 4
         assert result["profile"] is not None
 
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_import_failure_returns_error(self, mock_fetch, db_session):
-        from podcast_research.sources.zsxq_analysis import import_and_analyze
-        from podcast_research.sources.zsxq_cli import ZsxqCliMissingError
+        from signalvault.sources.zsxq_analysis import import_and_analyze
+        from signalvault.sources.zsxq_cli import ZsxqCliMissingError
 
         mock_fetch.side_effect = ZsxqCliMissingError("CLI not found")
 
@@ -514,7 +514,7 @@ class TestCliAnalyze:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 
@@ -531,8 +531,8 @@ class TestCliAnalyze:
         assert "--mock" in _plain
         assert "--focus" in _plain
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
-    @patch("podcast_research.sources.zsxq_import.fetch_topic")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
+    @patch("signalvault.sources.zsxq_import.fetch_topic")
     def test_analyze_with_mock_flag(self, mock_fetch, mock_pipeline, db_session):
         cli_mod = self._reload_cli()
         from typer.testing import CliRunner
@@ -567,7 +567,7 @@ class TestCliAnalyze:
 class TestUnifiedSearchZsxq:
     def test_infer_source_type_recognizes_zsxq(self):
         """Verify _infer_source_type returns zsxq_topic for ZSXQ episodes."""
-        from podcast_research.db.unified_search import _infer_source_type
+        from signalvault.db.unified_search import _infer_source_type
 
         ep = MagicMock()
         ep.video_id = None
@@ -578,7 +578,7 @@ class TestUnifiedSearchZsxq:
         assert result == "zsxq_topic"
 
     def test_infer_source_type_youtube_not_confused(self):
-        from podcast_research.db.unified_search import _infer_source_type
+        from signalvault.db.unified_search import _infer_source_type
 
         ep = MagicMock()
         ep.video_id = "abc123"
@@ -590,13 +590,13 @@ class TestUnifiedSearchZsxq:
 
     def test_zsxq_report_searchable_in_db(self, db_session):
         """Verify a ZSXQ-sourced report can be found via unified_search."""
-        from podcast_research.analysis.models import (
+        from signalvault.analysis.models import (
             Entity,
             ExtractionResult,
             InvestmentView,
             TrackingSignal,
         )
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             save_entities,
             save_episode,
             save_investment_views,
@@ -640,7 +640,7 @@ class TestUnifiedSearchZsxq:
         db_session.commit()
 
         # Search for it
-        from podcast_research.db.unified_search import unified_search
+        from signalvault.db.unified_search import unified_search
         results = unified_search(db_session, "NVIDIA")
 
         assert len(results) > 0
@@ -656,12 +656,12 @@ class TestUnifiedSearchZsxq:
 class TestKnowledgeGraphZsxq:
     def test_graph_rebuild_includes_zsxq_source_nodes(self, db_session):
         """Verify rebuild_knowledge_graph creates source nodes for ZSXQ episodes."""
-        from podcast_research.analysis.models import (
+        from signalvault.analysis.models import (
             Entity,
             ExtractionResult,
             InvestmentView,
         )
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             save_entities,
             save_episode,
             save_investment_views,
@@ -703,14 +703,14 @@ class TestKnowledgeGraphZsxq:
         db_session.commit()
 
         # Rebuild graph
-        from podcast_research.db.knowledge_graph import rebuild_knowledge_graph
+        from signalvault.db.knowledge_graph import rebuild_knowledge_graph
         result = rebuild_knowledge_graph(db_session)
 
         assert result["nodes"] > 0
         assert result["edges"] > 0
 
         # Verify ZSXQ source node exists
-        from podcast_research.db.models import KnowledgeNode
+        from signalvault.db.models import KnowledgeNode
         zsxq_sources = (
             db_session.query(KnowledgeNode)
             .filter(KnowledgeNode.metadata_json.like("%zsxq_topic%"))
@@ -726,7 +726,7 @@ class TestKnowledgeGraphZsxq:
 
 class TestRepositorySourceType:
     def test_infer_source_type_zsxq(self, db_session):
-        from podcast_research.db.repository import _infer_source_type
+        from signalvault.db.repository import _infer_source_type
 
         # Create a minimal Episode-like object
         ep = MagicMock()
@@ -745,7 +745,7 @@ class TestRepositorySourceType:
 
 class TestEdgeCases:
     def test_topic_with_special_characters_in_title(self):
-        from podcast_research.sources.zsxq_analysis import _topic_to_segments
+        from signalvault.sources.zsxq_analysis import _topic_to_segments
 
         topic = _make_topic(
             topic_title="【深度】AI芯片：$NVIDIA & TSMC 投资分析（2025Q4）",
@@ -756,7 +756,7 @@ class TestEdgeCases:
         assert "NVIDIA" in topic.topic_title  # title preserved in topic object
 
     def test_profile_with_all_metadata_fields(self):
-        from podcast_research.sources.zsxq_analysis import build_zsxq_analysis_source
+        from signalvault.sources.zsxq_analysis import build_zsxq_analysis_source
 
         profile = _make_profile(
             tags=["AI", "芯片", "半导体"],
@@ -769,9 +769,9 @@ class TestEdgeCases:
         assert source_info["zsxq_create_time"] == "2025-06-15T08:00:00"
         assert source_info["zsxq_topic_type"] == "q&a"
 
-    @patch("podcast_research.analysis.pipeline._run_pipeline")
+    @patch("signalvault.analysis.pipeline._run_pipeline")
     def test_deep_analysis_depth_passed_through(self, mock_pipeline):
-        from podcast_research.sources.zsxq_analysis import analyze_zsxq_topic
+        from signalvault.sources.zsxq_analysis import analyze_zsxq_topic
 
         mock_pipeline.return_value = {
             "report_id": 1, "report_path": "", "extraction_path": "",

@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from podcast_research.workspace import refresh_workspace
-from podcast_research.workspace.generators import (
+from signalvault.workspace import refresh_workspace
+from signalvault.workspace.generators import (
     generate_home_dashboard,
     generate_knowledge_map,
     generate_review_queue,
 )
-from podcast_research.workspace.managed_block import (
+from signalvault.workspace.managed_block import (
     _has_managed_block,
     _remove_managed_block,
     _upsert_managed_block,
 )
-from podcast_research.workspace.scanner import VaultScanner
+from signalvault.workspace.scanner import VaultScanner
 
 # ── Vault builder helpers ──────────────────────────────────────────
 
@@ -224,9 +224,9 @@ class TestManagedBlock:
         _upsert_managed_block(f, "test-block", "Hello world")
         assert f.exists()
         content = f.read_text(encoding="utf-8")
-        assert "<!-- PODCAST-RESEARCH:BEGIN test-block -->" in content
+        assert "<!-- signalvault:BEGIN test-block -->" in content
         assert "Hello world" in content
-        assert "<!-- PODCAST-RESEARCH:END test-block -->" in content
+        assert "<!-- signalvault:END test-block -->" in content
 
     def test_upserts_existing_block(self, tmp_path):
         f = tmp_path / "test.md"
@@ -236,7 +236,7 @@ class TestManagedBlock:
         assert "Version 2" in content
         assert "Version 1" not in content
         # Only one BEGIN marker
-        assert content.count("<!-- PODCAST-RESEARCH:BEGIN test-block -->") == 1
+        assert content.count("<!-- signalvault:BEGIN test-block -->") == 1
 
     def test_appends_to_file_without_block(self, tmp_path):
         f = tmp_path / "test.md"
@@ -257,7 +257,7 @@ class TestManagedBlock:
         assert "User paragraph" in content
         assert "Updated managed" in content
         # Only one marker pair
-        assert content.count("<!-- PODCAST-RESEARCH:BEGIN test-block -->") == 1
+        assert content.count("<!-- signalvault:BEGIN test-block -->") == 1
 
     def test_multiple_different_blocks(self, tmp_path):
         f = tmp_path / "test.md"
@@ -671,7 +671,7 @@ class TestRefreshWorkspace:
         home = vault / "Home.md"
         content = home.read_text(encoding="utf-8")
         # Only one managed block
-        assert content.count("<!-- PODCAST-RESEARCH:BEGIN home-dashboard -->") == 1
+        assert content.count("<!-- signalvault:BEGIN home-dashboard -->") == 1
 
     def test_does_not_overwrite_user_content(self, tmp_path):
         vault = _make_vault(tmp_path)
@@ -686,7 +686,7 @@ class TestRefreshWorkspace:
         content = home.read_text(encoding="utf-8")
         assert "My Custom Home" in content
         assert "Personal notes here" in content
-        assert "<!-- PODCAST-RESEARCH:BEGIN home-dashboard -->" in content
+        assert "<!-- signalvault:BEGIN home-dashboard -->" in content
 
     def test_home_only_flag(self, tmp_path):
         vault = _make_vault(tmp_path)
@@ -747,7 +747,7 @@ class TestWorkspaceCLI:
     def test_refresh_dry_run(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         vault = _make_vault(tmp_path)
         _add_report(vault, "r1")
@@ -767,7 +767,7 @@ class TestWorkspaceCLI:
     def test_refresh_requires_vault(self):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, [
@@ -779,7 +779,7 @@ class TestWorkspaceCLI:
     def test_refresh_mutually_exclusive_flags(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         vault = _make_vault(tmp_path)
         runner = CliRunner()
@@ -815,7 +815,7 @@ source_reports: []
 - [[Semiconductor]]
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -842,7 +842,7 @@ AI Agents are transforming enterprise AI adoption patterns.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -869,7 +869,7 @@ NVIDIA GPUs power OpenAI training infrastructure.
 ## Related Companies
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -897,7 +897,7 @@ AI Agents and Blockchain technology.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -926,7 +926,7 @@ AI Agents are important.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         new_t = updated[0]["new_topics"]
@@ -954,7 +954,7 @@ AI Agents.
 """
         p.write_text(original, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         backfill_relations(vault, dry_run=True, apply=False)
         assert p.read_text(encoding="utf-8") == original
 
@@ -978,7 +978,7 @@ AI Agents are important.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         backfill_relations(vault, dry_run=False, apply=True)
         content = p.read_text(encoding="utf-8")
         assert "AI Agents" in content
@@ -1003,7 +1003,7 @@ The semiconductor supply chain is changing.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         result = backfill_relations(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1029,7 +1029,7 @@ AI Agents.
 ## Related Topics
 """, encoding="utf-8")
 
-        from podcast_research.workspace.backfill import backfill_relations
+        from signalvault.workspace.backfill import backfill_relations
         backfill_relations(vault, dry_run=False, apply=True)
         log_path = vault / "99_System" / "Relation_Backfill_Log.md"
         assert log_path.exists()
@@ -1055,7 +1055,7 @@ Patched content.
 <!-- LLM-WIKI:END topic_AI_Agents_001 -->
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1078,7 +1078,7 @@ source_reports:
 No LLM-WIKI marker here.
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1097,7 +1097,7 @@ source_reports: []
 # Empty Topic
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1116,7 +1116,7 @@ source_reports: []
 # Claim: Test
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1135,7 +1135,7 @@ source_reports: []
 # Claim: Test
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1154,7 +1154,7 @@ source_reports: []
 # Signal: Test
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 1
@@ -1174,7 +1174,7 @@ source_reports: []
 # Claim: Test
 """, encoding="utf-8")
 
-        from podcast_research.workspace.curation import refresh_curation_status
+        from signalvault.workspace.curation import refresh_curation_status
         result = refresh_curation_status(vault, dry_run=True)
         updated = [r for r in result["results"] if r.get("updated")]
         assert len(updated) == 0  # already indexed
@@ -1194,7 +1194,7 @@ class TestScannerCuration:
         )
         p.write_text(content, encoding="utf-8")
 
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         assert snapshot.topics[0].curation_status == "enhanced"
@@ -1213,7 +1213,7 @@ source_reports: []
 # AI Agents
 """, encoding="utf-8")
 
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         summary = snapshot.curation_summary()
@@ -1226,8 +1226,8 @@ class TestHomeDashboardCuration:
     def test_includes_curation_column(self, tmp_path):
         vault = _make_vault(tmp_path)
         _add_topic(vault, "AI Agents", status="core")
-        from podcast_research.workspace.generators import generate_home_dashboard
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.generators import generate_home_dashboard
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         content = generate_home_dashboard(snapshot)
@@ -1242,8 +1242,8 @@ class TestReviewQueueTopN:
         for i in range(15):
             _add_claim(vault, f"claim_{i:03d}", status="challenged",
                         claim_text=f"Challenged claim about AI industry trend number {i} with enough detail")
-        from podcast_research.workspace.generators import generate_review_queue
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.generators import generate_review_queue
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         for c in snapshot.claims:
@@ -1259,8 +1259,8 @@ class TestReviewQueueTopN:
         for i in range(15):
             _add_signal(vault, f"signal_{i:03d}", status="open",
                          signal_text=f"Open signal about semiconductor supply chain risk number {i}")
-        from podcast_research.workspace.generators import generate_review_queue
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.generators import generate_review_queue
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         for s in snapshot.signals:
@@ -1277,8 +1277,8 @@ class TestReviewQueueTopN:
                     claim_text="Claim about AI agents transforming enterprise workflows with automation")
         _add_claim(vault, "claim_002", status="challenged",
                     claim_text="Claim about semiconductor supply chain constraints in global market")
-        from podcast_research.workspace.generators import generate_review_queue
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.generators import generate_review_queue
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         for c in snapshot.claims:
@@ -1294,7 +1294,7 @@ class TestBackfillCLI:
     def test_backfill_dry_run(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         vault = _make_vault(tmp_path)
         _add_topic(vault, "AI Agents", status="core")
@@ -1326,7 +1326,7 @@ AI Agents.
     def test_backfill_requires_flag(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         vault = _make_vault(tmp_path)
         runner = CliRunner()
@@ -1339,7 +1339,7 @@ AI Agents.
     def test_curation_status_dry_run(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         vault = _make_vault(tmp_path)
         p = vault / "02_Topics" / "AI Agents.md"
@@ -1380,14 +1380,14 @@ tags: []
 ## Summary
 """, encoding="utf-8")
 
-        from podcast_research.workspace.metadata import polish_report_metadata
+        from signalvault.workspace.metadata import polish_report_metadata
         result = polish_report_metadata(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("action") == "update_metadata"]
         assert len(updated) == 1
         assert updated[0]["suggested_title"] == "Human Readable Title"
 
     def test_title_from_db_when_available(self, tmp_path):
-        from podcast_research.workspace.metadata import _determine_title
+        from signalvault.workspace.metadata import _determine_title
         title = _determine_title("# d6EMk6dyrOU\n", "", "Acquired 10 Years", False)
         assert title == "Acquired 10 Years"
 
@@ -1406,13 +1406,13 @@ tags: []
 ## Summary
 """, encoding="utf-8")
 
-        from podcast_research.workspace.metadata import polish_report_metadata
+        from signalvault.workspace.metadata import polish_report_metadata
         result = polish_report_metadata(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r.get("action") == "update_metadata"]
         assert len(updated) == 0
 
     def test_overwrite_title_flag(self):
-        from podcast_research.workspace.metadata import _determine_title
+        from signalvault.workspace.metadata import _determine_title
         title = _determine_title(
             "---\ntitle: Old\n---\n# New Title\n",
             "Old", "DB Title", overwrite_title=True
@@ -1420,7 +1420,7 @@ tags: []
         assert title == "DB Title"
 
     def test_h1_is_video_id_detection(self):
-        from podcast_research.workspace.metadata import (
+        from signalvault.workspace.metadata import (
             _h1_is_video_id,
             _is_video_id_string,
         )
@@ -1431,7 +1431,7 @@ tags: []
         assert not _h1_is_video_id("# Human Title\n\n## Summary\n")
 
     def test_fix_h1_replaces_video_id(self):
-        from podcast_research.workspace.metadata import _fix_h1
+        from signalvault.workspace.metadata import _fix_h1
         content = "# d6EMk6dyrOU\n\n## Summary\n"
         fixed = _fix_h1(content, "Acquired 10 Years")
         assert "# Acquired 10 Years" in fixed
@@ -1451,12 +1451,12 @@ tags: []
 ## Summary
 """
         p.write_text(original, encoding="utf-8")
-        from podcast_research.workspace.metadata import polish_report_metadata
+        from signalvault.workspace.metadata import polish_report_metadata
         polish_report_metadata(vault, dry_run=True, apply=False)
         assert p.read_text(encoding="utf-8") == original
 
     def test_source_report_display_refresh(self):
-        from podcast_research.workspace.metadata import _refresh_source_report_display
+        from signalvault.workspace.metadata import _refresh_source_report_display
         title_map = {"2026-05-29_Latent Space_CSYWbbP_OkY": "Latent Space — Competing with ChatGPT"}
         content = "- [[2026-05-29_Latent Space_CSYWbbP_OkY]] — CSYWbbP_OkY\n"
         updated = _refresh_source_report_display(content, title_map)
@@ -1468,23 +1468,23 @@ tags: []
 
 class TestLongTailCleanup:
     def test_alias_resolution_cicd(self):
-        from podcast_research.workspace.longtail import _resolve_alias
+        from signalvault.workspace.longtail import _resolve_alias
         assert _resolve_alias("Cicd") == "CI/CD"
 
     def test_alias_resolution_egc(self):
-        from podcast_research.workspace.longtail import _resolve_alias
+        from signalvault.workspace.longtail import _resolve_alias
         assert _resolve_alias("Egc") == "Employee Generated Content"
 
     def test_alias_resolution_plg(self):
-        from podcast_research.workspace.longtail import _resolve_alias
+        from signalvault.workspace.longtail import _resolve_alias
         assert _resolve_alias("Plg") == "Product-Led Growth"
 
     def test_alias_resolution_mac_os(self):
-        from podcast_research.workspace.longtail import _resolve_alias
+        from signalvault.workspace.longtail import _resolve_alias
         assert _resolve_alias("Mac Os") == "macOS"
 
     def test_alias_resolution_mcp(self):
-        from podcast_research.workspace.longtail import _resolve_alias
+        from signalvault.workspace.longtail import _resolve_alias
         assert _resolve_alias("MCP") == "Model Context Protocol"
 
     def test_rename_topic(self, tmp_path):
@@ -1499,7 +1499,7 @@ source_reports:
 ---
 # Cicd
 """, encoding="utf-8")
-        from podcast_research.workspace.longtail import _rename_topic
+        from signalvault.workspace.longtail import _rename_topic
         _rename_topic(p, "CI/CD", vault / "02_Topics")
         new_path = vault / "02_Topics" / "CI-CD.md"
         assert new_path.exists()
@@ -1510,7 +1510,7 @@ source_reports:
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Mac Os", status="long_tail", source_reports=["r1"])
         _add_topic(vault, "macOS", status="long_tail", source_reports=["r2"])
-        from podcast_research.workspace.longtail import _merge_source_reports
+        from signalvault.workspace.longtail import _merge_source_reports
         from_path = vault / "02_Topics" / "Mac Os.md"
         to_path = vault / "02_Topics" / "macOS.md"
         _merge_source_reports(from_path, to_path)
@@ -1521,7 +1521,7 @@ source_reports:
     def test_dry_run_does_not_write(self, tmp_path):
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Cicd", status="long_tail", source_reports=["r1"])
-        from podcast_research.workspace.longtail import cleanup_long_tail_topics
+        from signalvault.workspace.longtail import cleanup_long_tail_topics
         result = cleanup_long_tail_topics(vault, dry_run=True, apply=False)
         updated = [r for r in result["results"] if r["action"] != "skip"]
         assert len(updated) == 1
@@ -1531,7 +1531,7 @@ source_reports:
     def test_apply_renames_file(self, tmp_path):
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Cicd", status="long_tail", source_reports=["r1"])
-        from podcast_research.workspace.longtail import cleanup_long_tail_topics
+        from signalvault.workspace.longtail import cleanup_long_tail_topics
         result = cleanup_long_tail_topics(vault, dry_run=False, apply=True)
         assert result["stats"]["renamed"] >= 1
         assert not (vault / "02_Topics" / "Cicd.md").exists()
@@ -1540,7 +1540,7 @@ source_reports:
     def test_quality_tagging(self, tmp_path):
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Useful Topic", status="long_tail", source_reports=["r1", "r2"])
-        from podcast_research.workspace.longtail import cleanup_long_tail_topics
+        from signalvault.workspace.longtail import cleanup_long_tail_topics
         cleanup_long_tail_topics(vault, dry_run=False, apply=True)
         content = (vault / "02_Topics" / "Useful Topic.md").read_text(encoding="utf-8")
         assert "topic_quality: useful" in content
@@ -1558,7 +1558,7 @@ source_reports: []
 ---
 # AI Agents
 """, encoding="utf-8")
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         assert snapshot.topics[0].topic_quality == "useful"
@@ -1570,7 +1570,7 @@ class TestMetadataCLI:
     def test_metadata_dry_run(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         vault = _make_vault(tmp_path)
         p = vault / "01_Reports" / "test.md"
         p.write_text("""---
@@ -1592,7 +1592,7 @@ tags: []
     def test_longtail_cleanup_dry_run(self, tmp_path):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
         vault = _make_vault(tmp_path)
         _add_topic(vault, "Cicd", status="long_tail", source_reports=["r1"])
         runner = CliRunner()
@@ -1680,7 +1680,7 @@ class TestSystemCuration:
     """Sub-task 2: system_curation for Topic and Company."""
 
     def test_topic_curation_raw(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             TOPIC_CURATION_RAW,
             compute_topic_system_curation,
         )
@@ -1692,7 +1692,7 @@ class TestSystemCuration:
         assert compute_topic_system_curation(topic, snapshot) == TOPIC_CURATION_RAW
 
     def test_topic_curation_emerging(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             TOPIC_CURATION_EMERGING,
             compute_topic_system_curation,
         )
@@ -1705,7 +1705,7 @@ class TestSystemCuration:
         assert compute_topic_system_curation(topic, snapshot) == TOPIC_CURATION_EMERGING
 
     def test_topic_curation_tracking(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             TOPIC_CURATION_TRACKING,
             compute_topic_system_curation,
         )
@@ -1719,7 +1719,7 @@ class TestSystemCuration:
         assert compute_topic_system_curation(topic, snapshot) == TOPIC_CURATION_TRACKING
 
     def test_topic_curation_established(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             TOPIC_CURATION_ESTABLISHED,
             compute_topic_system_curation,
         )
@@ -1737,7 +1737,7 @@ class TestSystemCuration:
         assert compute_topic_system_curation(topic, snapshot) == TOPIC_CURATION_ESTABLISHED
 
     def test_company_curation_mentioned(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             COMPANY_CURATION_MENTIONED,
             compute_company_system_curation,
         )
@@ -1749,7 +1749,7 @@ class TestSystemCuration:
         assert compute_company_system_curation(company, snapshot) == COMPANY_CURATION_MENTIONED
 
     def test_company_curation_covered(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             COMPANY_CURATION_COVERED,
             compute_company_system_curation,
         )
@@ -1761,7 +1761,7 @@ class TestSystemCuration:
         assert compute_company_system_curation(company, snapshot) == COMPANY_CURATION_COVERED
 
     def test_company_curation_tracking(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             COMPANY_CURATION_TRACKING,
             compute_company_system_curation,
         )
@@ -1775,7 +1775,7 @@ class TestSystemCuration:
         assert compute_company_system_curation(company, snapshot) == COMPANY_CURATION_TRACKING
 
     def test_watchlist_company_shows_high_attention(self, tmp_path):
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             COMPANY_CURATION_HIGH_ATTENTION,
             compute_company_system_curation,
         )
@@ -1795,7 +1795,7 @@ class TestSystemCuration:
 
     def test_curation_display_shows_label_not_unknown(self, tmp_path):
         """P2-N.4.3: Curation column should show labels, not 'unknown'."""
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             compute_topic_system_curation,
             curation_label,
         )
@@ -1919,7 +1919,7 @@ class TestReviewPriority:
     """Sub-task 4: Review Queue priority reconstruction."""
 
     def test_challenged_claim_is_high_priority(self, tmp_path):
-        from podcast_research.workspace.review_priority import (
+        from signalvault.workspace.review_priority import (
             PRIORITY_HIGH,
             compute_claim_review_priority,
         )
@@ -1932,7 +1932,7 @@ class TestReviewPriority:
         assert priority == PRIORITY_HIGH
 
     def test_auto_accepted_claim_not_in_needs_review(self, tmp_path):
-        from podcast_research.workspace.review_priority import (
+        from signalvault.workspace.review_priority import (
             claims_needing_review,
         )
         vault = _make_vault(tmp_path)
@@ -1956,7 +1956,7 @@ related_companies: []
         assert "claim_auto" not in {c.card_id for c in needs}
 
     def test_watching_signal_is_high_priority(self, tmp_path):
-        from podcast_research.workspace.review_priority import (
+        from signalvault.workspace.review_priority import (
             PRIORITY_HIGH,
             compute_signal_review_priority,
         )
@@ -2011,13 +2011,13 @@ related_companies: []
         scanner = VaultScanner(vault)
         snapshot = scanner.scan()
         # Recompute since refresh was dry_run
-        from podcast_research.workspace.system_curation import (
+        from signalvault.workspace.system_curation import (
             compute_topic_system_curation,
         )
         topic = [t for t in snapshot.topics if t.name == "AI Agents"][0]
         curation = compute_topic_system_curation(topic, snapshot)
         # Should be at least "emerging" (3 reports, 3 claims)
-        from podcast_research.workspace.system_curation import TOPIC_CURATION_EMERGING
+        from signalvault.workspace.system_curation import TOPIC_CURATION_EMERGING
         assert curation == TOPIC_CURATION_EMERGING
 
 
@@ -2087,7 +2087,7 @@ class TestNeedsReviewCompression:
 
     def test_dedup_strips_markdown(self, tmp_path):
         """Claims with markdown formatting differences should be deduped."""
-        from podcast_research.workspace.generators import (
+        from signalvault.workspace.generators import (
             _prefix_overlap,
             _token_overlap,
         )

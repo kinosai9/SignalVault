@@ -10,7 +10,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _setup_vault_for_profiling(monkeypatch, tmp_path):
     """Isolate vault path so profiling routes don't redirect to /setup/vault."""
-    import podcast_research.config_store as cs
+    import signalvault.config_store as cs
 
     vault = tmp_path / "test_vault_profile"
     vault.mkdir(parents=True)
@@ -36,7 +36,7 @@ def _mock_fetch_html(monkeypatch, html):
     def mock_fetch(self, url):
         return html
     monkeypatch.setattr(
-        "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+        "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
         mock_fetch,
     )
 
@@ -78,7 +78,7 @@ class TestSourceProfileModel:
     """Enums and dataclass defaults."""
 
     def test_source_kind_enum_values(self):
-        from podcast_research.sources.models import SourceKind
+        from signalvault.sources.models import SourceKind
         values = {k.value for k in SourceKind}
         assert "allin_notes_index" in values
         assert "rss_feed" in values
@@ -87,7 +87,7 @@ class TestSourceProfileModel:
         assert len(values) == 8
 
     def test_tracking_eligibility_enum_values(self):
-        from podcast_research.sources.models import TrackingEligibility
+        from signalvault.sources.models import TrackingEligibility
         values = {k.value for k in TrackingEligibility}
         assert "supported" in values
         assert "unsupported" in values
@@ -95,7 +95,7 @@ class TestSourceProfileModel:
         assert len(values) == 5
 
     def test_suggested_action_enum_values(self):
-        from podcast_research.sources.models import SuggestedAction
+        from signalvault.sources.models import SuggestedAction
         values = {k.value for k in SuggestedAction}
         assert "create_tracked_source" in values
         assert "use_single_url_import" in values
@@ -103,7 +103,7 @@ class TestSourceProfileModel:
         assert len(values) == 5
 
     def test_source_profile_defaults(self):
-        from podcast_research.sources.models import (
+        from signalvault.sources.models import (
             SourceKind,
             SourceProfile,
             SuggestedAction,
@@ -121,7 +121,7 @@ class TestSourceProfileModel:
         assert p.unsupported_reason is None
 
     def test_source_profile_allin_supported(self):
-        from podcast_research.sources.models import (
+        from signalvault.sources.models import (
             SourceKind,
             SourceProfile,
             SuggestedAction,
@@ -150,8 +150,8 @@ class TestProfileSourceURL:
     """Rule-based profiling returns correct SourceKind and eligibility."""
 
     def test_allin_homepage_supported(self):
-        from podcast_research.sources.models import SourceKind, SuggestedAction
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind, SuggestedAction
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://chirs-ma.github.io/allin-podcast-zh-notes/")
         assert p.source_kind == SourceKind.allin_notes_index
         assert p.tracking_supported is True
@@ -164,8 +164,8 @@ class TestProfileSourceURL:
 
     def test_allin_episode_page_also_matches(self):
         """Individual allin episode URLs should also match (before fetch)."""
-        from podcast_research.sources.models import SourceKind
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url(
             "https://chirs-ma.github.io/allin-podcast-zh-notes/episodes/ep1/notes.visual.html"
         )
@@ -174,24 +174,24 @@ class TestProfileSourceURL:
 
     def test_rss_feed_url_detected(self):
         """Direct RSS URL without fetch."""
-        from podcast_research.sources.models import SourceKind, SuggestedAction
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind, SuggestedAction
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/feed.xml")
         assert p.source_kind == SourceKind.rss_feed
         assert p.tracking_supported is False
         assert p.suggested_action == SuggestedAction.create_adapter_first
 
     def test_rss_in_path_detected(self):
-        from podcast_research.sources.models import SourceKind
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/rss")
         assert p.source_kind == SourceKind.rss_feed
 
     def test_html_rss_feed_link_detected(self, monkeypatch):
         """HTML with <link rel=alternate type=rss> should be detected as feed."""
         _mock_fetch_html(monkeypatch, MOCK_RSS_HTML)
-        from podcast_research.sources.models import SourceKind
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/blog/")
         assert p.source_kind == SourceKind.rss_feed
         assert p.detected_feed_url is not None
@@ -199,8 +199,8 @@ class TestProfileSourceURL:
     def test_single_article_unsupported(self, monkeypatch):
         """Article page should be identified as single_article, not trackable."""
         _mock_fetch_html(monkeypatch, MOCK_ARTICLE_HTML)
-        from podcast_research.sources.models import SourceKind, SuggestedAction
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind, SuggestedAction
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/post1")
         assert p.source_kind == SourceKind.single_article
         assert p.tracking_supported is False
@@ -209,8 +209,8 @@ class TestProfileSourceURL:
     def test_generic_list_page_needs_adapter(self, monkeypatch):
         """List page with multiple article cards → generic_list_page, needs_adapter."""
         _mock_fetch_html(monkeypatch, MOCK_LIST_PAGE_HTML)
-        from podcast_research.sources.models import SourceKind, SuggestedAction
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind, SuggestedAction
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/blog/")
         assert p.source_kind == SourceKind.generic_list_page
         assert p.tracking_supported is False
@@ -220,8 +220,8 @@ class TestProfileSourceURL:
     def test_unknown_page_low_confidence(self, monkeypatch):
         """Unknown page with minimal content → unknown, low_confidence."""
         _mock_fetch_html(monkeypatch, MOCK_UNKNOWN_HTML)
-        from podcast_research.sources.models import SourceKind, SuggestedAction
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind, SuggestedAction
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://example.com/")
         assert p.source_kind == SourceKind.unknown
         assert p.tracking_supported is False
@@ -232,18 +232,18 @@ class TestProfileSourceURL:
         def mock_fail(self, url):
             raise RuntimeError("Connection timeout")
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fail,
         )
-        from podcast_research.sources.models import SourceKind
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.models import SourceKind
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("https://nonexistent.example.com/")
         assert p.source_kind == SourceKind.unknown
         assert p.confidence == 0.0
         assert p.tracking_supported is False
 
     def test_empty_url_unknown(self):
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.source_profiler import profile_source_url
         p = profile_source_url("")
         assert p.tracking_supported is False
 
@@ -351,11 +351,11 @@ class TestLLMStub:
     """Stub does nothing and cannot override safety constraints."""
 
     def test_stub_idempotent(self):
-        from podcast_research.sources.llm_source_profiler import (
+        from signalvault.sources.llm_source_profiler import (
             LLMSourceProfiler,
             enhance_source_profile_with_llm,
         )
-        from podcast_research.sources.models import SourceProfile
+        from signalvault.sources.models import SourceProfile
         p = SourceProfile(url="https://example.com")
         p2 = enhance_source_profile_with_llm(p, "<html></html>")
         assert p2 is p  # same object returned
@@ -365,10 +365,10 @@ class TestLLMStub:
         assert p3 is p
 
     def test_stub_does_not_promote_unsupported(self):
-        from podcast_research.sources.llm_source_profiler import (
+        from signalvault.sources.llm_source_profiler import (
             enhance_source_profile_with_llm,
         )
-        from podcast_research.sources.models import SourceProfile
+        from signalvault.sources.models import SourceProfile
         p = SourceProfile(
             url="https://example.com",
             tracking_supported=False,
@@ -393,7 +393,7 @@ class TestProfilingDoesNotWrite:
 
         _mock_fetch_html(monkeypatch, MOCK_ARTICLE_HTML)
 
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.sources.source_profiler import profile_source_url
         _ = profile_source_url("https://example.com/post1")
 
         # Vault should be unchanged
@@ -408,9 +408,9 @@ class TestProfilingDoesNotWrite:
 
         from sqlalchemy import func
 
-        from podcast_research.db.models import TrackedSource
-        from podcast_research.db.session import get_session, init_db
-        from podcast_research.sources.source_profiler import profile_source_url
+        from signalvault.db.models import TrackedSource
+        from signalvault.db.session import get_session, init_db
+        from signalvault.sources.source_profiler import profile_source_url
 
         _ = profile_source_url("https://example.com/post1")
 
@@ -432,9 +432,9 @@ class TestAllowlist:
     """Adapter allowlist constraints."""
 
     def test_allowlist_contains_allin(self):
-        from podcast_research.sources.source_profiler import TRACKABLE_ADAPTER_ALLOWLIST
+        from signalvault.sources.source_profiler import TRACKABLE_ADAPTER_ALLOWLIST
         assert "allin_zh_notes" in TRACKABLE_ADAPTER_ALLOWLIST
 
     def test_allowlist_is_set(self):
-        from podcast_research.sources.source_profiler import TRACKABLE_ADAPTER_ALLOWLIST
+        from signalvault.sources.source_profiler import TRACKABLE_ADAPTER_ALLOWLIST
         assert isinstance(TRACKABLE_ADAPTER_ALLOWLIST, set)

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from podcast_research.adapters.base import TranscriptResult
-from podcast_research.adapters.youtube_transcript import YouTubeTranscriptAdapter
+from signalvault.adapters.base import TranscriptResult
+from signalvault.adapters.youtube_transcript import YouTubeTranscriptAdapter
 
 # 模拟 youtube-transcript-api 返回的 transcript 数据
 MOCK_TRANSCRIPT_DATA = [
@@ -38,7 +38,7 @@ def _make_mock_transcript_list(mock_transcript: MagicMock) -> MagicMock:
 class TestYouTubeTranscriptAdapterFetch:
     """测试 fetch 方法，mock youtube-transcript-api。"""
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_with_url(self, mock_api_class: MagicMock) -> None:
         mock_transcript = _make_mock_transcript_fetch()
         mock_list = _make_mock_transcript_list(mock_transcript)
@@ -56,7 +56,7 @@ class TestYouTubeTranscriptAdapterFetch:
         assert result.segments[0].start_time.startswith("00:00:00")
         assert result.metadata["is_generated"] is False
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_with_video_id(self, mock_api_class: MagicMock) -> None:
         mock_transcript = _make_mock_transcript_fetch()
         mock_list = _make_mock_transcript_list(mock_transcript)
@@ -74,7 +74,7 @@ class TestYouTubeTranscriptAdapterFetch:
         with pytest.raises(ValueError, match="必须提供"):
             adapter.fetch()
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_transcripts_disabled(self, mock_api_class: MagicMock) -> None:
         from youtube_transcript_api import TranscriptsDisabled
         mock_api_instance = mock_api_class.return_value
@@ -84,7 +84,7 @@ class TestYouTubeTranscriptAdapterFetch:
         with pytest.raises(ValueError, match="字幕功能被禁用"):
             adapter.fetch(video_id="vid123")
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_no_transcript_found(self, mock_api_class: MagicMock) -> None:
         from youtube_transcript_api import NoTranscriptFound
         mock_list = MagicMock()
@@ -97,7 +97,7 @@ class TestYouTubeTranscriptAdapterFetch:
         with pytest.raises(ValueError, match="没有可用字幕"):
             adapter.fetch(video_id="vid123")
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_language_fallback(self, mock_api_class: MagicMock) -> None:
         """测试语言 fallback：zh-Hans 不存在时 fallback 到 en。"""
         from youtube_transcript_api import NoTranscriptFound
@@ -148,7 +148,7 @@ class TestYouTubeTranscriptAdapterCache:
         adapter = YouTubeTranscriptAdapter(cache_dir=tmp_path)
 
         # 手动构造一个结果来保存
-        from podcast_research.analysis.models import SubtitleSegment
+        from signalvault.analysis.models import SubtitleSegment
         result = TranscriptResult(
             source_type="youtube",
             source_url="https://www.youtube.com/watch?v=vid123",
@@ -167,10 +167,10 @@ class TestYouTubeTranscriptAdapterCache:
         assert len(loaded.segments) == 1
         assert loaded.segments[0].text == "测试文本"
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_uses_cache(self, mock_api_class: MagicMock, tmp_path: Path) -> None:
         """第二次 fetch 应使用缓存，不调用 API。"""
-        from podcast_research.analysis.models import SubtitleSegment
+        from signalvault.analysis.models import SubtitleSegment
 
         # 先保存缓存
         adapter = YouTubeTranscriptAdapter(cache_dir=tmp_path)
@@ -191,10 +191,10 @@ class TestYouTubeTranscriptAdapterCache:
         assert result.segments[0].text == "缓存文本"
         mock_api_class.list.assert_not_called()
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_refresh_bypasses_cache(self, mock_api_class: MagicMock, tmp_path: Path) -> None:
         """refresh=True 应忽略缓存并调用 API。"""
-        from podcast_research.analysis.models import SubtitleSegment
+        from signalvault.analysis.models import SubtitleSegment
 
         adapter = YouTubeTranscriptAdapter(cache_dir=tmp_path)
         cached_result = TranscriptResult(
@@ -224,19 +224,19 @@ class TestFormatTime:
     """测试时间格式化。"""
 
     def test_zero(self) -> None:
-        from podcast_research.adapters.youtube_transcript import _format_time
+        from signalvault.adapters.youtube_transcript import _format_time
         assert _format_time(0) == "00:00:00.000"
 
     def test_with_seconds(self) -> None:
-        from podcast_research.adapters.youtube_transcript import _format_time
+        from signalvault.adapters.youtube_transcript import _format_time
         assert _format_time(3.5) == "00:00:03.500"
 
     def test_with_minutes(self) -> None:
-        from podcast_research.adapters.youtube_transcript import _format_time
+        from signalvault.adapters.youtube_transcript import _format_time
         assert _format_time(125.123) == "00:02:05.123"
 
     def test_with_hours(self) -> None:
-        from podcast_research.adapters.youtube_transcript import _format_time
+        from signalvault.adapters.youtube_transcript import _format_time
         assert _format_time(3661.5) == "01:01:01.500"
 
 
@@ -265,7 +265,7 @@ class TestTranscriptResultMetadata:
         assert result.fetched_at == "2026-05-27T10:00:00"
 
     def test_transcript_segment_count(self) -> None:
-        from podcast_research.analysis.models import SubtitleSegment
+        from signalvault.analysis.models import SubtitleSegment
         result = TranscriptResult(
             source_type="youtube",
             segments=[
@@ -285,7 +285,7 @@ class TestTranscriptResultMetadata:
         assert result.is_generated is False
         assert result.fetched_at == ""
 
-    @patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+    @patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
     def test_fetch_populates_metadata(self, mock_api_class: MagicMock) -> None:
         """fetch 应填充 is_generated / fetched_at / channel_name。"""
         mock_transcript = _make_mock_transcript_fetch()
@@ -303,7 +303,7 @@ class TestTranscriptResultMetadata:
 
     def test_cache_roundtrip_with_new_fields(self, tmp_path: Path) -> None:
         """缓存读写应保留新元数据字段。"""
-        from podcast_research.analysis.models import SubtitleSegment
+        from signalvault.analysis.models import SubtitleSegment
         adapter = YouTubeTranscriptAdapter(cache_dir=tmp_path)
         result = TranscriptResult(
             source_type="youtube",

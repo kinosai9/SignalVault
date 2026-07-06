@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.diagnostics.bundle import (
+from signalvault.diagnostics.bundle import (
     DiagnosticBundleBuilder,
     DiagnosticBundleConfig,
     DiagnosticBundleResult,
@@ -210,7 +210,7 @@ class TestBundleRedaction:
         assert "[REDACTED]" in config_str or "true" in config_str or "false" in config_str
 
     def test_operation_logs_have_no_raw_tokens(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
         op = OperationLogManager.start(
             operation_type="graph.rebuild",
             metadata={"api_key": "sk-secret", "group_name": "投资研究"},
@@ -224,7 +224,7 @@ class TestBundleRedaction:
         assert "sk-secret" not in logs_str
 
     def test_review_items_have_no_full_content(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
         ReviewItemManager.create_item(
             item_type="pdf_needs_ocr",
             title="Test",
@@ -270,7 +270,7 @@ class TestBundleCLI:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 
@@ -334,7 +334,7 @@ class TestBundleCLI:
         cli_mod = self._reload_cli()
         from typer.testing import CliRunner
 
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         output_dir = tmp_path / "bundle_opl"
         runner = CliRunner()

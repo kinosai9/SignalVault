@@ -28,7 +28,7 @@ Thumbs.db
 
 # Runtime data (keep directory structure via .gitkeep, exclude all generated content)
 backup/
-data/podcast_analyst.db
+data/signalvault.db
 data/user_settings.json
 data/reports/*
 !data/reports/.gitkeep

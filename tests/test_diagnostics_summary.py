@@ -12,7 +12,7 @@ import json as _json
 class TestDiagnosticsSummaryHealthy:
     def test_empty_db_returns_ok(self, db_session):
         """On a fresh empty DB, overall status should be OK (not crash)."""
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
@@ -22,7 +22,7 @@ class TestDiagnosticsSummaryHealthy:
         assert summary.blocked_count == 0
 
     def test_all_subsystems_present(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
@@ -32,7 +32,7 @@ class TestDiagnosticsSummaryHealthy:
         assert names == expected, f"Missing: {expected - names}, Extra: {names - expected}"
 
     def test_each_subsystem_has_required_fields(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
@@ -45,7 +45,7 @@ class TestDiagnosticsSummaryHealthy:
             assert isinstance(ss.suggested_actions, list), f"{ss.name}: actions not list"
 
     def test_empty_db_summary_to_dict(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         d = summary.to_dict()
@@ -59,7 +59,7 @@ class TestDiagnosticsSummaryHealthy:
         _json.dumps(d, ensure_ascii=False, default=str)
 
     def test_overall_status_is_valid(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         assert summary.overall_status in ("ok", "attention", "blocked")
@@ -73,7 +73,7 @@ class TestDiagnosticsSummaryHealthy:
 class TestIngestAttention:
     def test_failed_ingest_jobs_trigger_attention(self, db_session):
         """Create failed ingest jobs and verify ingest status becomes attention."""
-        from podcast_research.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.ingest_jobs import IngestJobManager
 
         # Create a failed job
         job = IngestJobManager.create_job(
@@ -89,7 +89,7 @@ class TestIngestAttention:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         ingest = _find_subsystem(summary, "ingest")
@@ -97,7 +97,7 @@ class TestIngestAttention:
         assert ingest.counts.get("failed", 0) >= 1
 
     def test_many_pending_jobs_trigger_attention(self, db_session):
-        from podcast_research.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.ingest_jobs import IngestJobManager
 
         for i in range(12):
             IngestJobManager.create_job(
@@ -107,7 +107,7 @@ class TestIngestAttention:
                 session=db_session,
             )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         ingest = _find_subsystem(summary, "ingest")
@@ -122,7 +122,7 @@ class TestIngestAttention:
 
 class TestReviewAttention:
     def test_open_review_items_trigger_attention(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="pdf_extraction_failed",
@@ -133,7 +133,7 @@ class TestReviewAttention:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         review = _find_subsystem(summary, "review")
@@ -142,7 +142,7 @@ class TestReviewAttention:
         assert review.counts.get("error", 0) >= 1
 
     def test_overall_attention_when_reviews_open(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="zsxq_cli_missing",
@@ -151,7 +151,7 @@ class TestReviewAttention:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         assert summary.overall_status == "attention"
@@ -165,7 +165,7 @@ class TestReviewAttention:
 
 class TestOperationFailures:
     def test_recent_failures_appear_in_summary(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="pdf.analyze",
@@ -181,7 +181,7 @@ class TestOperationFailures:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         assert len(summary.recent_failures) >= 1
@@ -195,7 +195,7 @@ class TestOperationFailures:
 
 class TestZsxqChecks:
     def test_zsxq_subsystem_present(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         zsxq = _find_subsystem(summary, "zsxq")
@@ -205,7 +205,7 @@ class TestZsxqChecks:
 
     def test_zsxq_cli_missing_marked(self, db_session):
         """When zsxq-cli is not on PATH, status should reflect it."""
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         # check_zsxq=False (default) — lightweight PATH check only
         summary = DiagnosticsCenter.get_summary(session=db_session, check_zsxq=False)
@@ -224,7 +224,7 @@ class TestZsxqChecks:
 
 class TestPdfChecks:
     def test_pdf_needs_ocr_attention(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="pdf_needs_ocr",
@@ -234,14 +234,14 @@ class TestPdfChecks:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         pdf = _find_subsystem(summary, "pdf")
         assert pdf.counts.get("needs_ocr", 0) >= 1
 
     def test_pdf_extraction_failed_attention(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="pdf_extraction_failed",
@@ -251,7 +251,7 @@ class TestPdfChecks:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         pdf = _find_subsystem(summary, "pdf")
@@ -266,7 +266,7 @@ class TestPdfChecks:
 
 class TestGraphChecks:
     def test_empty_graph_ok(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         graph = _find_subsystem(summary, "graph")
@@ -277,12 +277,12 @@ class TestGraphChecks:
     def test_graph_after_rebuild(self, db_session):
         """After seeding some data and rebuilding, graph should show nodes."""
         # Create a minimal episode + report to populate graph
-        from podcast_research.analysis.models import (
+        from signalvault.analysis.models import (
             Entity,
             ExtractionResult,
             InvestmentView,
         )
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             save_entities,
             save_episode,
             save_investment_views,
@@ -311,10 +311,10 @@ class TestGraphChecks:
         save_entities(db_session, extraction.mentioned_entities)
         db_session.commit()
 
-        from podcast_research.db.knowledge_graph import rebuild_knowledge_graph
+        from signalvault.db.knowledge_graph import rebuild_knowledge_graph
         rebuild_knowledge_graph(db_session)
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
         graph = _find_subsystem(summary, "graph")
 
@@ -329,7 +329,7 @@ class TestGraphChecks:
 
 class TestConfigChecks:
     def test_config_subsystem_present(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         config = _find_subsystem(summary, "config")
@@ -341,7 +341,7 @@ class TestConfigChecks:
         assert "api_key" not in str(config.metadata).lower() or "set" in str(config.metadata)
 
     def test_config_no_secrets_in_output(self, db_session):
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
 
         summary = DiagnosticsCenter.get_summary(session=db_session)
         d = summary.to_dict()
@@ -358,7 +358,7 @@ class TestConfigChecks:
 
 class TestRecoveryActions:
     def test_all_actions_have_required_fields(self):
-        from podcast_research.diagnostics.summary import (
+        from signalvault.diagnostics.summary import (
             RECOVERY_ACTIONS,
         )
 
@@ -372,14 +372,14 @@ class TestRecoveryActions:
             assert a.severity in ("info", "warning", "error")
 
     def test_get_recovery_action_by_id(self):
-        from podcast_research.diagnostics.summary import get_recovery_action
+        from signalvault.diagnostics.summary import get_recovery_action
 
         a = get_recovery_action("rebuild_graph")
         assert a is not None
         assert a.title == "重建知识图谱"
 
     def test_list_by_category(self):
-        from podcast_research.diagnostics.summary import list_recovery_actions
+        from signalvault.diagnostics.summary import list_recovery_actions
 
         zsxq_actions = list_recovery_actions("zsxq")
         assert len(zsxq_actions) >= 2
@@ -395,7 +395,7 @@ class TestRecoveryActions:
 class TestSuggestedActions:
     def test_suggested_actions_included_when_issues(self, db_session):
         """When there are issues, suggested actions should appear."""
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="pdf_extraction_failed",
@@ -404,14 +404,14 @@ class TestSuggestedActions:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         # Should have at least some suggestions
         assert isinstance(summary.suggested_actions, list)
 
     def test_actions_are_well_formed(self, db_session):
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         ReviewItemManager.create_item(
             item_type="zsxq_cli_missing",
@@ -420,7 +420,7 @@ class TestSuggestedActions:
             session=db_session,
         )
 
-        from podcast_research.diagnostics.summary import DiagnosticsCenter
+        from signalvault.diagnostics.summary import DiagnosticsCenter
         summary = DiagnosticsCenter.get_summary(session=db_session)
 
         for action in summary.suggested_actions:
@@ -438,7 +438,7 @@ class TestDiagnosticsCLI:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 

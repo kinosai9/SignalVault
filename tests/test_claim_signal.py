@@ -134,7 +134,7 @@ topic: AI Agents
 
 def test_extract_claims_from_reports(tmp_path):
     """Test claim extraction from reports."""
-    from podcast_research.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.extractor import extract_claims
 
     vault = _create_vault(tmp_path)
     claims = extract_claims(vault, source="reports", limit=50)
@@ -146,7 +146,7 @@ def test_extract_claims_from_reports(tmp_path):
 
 def test_extract_claims_from_patches(tmp_path):
     """Test claim extraction from applied patches."""
-    from podcast_research.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.extractor import extract_claims
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -160,7 +160,7 @@ def test_extract_claims_from_patches(tmp_path):
 
 def test_extract_signals_from_reports(tmp_path):
     """Test signal extraction from reports."""
-    from podcast_research.claim_signal.extractor import extract_signals
+    from signalvault.claim_signal.extractor import extract_signals
 
     vault = _create_vault(tmp_path)
     signals = extract_signals(vault, source="reports", limit=50)
@@ -170,7 +170,7 @@ def test_extract_signals_from_reports(tmp_path):
 
 def test_extract_signals_from_patches(tmp_path):
     """Test signal extraction from applied patches."""
-    from podcast_research.claim_signal.extractor import extract_signals
+    from signalvault.claim_signal.extractor import extract_signals
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -184,7 +184,7 @@ def test_extract_signals_from_patches(tmp_path):
 
 def test_pending_patch_not_processed(tmp_path):
     """Test that pending patches are NOT processed."""
-    from podcast_research.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.extractor import extract_claims
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -211,7 +211,7 @@ auto_apply: false
 
 def test_investment_advice_filtered(tmp_path):
     """Test that investment advice keywords are filtered."""
-    from podcast_research.claim_signal.extractor import _is_investment_advice
+    from signalvault.claim_signal.extractor import _is_investment_advice
 
     assert _is_investment_advice("建议买入 NVIDIA 股票")
     assert _is_investment_advice("target price 500")
@@ -220,7 +220,7 @@ def test_investment_advice_filtered(tmp_path):
 
 def test_short_claims_filtered(tmp_path):
     """Test that claims shorter than 20 chars are filtered."""
-    from podcast_research.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.extractor import extract_claims
 
     vault = tmp_path / "vault"
     reports_dir = vault / "01_Reports"
@@ -243,7 +243,7 @@ type: report
 
 def test_dry_run_does_not_write(tmp_path):
     """Test dry-run doesn't write files."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = _create_vault(tmp_path)
     claims_dir = vault / "06_Claims"
@@ -256,7 +256,7 @@ def test_dry_run_does_not_write(tmp_path):
 
 def test_claims_only_generation(tmp_path):
     """Test --claims-only generates only claims."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = _create_vault(tmp_path)
     result = generate_all(vault, dry_run=False, claims_only=True)
@@ -266,7 +266,7 @@ def test_claims_only_generation(tmp_path):
 
 def test_signals_only_generation(tmp_path):
     """Test --signals-only generates only signals."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = _create_vault(tmp_path)
     result = generate_all(vault, dry_run=False, signals_only=True)
@@ -276,8 +276,8 @@ def test_signals_only_generation(tmp_path):
 
 def test_claim_card_format(tmp_path):
     """Test Claim Card has correct frontmatter and structure."""
-    from podcast_research.claim_signal.extractor import extract_claims
-    from podcast_research.claim_signal.generator import generate_claim_card
+    from signalvault.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.generator import generate_claim_card
 
     vault = _create_vault(tmp_path)
     claims = extract_claims(vault, source="reports", limit=5)
@@ -299,8 +299,8 @@ def test_claim_card_format(tmp_path):
 
 def test_signal_card_format(tmp_path):
     """Test Signal Card has correct frontmatter and structure."""
-    from podcast_research.claim_signal.extractor import extract_signals
-    from podcast_research.claim_signal.generator import generate_signal_card
+    from signalvault.claim_signal.extractor import extract_signals
+    from signalvault.claim_signal.generator import generate_signal_card
 
     vault = _create_vault(tmp_path)
     signals = extract_signals(vault, source="reports", limit=5)
@@ -322,8 +322,8 @@ def test_signal_card_format(tmp_path):
 
 def test_existing_card_skipped(tmp_path):
     """Test that existing cards are skipped by default."""
-    from podcast_research.claim_signal.extractor import extract_claims
-    from podcast_research.claim_signal.generator import generate_claim_card
+    from signalvault.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.generator import generate_claim_card
 
     vault = _create_vault(tmp_path)
     claims = extract_claims(vault, source="reports", limit=5)
@@ -340,8 +340,8 @@ def test_existing_card_skipped(tmp_path):
 
 def test_overwrite_flag(tmp_path):
     """Test --overwrite flag overwrites existing cards."""
-    from podcast_research.claim_signal.extractor import extract_claims
-    from podcast_research.claim_signal.generator import generate_claim_card
+    from signalvault.claim_signal.extractor import extract_claims
+    from signalvault.claim_signal.generator import generate_claim_card
 
     vault = _create_vault(tmp_path)
     claims = extract_claims(vault, source="reports", limit=5)
@@ -355,7 +355,7 @@ def test_overwrite_flag(tmp_path):
 
 def test_indexes_generated(tmp_path):
     """Test that indexes are generated."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = _create_vault(tmp_path)
     generate_all(vault, dry_run=False)
@@ -368,7 +368,7 @@ def test_indexes_generated(tmp_path):
 
 def test_source_reports_only(tmp_path):
     """Test --source reports only extracts from reports."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = _create_vault(tmp_path)
     result = generate_all(vault, dry_run=False, source="reports")
@@ -377,7 +377,7 @@ def test_source_reports_only(tmp_path):
 
 def test_source_patches_only(tmp_path):
     """Test --source patches only extracts from patches."""
-    from podcast_research.claim_signal.generator import generate_all
+    from signalvault.claim_signal.generator import generate_all
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -392,7 +392,7 @@ def test_cli_generate_claims_signals_dry_run(tmp_path):
     """Test CLI obsidian generate-claims-signals --dry-run."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = _create_vault(tmp_path)
 
@@ -410,7 +410,7 @@ def test_cli_claims_only(tmp_path):
     """Test CLI --claims-only."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = _create_vault(tmp_path)
 
@@ -429,7 +429,7 @@ def test_cli_mutual_exclusion(tmp_path):
     """Test --claims-only and --signals-only mutual exclusion."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, [

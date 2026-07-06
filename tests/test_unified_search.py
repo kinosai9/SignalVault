@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 
-from podcast_research.db.unified_search import (
+from signalvault.db.unified_search import (
     UnifiedSearchResult,
     serialize_unified_result,
     unified_search,
@@ -260,7 +260,7 @@ class TestCliSearch:
     def test_search_help(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -271,7 +271,7 @@ class TestCliSearch:
     def test_search_keyword(self, seeded_db):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -282,7 +282,7 @@ class TestCliSearch:
     def test_search_json_output(self, seeded_db):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -294,7 +294,7 @@ class TestCliSearch:
     def test_search_no_results(self, seeded_db):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -304,7 +304,7 @@ class TestCliSearch:
     def test_search_filter_type(self, seeded_db):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -321,7 +321,7 @@ class TestCliSearch:
 
 class TestMcpUnifiedSearch:
     def test_unified_search_tool_registered(self):
-        from podcast_research.mcp_server.tools import TOOLS
+        from signalvault.mcp_server.tools import TOOLS
         names = {t.name for t in TOOLS}
         assert "unified_search" in names
         assert len(TOOLS) >= 9  # 8 original + unified_search (plus more from P5-B)
@@ -329,7 +329,7 @@ class TestMcpUnifiedSearch:
     def test_unified_search_handler(self, seeded_db):
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "unified_search",
             {"query": "AI", "limit": 5},
@@ -343,7 +343,7 @@ class TestMcpUnifiedSearch:
     def test_unified_search_handler_with_filters(self, seeded_db):
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "unified_search",
             {
@@ -360,7 +360,7 @@ class TestMcpUnifiedSearch:
     def test_unified_search_handler_no_results(self, seeded_db):
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "unified_search",
             {"query": "xyznonexistent123456"},
@@ -371,7 +371,7 @@ class TestMcpUnifiedSearch:
     def test_unified_search_handler_empty_query(self, seeded_db):
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "unified_search",
             {"query": ""},
@@ -383,7 +383,7 @@ class TestMcpUnifiedSearch:
         """Verify existing 8 tools still work alongside unified_search."""
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
 
         # Test a subset of existing tools
         tests = [

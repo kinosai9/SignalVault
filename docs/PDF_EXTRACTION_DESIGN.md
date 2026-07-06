@@ -572,7 +572,7 @@ pdf preview → IngestJobManager.create_job(
 # PDF 文本作为 "transcript-less" 输入进入分析
 # 使用 analyze() 路径（不是 analyze_from_transcript()）
 
-from podcast_research.analysis.pipeline import analyze
+from signalvault.analysis.pipeline import analyze
 
 # 将 PdfExtractionResult.full_text 写入临时 .txt 文件
 # 或直接传给 LLM（如果文本长度在 token 限制内）
@@ -673,7 +673,7 @@ def check_pdf_quality(extraction: PdfExtractionResult) -> list[dict]:
 ## 八、模块结构
 
 ```
-src/podcast_research/sources/
+src/signalvault/sources/
     models.py               ← 扩展：PdfPage, PdfExtractionResult, PdfMetadata
     pdf_profile.py          ← NEW: PDF 文件验证、元数据提取、类型检测
     pdf_extractor.py        ← NEW: 文本提取入口 + 质量评估
@@ -683,14 +683,14 @@ src/podcast_research/sources/
     ingest_jobs.py          ← 扩展：_make_job_key() 增加 pdf_upload
     review_items.py         ← 扩展：VALID_ITEM_TYPES 增加 2 个 PDF 类型
 
-src/podcast_research/analysis/
+src/signalvault/analysis/
     models.py               ← 扩展：Evidence.page_number
 
-src/podcast_research/db/
+src/signalvault/db/
     models.py               ← 扩展：InvestmentViewRecord.evidence_page
     session.py              ← 扩展：_migrate_investment_views 增加 evidence_page 列
 
-src/podcast_research/
+src/signalvault/
     cli.py                  ← 扩展：新增 pdf 命令组
 
 tests/
@@ -745,7 +745,7 @@ OCR 路径:
 ## 十一、CLI 输出示例
 
 ```
-$ python -m podcast_research pdf preview research_report.pdf
+$ python -m signalvault pdf preview research_report.pdf
 
 📄 PDF Preview: research_report.pdf
   Pages: 24

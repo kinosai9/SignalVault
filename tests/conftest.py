@@ -1,6 +1,6 @@
 """共享测试 fixtures。
 
-⚠️ 环境隔离：conftest 在 import podcast_research 模块之前强制设置 LLM env vars，
+⚠️ 环境隔离：conftest 在 import signalvault 模块之前强制设置 LLM env vars，
 确保所有 mock 测试不受用户本地 .env 影响，永远使用 mock provider。
 """
 
@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# P2-A1.1 测试环境 hardening：在任何 podcast_research 模块导入前，强制覆盖
+# P2-A1.1 测试环境 hardening：在任何 signalvault 模块导入前，强制覆盖
 # LLM 相关的环境变量。load_dotenv() 默认不覆盖已存在的 env var，所以这里先行
 # 设置就能阻止 .env 中的真实 LLM 配置进入测试。
 # ---------------------------------------------------------------------------
@@ -28,20 +28,20 @@ os.environ["OBSIDIAN_EXPORT_ENABLED"] = "false"
 
 import pytest
 
-from podcast_research.analysis.models import (
+from signalvault.analysis.models import (
     Entity,
     ExtractionResult,
     InvestmentView,
     TrackingSignal,
 )
-from podcast_research.db.repository import (
+from signalvault.db.repository import (
     save_entities,
     save_episode,
     save_investment_views,
     save_report,
     save_tracking_signals,
 )
-from podcast_research.db.session import get_session, init_db, reset_engine
+from signalvault.db.session import get_session, init_db, reset_engine
 
 SAMPLE_SRT = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
 
@@ -129,7 +129,7 @@ def api_client(db_session):
     """创建 FastAPI TestClient，复用 db_session 的临时数据库。"""
     from fastapi.testclient import TestClient
 
-    from podcast_research.api.app import create_app
+    from signalvault.api.app import create_app
 
     app = create_app()
     client = TestClient(app)
@@ -139,7 +139,7 @@ def api_client(db_session):
 @pytest.fixture(autouse=True)
 def _isolate_config_store(tmp_path, monkeypatch):
     """P2-L.1: Isolate config_store to temp dir so tests don't touch real data/user_settings.json."""
-    import podcast_research.config_store as cs
+    import signalvault.config_store as cs
     settings_file = tmp_path / "user_settings.json"
     monkeypatch.setattr(cs, "_get_settings_path", lambda: settings_file)
     # Also reset the module-level cache so it picks up our override

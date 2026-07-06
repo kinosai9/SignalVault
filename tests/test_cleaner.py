@@ -1,7 +1,7 @@
 """字幕清洗器测试。"""
 
-from podcast_research.analysis.models import SubtitleSegment
-from podcast_research.subtitles.cleaner import clean_segments
+from signalvault.analysis.models import SubtitleSegment
+from signalvault.subtitles.cleaner import clean_segments
 
 
 def _make_segment(idx: int, text: str, start: str = "00:00:00", end: str = "00:00:05") -> SubtitleSegment:

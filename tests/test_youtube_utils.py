@@ -1,6 +1,6 @@
 """YouTube URL 解析工具测试。"""
 
-from podcast_research.utils.youtube import extract_video_id, is_youtube_url
+from signalvault.utils.youtube import extract_video_id, is_youtube_url
 
 
 class TestExtractVideoId:

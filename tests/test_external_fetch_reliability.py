@@ -19,8 +19,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from podcast_research.adapters.allin_zh_notes import AllInZHNotesAdapter
-from podcast_research.adapters.external_html_notes import (
+from signalvault.adapters.allin_zh_notes import AllInZHNotesAdapter
+from signalvault.adapters.external_html_notes import (
     DEFAULT_MAX_RETRIES,
     ERROR_CONNECTION,
     ERROR_HTTP_4XX,

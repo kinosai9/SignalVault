@@ -12,15 +12,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from podcast_research.sources.conflict_detector import ConflictDetector
-from podcast_research.sources.import_preview import (
+from signalvault.sources.conflict_detector import ConflictDetector
+from signalvault.sources.import_preview import (
     _compute_recommendation,
     _extract_first_video_id,
     build_import_preview,
     execute_import_action,
     select_adapter_for_url,
 )
-from podcast_research.sources.models import (
+from signalvault.sources.models import (
     ActionEnum,
     ConflictInfo,
     ImportPreview,
@@ -135,7 +135,7 @@ class TestGenericWebPageParsing:
 
     @pytest.fixture
     def adapter(self):
-        from podcast_research.adapters.generic_web_page import GenericWebPageAdapter
+        from signalvault.adapters.generic_web_page import GenericWebPageAdapter
         return GenericWebPageAdapter()
 
     def test_parse_title(self, adapter) -> None:
@@ -299,9 +299,9 @@ class TestConflictDetector:
     def test_same_video_id_report_mocked(self, tmp_vault: Path) -> None:
         """When find_report_by_video_id returns a result, conflict is detected."""
         with patch(
-            "podcast_research.db.repository.find_report_by_video_id",
+            "signalvault.db.repository.find_report_by_video_id",
             return_value={"id": 5, "episode_id": 5, "video_id": "testVid1", "title": "Existing Report"},
-        ), patch("podcast_research.db.session.init_db"), patch("podcast_research.db.session.get_session"):
+        ), patch("signalvault.db.session.init_db"), patch("signalvault.db.session.get_session"):
             detector = ConflictDetector(tmp_vault)
             conflicts = detector.detect(
                 url="https://example.com/new",
@@ -490,8 +490,8 @@ class TestConfirmFlow:
             content_hash="test123",
             _parsed_data=None,
         )
-        with patch("podcast_research.adapters.generic_web_page.GenericWebPageAdapter.fetch_page") as mock_fetch:
-            from podcast_research.adapters.generic_web_page import ParsedWebPage
+        with patch("signalvault.adapters.generic_web_page.GenericWebPageAdapter.fetch_page") as mock_fetch:
+            from signalvault.adapters.generic_web_page import ParsedWebPage
             mock_fetch.return_value = ParsedWebPage(
                 title="Test Article",
                 content_hash="test123",
@@ -516,8 +516,8 @@ class TestConfirmFlow:
             content_hash="hash123",
             detected_youtube_video_id="vid1",
         )
-        with patch("podcast_research.adapters.generic_web_page.GenericWebPageAdapter.fetch_page") as mock_fetch:
-            from podcast_research.adapters.generic_web_page import ParsedWebPage
+        with patch("signalvault.adapters.generic_web_page.GenericWebPageAdapter.fetch_page") as mock_fetch:
+            from signalvault.adapters.generic_web_page import ParsedWebPage
             mock_fetch.return_value = ParsedWebPage(
                 title="My Article",
                 content_hash="hash123",
@@ -547,7 +547,7 @@ class TestE2EIntegration:
 
     def test_build_preview_generic(self, tmp_vault: Path) -> None:
         """build_import_preview for a generic URL should return ImportPreview."""
-        with patch("podcast_research.adapters.generic_web_page.GenericWebPageAdapter._fetch_html") as mock_fetch:
+        with patch("signalvault.adapters.generic_web_page.GenericWebPageAdapter._fetch_html") as mock_fetch:
             mock_fetch.return_value = MOCK_WEB_HTML
             preview = build_import_preview("https://example.com/article", tmp_vault)
             assert isinstance(preview, ImportPreview)
@@ -557,7 +557,7 @@ class TestE2EIntegration:
 
     def test_build_preview_allin(self, tmp_vault: Path) -> None:
         """build_import_preview for an allin URL should return ImportPreview."""
-        with patch("podcast_research.adapters.allin_zh_notes.AllInZHNotesAdapter._fetch_html") as mock_fetch:
+        with patch("signalvault.adapters.allin_zh_notes.AllInZHNotesAdapter._fetch_html") as mock_fetch:
             mock_fetch.return_value = MOCK_ALLIN_EPISODE_HTML
             preview = build_import_preview(
                 "https://chirs-ma.github.io/allin-podcast-zh-notes/episodes/test/notes.visual.html",
@@ -590,7 +590,7 @@ class TestModelEdgeCases:
         assert c.severity == "info"
 
     def test_action_descriptions_all_present(self) -> None:
-        from podcast_research.sources.models import ACTION_DESCRIPTIONS
+        from signalvault.sources.models import ACTION_DESCRIPTIONS
         for action in ActionEnum:
             assert action in ACTION_DESCRIPTIONS
 

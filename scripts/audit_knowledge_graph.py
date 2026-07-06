@@ -2,7 +2,7 @@
 """P2-N.3: Run knowledge graph quality audit.
 
 Usage:
-    python scripts/audit_knowledge_graph.py --db data/podcast_analyst.db --vault "<vault_path>" --output data/validation
+    python scripts/audit_knowledge_graph.py --db data/signalvault.db --vault "<vault_path>" --output data/validation
 """
 
 import argparse
@@ -12,7 +12,7 @@ from pathlib import Path
 # Ensure src is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from podcast_research.workspace.quality_audit import (
+from signalvault.workspace.quality_audit import (
     export_audit_json,
     export_audit_markdown,
     run_quality_audit,
@@ -21,7 +21,7 @@ from podcast_research.workspace.quality_audit import (
 
 def main():
     parser = argparse.ArgumentParser(description="Knowledge Graph Quality Audit")
-    parser.add_argument("--db", default="data/podcast_analyst.db", help="Path to SQLite DB")
+    parser.add_argument("--db", default="data/signalvault.db", help="Path to SQLite DB")
     parser.add_argument("--vault", default=None, help="Path to Obsidian vault (optional)")
     parser.add_argument("--output", default="data/validation", help="Output directory")
     args = parser.parse_args()

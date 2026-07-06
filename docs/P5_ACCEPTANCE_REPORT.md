@@ -91,14 +91,14 @@ class UnifiedSearchResult:
 
 ```bash
 # 统一搜索
-python -m podcast_research search "NVIDIA"
-python -m podcast_research search "GPU" --type investment_view --source-type pdf_upload
+python -m signalvault search "NVIDIA"
+python -m signalvault search "GPU" --type investment_view --source-type pdf_upload
 
 # 知识图谱
-python -m podcast_research graph rebuild
-python -m podcast_research graph neighborhood "NVIDIA"
-python -m podcast_research graph evidence-trail --view 1
-python -m podcast_research graph export -o graph.json
+python -m signalvault graph rebuild
+python -m signalvault graph neighborhood "NVIDIA"
+python -m signalvault graph evidence-trail --view 1
+python -m signalvault graph export -o graph.json
 ```
 
 ## 五、MCP Tools 清单（12 个，全部只读）

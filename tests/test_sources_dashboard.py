@@ -102,7 +102,7 @@ class TestSourcesDashboardContext:
     @pytest.fixture(autouse=True)
     def _isolate_preview_stores(self):
         """Clear preview stores before/after each test to prevent cross-test pollution."""
-        import podcast_research.web.routes as routes_mod
+        import signalvault.web.routes as routes_mod
         saved_url = dict(routes_mod._preview_store)
         saved_file = dict(routes_mod._file_preview_store)
         routes_mod._preview_store.clear()
@@ -115,7 +115,7 @@ class TestSourcesDashboardContext:
 
     def test_context_has_required_keys(self, tmp_path):
         """Context dict contains all expected keys."""
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         ctx = _build_sources_dashboard_context(str(tmp_path))
         assert "entry_cards" in ctx
@@ -128,7 +128,7 @@ class TestSourcesDashboardContext:
 
     def test_entry_cards_have_four_items(self, tmp_path):
         """All four entry cards are present."""
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         ctx = _build_sources_dashboard_context(str(tmp_path))
         assert len(ctx["entry_cards"]) == 4
@@ -137,7 +137,7 @@ class TestSourcesDashboardContext:
 
     def test_each_card_has_required_fields(self, tmp_path):
         """Each card has all required display fields."""
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         ctx = _build_sources_dashboard_context(str(tmp_path))
         for card in ctx["entry_cards"]:
@@ -153,7 +153,7 @@ class TestSourcesDashboardContext:
 
     def test_archive_count_reflects_files(self, tmp_path):
         """archive_file_count matches actual file count."""
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         archive_dir = tmp_path / "01_Reports" / "SourceArchive"
         archive_dir.mkdir(parents=True)
@@ -165,7 +165,7 @@ class TestSourcesDashboardContext:
 
     def test_empty_vault_shows_zero_counts(self, tmp_path):
         """Fresh empty vault shows zeros and empty states."""
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         # Stores are already clean from _isolate_preview_stores fixture
         ctx = _build_sources_dashboard_context(str(tmp_path))
@@ -175,8 +175,8 @@ class TestSourcesDashboardContext:
 
     def test_pending_items_with_data(self, tmp_path):
         """Pending items list reflects actual state."""
-        import podcast_research.web.routes as routes_mod
-        from podcast_research.web.routes import _build_sources_dashboard_context
+        import signalvault.web.routes as routes_mod
+        from signalvault.web.routes import _build_sources_dashboard_context
 
         # Stores are already clean from _isolate_preview_stores fixture
         routes_mod._preview_store["fake-p1"] = object()
@@ -196,7 +196,7 @@ class TestRelativeTimeFormat:
     def test_formats_seconds(self):
         from datetime import datetime, timedelta
 
-        from podcast_research.web.routes import _format_relative_time
+        from signalvault.web.routes import _format_relative_time
 
         now = datetime(2026, 6, 30, 12, 0, 0)
         dt = now - timedelta(seconds=30)
@@ -205,7 +205,7 @@ class TestRelativeTimeFormat:
     def test_formats_minutes(self):
         from datetime import datetime, timedelta
 
-        from podcast_research.web.routes import _format_relative_time
+        from signalvault.web.routes import _format_relative_time
 
         now = datetime(2026, 6, 30, 12, 0, 0)
         dt = now - timedelta(minutes=15)
@@ -215,7 +215,7 @@ class TestRelativeTimeFormat:
     def test_formats_hours(self):
         from datetime import datetime, timedelta
 
-        from podcast_research.web.routes import _format_relative_time
+        from signalvault.web.routes import _format_relative_time
 
         now = datetime(2026, 6, 30, 12, 0, 0)
         dt = now - timedelta(hours=5)
@@ -225,7 +225,7 @@ class TestRelativeTimeFormat:
     def test_formats_days(self):
         from datetime import datetime, timedelta
 
-        from podcast_research.web.routes import _format_relative_time
+        from signalvault.web.routes import _format_relative_time
 
         now = datetime(2026, 6, 30, 12, 0, 0)
         dt = now - timedelta(days=3)

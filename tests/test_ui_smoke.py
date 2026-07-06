@@ -19,7 +19,7 @@ try:
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
-from podcast_research.api.app import create_app
+from signalvault.api.app import create_app
 
 pytestmark = pytest.mark.skipif(
     not PLAYWRIGHT_AVAILABLE,

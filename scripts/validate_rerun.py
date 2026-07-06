@@ -16,10 +16,10 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 
 
 def main(video_id: str, new_report_id: int):
-    from podcast_research.config_store import get_user_vault_path
-    from podcast_research.db.models import ChannelVideo, Report
-    from podcast_research.db.session import get_session, init_db
-    from podcast_research.utils.file_io import read_text_safe
+    from signalvault.config_store import get_user_vault_path
+    from signalvault.db.models import ChannelVideo, Report
+    from signalvault.db.session import get_session, init_db
+    from signalvault.utils.file_io import read_text_safe
 
     init_db()
     session = get_session()

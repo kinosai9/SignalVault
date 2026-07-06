@@ -5,7 +5,7 @@ All tests use mock provider — no real LLM API calls.
 
 from pathlib import Path
 
-from podcast_research.analysis.chunking import (
+from signalvault.analysis.chunking import (
     MAX_MERGED_ENTITIES,
     MAX_MERGED_INVESTMENT_VIEWS,
     _compact_entities,
@@ -21,7 +21,7 @@ from podcast_research.analysis.chunking import (
     is_long_transcript,
     merge_extraction_results,
 )
-from podcast_research.analysis.models import (
+from signalvault.analysis.models import (
     Entity,
     Evidence,
     ExtractionResult,
@@ -411,7 +411,7 @@ def test_merge_compaction_enforces_limits():
 
 def test_pipeline_short_transcript_no_chunking(db_session, tmp_path):
     """短字幕默认不走 chunking。"""
-    from podcast_research.analysis.pipeline import analyze
+    from signalvault.analysis.pipeline import analyze
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     result = analyze(sample, provider_name="mock", output_dir=tmp_path)
@@ -426,8 +426,8 @@ def test_pipeline_long_transcript_auto_chunking(db_session, tmp_path):
     # 生成超过 1000 段的合成字幕
     long_segs = _make_segments(1200, chars_per_seg=60)  # ~72K chars, >1000 segments
 
-    from podcast_research.analysis.pipeline import _run_pipeline
-    from podcast_research.config import ensure_dirs
+    from signalvault.analysis.pipeline import _run_pipeline
+    from signalvault.config import ensure_dirs
     ensure_dirs()
 
     result = _run_pipeline(
@@ -449,7 +449,7 @@ def test_pipeline_long_transcript_auto_chunking(db_session, tmp_path):
 
 def test_pipeline_chunked_config_forced(db_session, tmp_path):
     """chunking_config enabled=True 强制启用 chunking。"""
-    from podcast_research.analysis.pipeline import analyze
+    from signalvault.analysis.pipeline import analyze
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     result = analyze(
@@ -462,7 +462,7 @@ def test_pipeline_chunked_config_forced(db_session, tmp_path):
 
 def test_pipeline_no_chunking_config_forced(db_session, tmp_path):
     """chunking_config enabled=False 禁用 chunking。"""
-    from podcast_research.analysis.pipeline import analyze
+    from signalvault.analysis.pipeline import analyze
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     result = analyze(
@@ -481,7 +481,7 @@ def test_cli_chunked_flag(db_session, tmp_path):
     """CLI --chunked 参数可用。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     runner = CliRunner()
@@ -499,7 +499,7 @@ def test_cli_no_chunking_flag(db_session, tmp_path):
     """CLI --no-chunking 参数可用。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     sample = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
     runner = CliRunner()

@@ -24,7 +24,7 @@ CLI: search "NVIDIA" / MCP: unified_search
 
 **CLI 入口：**
 ```bash
-podcast-research search "NVIDIA" --type investment_view --json --limit 30
+signalvault search "NVIDIA" --type investment_view --json --limit 30
 ```
 
 **MCP 入口：** `unified_search` tool（第 9 个只读 tool）
@@ -265,21 +265,21 @@ results = unified_search(
 
 ```bash
 # 现有行为：只搜索报告
-python -m podcast_research reports search "NVIDIA"
+python -m signalvault reports search "NVIDIA"
 
 # P5-A 新行为：统一搜索
-python -m podcast_research reports search "NVIDIA" --unified
-python -m podcast_research reports search "GPU" --unified --types investment_view
-python -m podcast_research reports search "AI" --unified --source pdf_upload
-python -m podcast_research reports search "半导体" --unified --direction bullish
+python -m signalvault reports search "NVIDIA" --unified
+python -m signalvault reports search "GPU" --unified --types investment_view
+python -m signalvault reports search "AI" --unified --source pdf_upload
+python -m signalvault reports search "半导体" --unified --direction bullish
 ```
 
 或新增独立命令：
 
 ```bash
-python -m podcast_research search "NVIDIA"                    # 统一搜索
-python -m podcast_research search "NVIDIA" --types view,signal
-python -m podcast_research search "AI" --source pdf --limit 30
+python -m signalvault search "NVIDIA"                    # 统一搜索
+python -m signalvault search "NVIDIA" --types view,signal
+python -m signalvault search "AI" --source pdf --limit 30
 ```
 
 ## 六、MCP Tool: `unified_search`
@@ -312,12 +312,12 @@ python -m podcast_research search "AI" --source pdf --limit 30
 ## 七、模块结构
 
 ```
-src/podcast_research/db/
+src/signalvault/db/
     fts.py               ← 扩展：view_search_fts / signal_search_fts / entity_search_fts
     unified_search.py    ← NEW: 统一搜索主入口 + UnifiedSearchResult
     models.py            ← 不变
 
-src/podcast_research/mcp_server/
+src/signalvault/mcp_server/
     tools.py             ← 扩展：新增 unified_search tool
     serializers.py       ← 扩展：serialize_unified_search_result
 

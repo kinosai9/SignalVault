@@ -4,7 +4,7 @@ import json
 from collections import OrderedDict
 from pathlib import Path
 
-from podcast_research.exporters.markdown_utils import (
+from signalvault.exporters.markdown_utils import (
     build_frontmatter,
     sanitize_filename,
     wiki_link,
@@ -78,9 +78,9 @@ def test_wiki_links_from_list():
 
 def test_export_report_creates_file(seeded_db, tmp_path):
     """Report export 生成正确文件。"""
-    from podcast_research.db.models import Episode, InvestmentViewRecord, Report
-    from podcast_research.db.session import get_session
-    from podcast_research.exporters.obsidian import _load_extraction, export_report
+    from signalvault.db.models import Episode, InvestmentViewRecord, Report
+    from signalvault.db.session import get_session
+    from signalvault.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).first()
@@ -122,9 +122,9 @@ def test_export_report_creates_file(seeded_db, tmp_path):
 
 def test_export_report_skips_existing(seeded_db, tmp_path):
     """已存在文件默认 skip。"""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session
-    from podcast_research.exporters.obsidian import _load_extraction, export_report
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session
+    from signalvault.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     # Use report #3 (NVIDIA, youtube, video_id=abc123)
@@ -157,9 +157,9 @@ def test_export_report_skips_existing(seeded_db, tmp_path):
 
 def test_export_report_overwrite(seeded_db, tmp_path):
     """--overwrite 覆盖已存在文件。"""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session
-    from podcast_research.exporters.obsidian import _load_extraction, export_report
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session
+    from signalvault.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     # Use report #3 (youtube, has video_id)
@@ -190,9 +190,9 @@ def test_export_report_overwrite(seeded_db, tmp_path):
 
 def test_export_report_has_frontmatter_fields(seeded_db, tmp_path):
     """Report frontmatter 包含所有必需字段。"""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session
-    from podcast_research.exporters.obsidian import _load_extraction, export_report
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session
+    from signalvault.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).first()
@@ -216,9 +216,9 @@ def test_export_report_has_frontmatter_fields(seeded_db, tmp_path):
 
 def test_export_report_wiki_links(seeded_db, tmp_path):
     """Report 中 entity wiki links 正确生成。"""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session
-    from podcast_research.exporters.obsidian import _load_extraction, export_report
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session
+    from signalvault.exporters.obsidian import _load_extraction, export_report
 
     session = get_session()
     report = session.query(Report).filter(Report.id == 3).first()  # NVIDIA report
@@ -243,7 +243,7 @@ def test_export_report_wiki_links(seeded_db, tmp_path):
 
 def test_export_channel_card_creates_new(tmp_path):
     """创建新频道卡片。"""
-    from podcast_research.exporters.obsidian import export_channel_card
+    from signalvault.exporters.obsidian import export_channel_card
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -266,7 +266,7 @@ def test_export_channel_card_creates_new(tmp_path):
 
 def test_export_channel_card_skips_existing(tmp_path):
     """已存在文件默认不覆盖。"""
-    from podcast_research.exporters.obsidian import export_channel_card
+    from signalvault.exporters.obsidian import export_channel_card
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -290,7 +290,7 @@ def test_export_channel_card_skips_existing(tmp_path):
 
 def test_export_channel_card_overwrite(tmp_path):
     """--overwrite 完全重写频道卡片。"""
-    from podcast_research.exporters.obsidian import export_channel_card
+    from signalvault.exporters.obsidian import export_channel_card
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -318,7 +318,7 @@ def test_export_channel_card_overwrite(tmp_path):
 
 def test_report_index_generation(seeded_db, tmp_path):
     """Report Index 正确生成。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -335,7 +335,7 @@ def test_report_index_generation(seeded_db, tmp_path):
 
 def test_export_log_generation(seeded_db, tmp_path):
     """Export Log 正确生成。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -351,7 +351,7 @@ def test_export_log_generation(seeded_db, tmp_path):
 
 def test_dry_run_does_not_write(seeded_db, tmp_path):
     """--dry-run 不写入任何文件。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -378,7 +378,7 @@ def test_dry_run_does_not_write(seeded_db, tmp_path):
 
 def test_full_export_to_tmp_vault(seeded_db, tmp_path):
     """完整导出流程：reports + channels + index + log。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -399,7 +399,7 @@ def test_full_export_to_tmp_vault(seeded_db, tmp_path):
 
 def test_export_report_id_specific(seeded_db, tmp_path):
     """--report-id 只导出指定报告。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -416,7 +416,7 @@ def test_cli_obsidian_export_dry_run(seeded_db, tmp_path):
     """CLI obsidian export --dry-run 不写入。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -436,7 +436,7 @@ def test_cli_obsidian_export_vault_not_exists():
     """Vault 路径不存在时报错。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, [
@@ -451,11 +451,11 @@ def test_cli_obsidian_export_no_vault(monkeypatch):
     """未指定 --vault 且 .env 未配置时报错。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
     # Isolate from local .env OBSIDIAN_VAULT_PATH
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "export", "--limit", "1"])
@@ -466,13 +466,13 @@ def test_cli_obsidian_export_no_vault_with_env_set(seeded_db, monkeypatch, tmp_p
     """monkeypatch 设置 OBSIDIAN_VAULT_PATH 后不传 --vault 仍能走通。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
     # Even if .env has OBSIDIAN_VAULT_PATH, monkeypatch overrides it
     fake_vault = tmp_path / "fake_vault"
     fake_vault.mkdir()
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", str(fake_vault))
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", str(fake_vault))
 
     runner = CliRunner()
     # Without --vault, should fall back to monkeypatched OBSIDIAN_VAULT_PATH
@@ -485,7 +485,7 @@ def test_cli_obsidian_export_basic(seeded_db, tmp_path):
     """CLI obsidian export 基本运行。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -512,7 +512,7 @@ def test_existing_tests_unaffected():
 def _seed_channel_video(session, video_id, channel_name, channel_url="",
                         channel_tags=None, video_title="", published_at=""):
     """Helper: create Channel + ChannelVideo for backfill testing."""
-    from podcast_research.db.models import Channel, ChannelVideo
+    from signalvault.db.models import Channel, ChannelVideo
     ch = Channel(
         youtube_channel_id=f"UC_{channel_name.replace(' ', '_')}",
         name=channel_name,
@@ -536,7 +536,7 @@ def _seed_channel_video(session, video_id, channel_name, channel_url="",
 
 def test_backfill_channel_name_from_channel_videos(seeded_db, tmp_path):
     """export 时能通过 channel_videos backfill channel_name。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     # seeded_db report #3 has video_id="abc123" with empty source_info.channel_name
@@ -561,7 +561,7 @@ def test_backfill_channel_name_from_channel_videos(seeded_db, tmp_path):
 
 def test_backfill_video_title_from_channel_videos(seeded_db, tmp_path):
     """export 时能通过 channel_videos backfill video_title。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_channel_video(session, "abc123", "TechInvest",
@@ -580,8 +580,8 @@ def test_backfill_video_title_from_channel_videos(seeded_db, tmp_path):
 
 def test_backfill_does_not_overwrite_existing(seeded_db, tmp_path):
     """backfill 不覆盖已有的 channel_name。"""
-    from podcast_research.db.models import Report
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.db.models import Report
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     # Manually set source_info with channel_name for report #3
@@ -612,7 +612,7 @@ def test_backfill_does_not_overwrite_existing(seeded_db, tmp_path):
 
 def _seed_two_youtube_reports(session):
     """Helper: add a second youtube report with a different channel."""
-    from podcast_research.db.repository import save_episode, save_report
+    from signalvault.db.repository import save_episode, save_report
 
     ep4_id = save_episode(
         session, "Tech Talk", "youtube", "json", "hash4",
@@ -624,7 +624,7 @@ def _seed_two_youtube_reports(session):
     rep4_id = save_report(session, ep4_id, ex4, "# TSMC Report", analysis_depth="standard")
 
     # Set source_info with channel name for report 3
-    from podcast_research.db.models import Report
+    from signalvault.db.models import Report
     report3 = session.query(Report).filter(Report.id == 3).first()
     extraction3 = json.loads(report3.extraction_json)
     extraction3["source_info"] = {"channel_name": "Acquired"}
@@ -642,7 +642,7 @@ def _seed_two_youtube_reports(session):
 
 def _make_extraction_helper(target="NVIDIA", direction="bullish"):
     """Helper to create ExtractionResult for tests."""
-    from podcast_research.analysis.models import (
+    from signalvault.analysis.models import (
         Entity,
         ExtractionResult,
         InvestmentView,
@@ -667,7 +667,7 @@ def _make_extraction_helper(target="NVIDIA", direction="bullish"):
 
 def test_only_with_channel_skips_unknown(seeded_db, tmp_path):
     """--only-with-channel 跳过无频道信息的报告。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -686,7 +686,7 @@ def test_only_with_channel_skips_unknown(seeded_db, tmp_path):
 
 def test_channel_filter_only_matching(seeded_db, tmp_path):
     """--channel Acquired 只导出 Acquired 报告。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_two_youtube_reports(session)
@@ -711,7 +711,7 @@ def test_channel_filter_only_matching(seeded_db, tmp_path):
 
 def test_channel_filter_case_insensitive(seeded_db, tmp_path):
     """--channel 过滤大小写不敏感。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_two_youtube_reports(session)
@@ -731,7 +731,7 @@ def test_channel_filter_case_insensitive(seeded_db, tmp_path):
 
 def test_channel_filter_with_backfill(seeded_db, tmp_path):
     """--channel 能使用 backfilled channel_name 匹配。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     # Report #3 has no channel_name in source_info
@@ -755,7 +755,7 @@ def test_channel_filter_with_backfill(seeded_db, tmp_path):
 
 def test_channel_filter_partial_match(seeded_db, tmp_path):
     """--channel 支持部分匹配。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_two_youtube_reports(session)
@@ -774,7 +774,7 @@ def test_channel_filter_partial_match(seeded_db, tmp_path):
 
 def test_unknown_channel_default_still_exports(seeded_db, tmp_path):
     """P2-L.2: UnknownChannel 不再作为默认 fallback，改用 YouTube_{video_id}。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -797,7 +797,7 @@ def test_unknown_channel_default_still_exports(seeded_db, tmp_path):
 
 def test_dry_run_returns_action_and_reason(seeded_db, tmp_path):
     """dry-run 返回 action/reason 字段。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -815,7 +815,7 @@ def test_dry_run_returns_action_and_reason(seeded_db, tmp_path):
 
 def test_dry_run_only_with_channel_marks_missing(seeded_db, tmp_path):
     """dry-run + only_with_channel 标记 missing_channel。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -834,7 +834,7 @@ def test_dry_run_only_with_channel_marks_missing(seeded_db, tmp_path):
 
 def test_dry_run_channel_filter_marks_filtered(seeded_db, tmp_path):
     """dry-run + channel_filter 标记 filtered_by_channel。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_two_youtube_reports(session)
@@ -857,7 +857,7 @@ def test_dry_run_channel_filter_marks_filtered(seeded_db, tmp_path):
 
 def test_dry_run_with_backfill_shows_channel(seeded_db, tmp_path):
     """dry-run 中 backfill 的 channel_name 正确显示。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_channel_video(session, "abc123", "BackfilledChannel")
@@ -876,7 +876,7 @@ def test_dry_run_with_backfill_shows_channel(seeded_db, tmp_path):
 
 def test_dry_run_no_files_written_with_filters(seeded_db, tmp_path):
     """dry-run + filters 不写入文件。"""
-    from podcast_research.exporters.obsidian import export_to_vault
+    from signalvault.exporters.obsidian import export_to_vault
 
     session = seeded_db
     _seed_two_youtube_reports(session)
@@ -903,7 +903,7 @@ def test_cli_obsidian_export_channel_filter(seeded_db, tmp_path):
     """CLI --channel 过滤参数工作。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -923,7 +923,7 @@ def test_cli_obsidian_export_only_with_channel(seeded_db, tmp_path):
     """CLI --only-with-channel 参数工作。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -943,7 +943,7 @@ def test_cli_obsidian_enhanced_dry_run_table(seeded_db, tmp_path):
     """CLI enhanced dry-run 表格包含 Action/Reason 列。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -996,7 +996,7 @@ Test summary.
 
 def test_parse_yaml_frontmatter_basic():
     """_parse_yaml_frontmatter 正确解析简单 frontmatter。"""
-    from podcast_research.exporters.obsidian import _parse_yaml_frontmatter
+    from signalvault.exporters.obsidian import _parse_yaml_frontmatter
 
     content = """---
 type: report
@@ -1016,7 +1016,7 @@ published_at: 2026-05-15
 
 def test_parse_yaml_frontmatter_no_frontmatter():
     """_parse_yaml_frontmatter 处理无 frontmatter 内容。"""
-    from podcast_research.exporters.obsidian import _parse_yaml_frontmatter
+    from signalvault.exporters.obsidian import _parse_yaml_frontmatter
 
     assert _parse_yaml_frontmatter("# Just a title\nNo frontmatter here.") == {}
     assert _parse_yaml_frontmatter("") == {}
@@ -1024,7 +1024,7 @@ def test_parse_yaml_frontmatter_no_frontmatter():
 
 def test_parse_yaml_frontmatter_quoted_values():
     """_parse_yaml_frontmatter 处理引号包裹的值。"""
-    from podcast_research.exporters.obsidian import _parse_yaml_frontmatter
+    from signalvault.exporters.obsidian import _parse_yaml_frontmatter
 
     content = """---
 video_id: "def456"
@@ -1038,7 +1038,7 @@ channel: 'SingleQuoted'
 
 def test_find_unknown_channel_files(tmp_path):
     """find_unknown_channel_files 能找到 UnknownChannel 文件。"""
-    from podcast_research.exporters.obsidian import find_unknown_channel_files
+    from signalvault.exporters.obsidian import find_unknown_channel_files
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1067,7 +1067,7 @@ def test_find_unknown_channel_files(tmp_path):
 
 def test_find_unknown_channel_files_empty(tmp_path):
     """find_unknown_channel_files 空 vault 返回空列表。"""
-    from podcast_research.exporters.obsidian import find_unknown_channel_files
+    from signalvault.exporters.obsidian import find_unknown_channel_files
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1080,7 +1080,7 @@ def test_find_unknown_channel_files_empty(tmp_path):
 
 def test_analyze_unknown_file_with_backfill(tmp_path):
     """analyze 能从 cv_ch_map backfill channel_name。"""
-    from podcast_research.exporters.obsidian import _analyze_unknown_file
+    from signalvault.exporters.obsidian import _analyze_unknown_file
 
     vault = tmp_path / "vault"
     filepath = _create_unknown_report(vault, "vid001")
@@ -1107,7 +1107,7 @@ def test_analyze_unknown_file_with_backfill(tmp_path):
 
 def test_analyze_unknown_file_no_metadata(tmp_path):
     """analyze 无法 backfill 时标记 manual_review。"""
-    from podcast_research.exporters.obsidian import _analyze_unknown_file
+    from signalvault.exporters.obsidian import _analyze_unknown_file
 
     vault = tmp_path / "vault"
     filepath = _create_unknown_report(vault, "vid999")
@@ -1119,7 +1119,7 @@ def test_analyze_unknown_file_no_metadata(tmp_path):
 
 def test_analyze_unknown_file_no_video_id(tmp_path):
     """analyze 缺少 video_id 时标记 manual_review。"""
-    from podcast_research.exporters.obsidian import _analyze_unknown_file
+    from signalvault.exporters.obsidian import _analyze_unknown_file
 
     vault = tmp_path / "vault"
     reports_dir = vault / "01_Reports"
@@ -1134,7 +1134,7 @@ def test_analyze_unknown_file_no_video_id(tmp_path):
 
 def test_cleanup_dry_run_no_changes(seeded_db, tmp_path):
     """cleanup dry-run 不修改文件。"""
-    from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
+    from signalvault.exporters.obsidian import cleanup_unknown_channel_files
 
     vault = tmp_path / "vault"
     _create_unknown_report(vault, "vid001")
@@ -1149,7 +1149,7 @@ def test_cleanup_dry_run_no_changes(seeded_db, tmp_path):
 
 def test_cleanup_dry_run_returns_analysis(seeded_db, tmp_path):
     """cleanup dry-run 返回分析结果。"""
-    from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
+    from signalvault.exporters.obsidian import cleanup_unknown_channel_files
 
     vault = tmp_path / "vault"
     _create_unknown_report(vault, "vid001")
@@ -1173,7 +1173,7 @@ def test_cleanup_dry_run_returns_analysis(seeded_db, tmp_path):
 
 def test_cleanup_apply_moves_to_backup(seeded_db, tmp_path):
     """cleanup apply 将旧文件移到 backup，不删除。"""
-    from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
+    from signalvault.exporters.obsidian import cleanup_unknown_channel_files
 
     vault = tmp_path / "vault"
     old_file = _create_unknown_report(vault, "abc123")  # matches seeded_db video_id
@@ -1202,7 +1202,7 @@ def test_cleanup_apply_moves_to_backup(seeded_db, tmp_path):
 
 def test_cleanup_apply_unknown_channel_card(tmp_path, seeded_db):
     """cleanup apply 将 UnknownChannel.md 频道卡片移到 backup。"""
-    from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
+    from signalvault.exporters.obsidian import cleanup_unknown_channel_files
 
     vault = tmp_path / "vault"
     channels_dir = vault / "05_Channels"
@@ -1220,7 +1220,7 @@ def test_cleanup_apply_unknown_channel_card(tmp_path, seeded_db):
 
 def test_cleanup_apply_no_delete(tmp_path, seeded_db):
     """cleanup apply 不直接删除文件，只移动到 backup。"""
-    from podcast_research.exporters.obsidian import cleanup_unknown_channel_files
+    from signalvault.exporters.obsidian import cleanup_unknown_channel_files
 
     vault = tmp_path / "vault"
     old_file = _create_unknown_report(vault, "nomatch_vid")
@@ -1240,13 +1240,13 @@ def test_cli_cleanup_unknown_dry_run(seeded_db, tmp_path, monkeypatch):
     """CLI cleanup-unknown --dry-run 工作。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_unknown_report(vault, "vid001")
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", str(vault))
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", str(vault))
 
     runner = CliRunner()
     result = runner.invoke(app, [
@@ -1262,10 +1262,10 @@ def test_cli_cleanup_unknown_no_vault(monkeypatch):
     """CLI cleanup-unknown 无 vault 时报错。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "cleanup-unknown"])
@@ -1310,7 +1310,7 @@ Test summary for {channel}.
 
 def test_scan_report_frontmatters_reads_channel(tmp_path):
     """_scan_report_frontmatters 能从 frontmatter 读取 channel。"""
-    from podcast_research.exporters.obsidian import _scan_report_frontmatters
+    from signalvault.exporters.obsidian import _scan_report_frontmatters
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1326,7 +1326,7 @@ def test_scan_report_frontmatters_reads_channel(tmp_path):
 
 def test_scan_report_frontmatters_reads_title(tmp_path):
     """_scan_report_frontmatters 能从 H1 标题读取 title。"""
-    from podcast_research.exporters.obsidian import _scan_report_frontmatters
+    from signalvault.exporters.obsidian import _scan_report_frontmatters
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1338,7 +1338,7 @@ def test_scan_report_frontmatters_reads_title(tmp_path):
 
 def test_group_reports_by_channel(tmp_path):
     """_group_reports_by_channel 正确分组并跳过 unknown。"""
-    from podcast_research.exporters.obsidian import (
+    from signalvault.exporters.obsidian import (
         _group_reports_by_channel,
         _scan_report_frontmatters,
     )
@@ -1359,7 +1359,7 @@ def test_group_reports_by_channel(tmp_path):
 
 def test_group_reports_skips_unknown_channel(tmp_path):
     """_group_reports_by_channel 跳过 UnknownChannel / empty。"""
-    from podcast_research.exporters.obsidian import _group_reports_by_channel
+    from signalvault.exporters.obsidian import _group_reports_by_channel
 
     reports = [
         {"channel": "Acquired", "video_id": "v1"},
@@ -1374,7 +1374,7 @@ def test_group_reports_skips_unknown_channel(tmp_path):
 
 def test_sync_creates_missing_channel_card(tmp_path):
     """sync 为缺少的频道创建 card。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1397,7 +1397,7 @@ def test_sync_creates_missing_channel_card(tmp_path):
 
 def test_sync_creates_multiple_channel_cards(tmp_path):
     """多个 Latent Space + Acquired reports 会各自生成 card。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1414,7 +1414,7 @@ def test_sync_creates_multiple_channel_cards(tmp_path):
 
 def test_sync_existing_card_only_appends(tmp_path):
     """已存在 channel card 时只追加 Recent Reports。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1450,7 +1450,7 @@ def test_sync_existing_card_only_appends(tmp_path):
 
 def test_sync_no_duplicate_links(tmp_path):
     """已存在的 report link 不重复追加。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1476,7 +1476,7 @@ def test_sync_no_duplicate_links(tmp_path):
 
 def test_sync_skips_unknown_channel_reports(tmp_path):
     """UnknownChannel report 被跳过，不生成 card。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1497,7 +1497,7 @@ def test_sync_skips_unknown_channel_reports(tmp_path):
 
 def test_sync_dry_run_no_files_written(tmp_path):
     """dry-run 不写文件。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1513,7 +1513,7 @@ def test_sync_dry_run_no_files_written(tmp_path):
 
 def test_sync_channel_filter(tmp_path):
     """--channel 只同步指定 channel。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1532,7 +1532,7 @@ def test_sync_channel_filter(tmp_path):
 
 def test_sync_overwrite_rewrites_card(tmp_path):
     """--overwrite 可重写 channel card。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1556,7 +1556,7 @@ def test_sync_overwrite_rewrites_card(tmp_path):
 
 def test_sync_empty_reports_dir(tmp_path):
     """空 01_Reports/ 目录不报错。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1570,7 +1570,7 @@ def test_sync_empty_reports_dir(tmp_path):
 
 def test_sync_no_reports_dir(tmp_path):
     """无 01_Reports/ 目录不报错。"""
-    from podcast_research.exporters.obsidian import sync_channel_cards
+    from signalvault.exporters.obsidian import sync_channel_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1583,7 +1583,7 @@ def test_cli_sync_channel_cards_dry_run(tmp_path, monkeypatch):
     """CLI sync-channel-cards --dry-run 工作。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1605,7 +1605,7 @@ def test_cli_sync_channel_cards_real(tmp_path, monkeypatch):
     """CLI sync-channel-cards 实际执行。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1626,10 +1626,10 @@ def test_cli_sync_channel_cards_no_vault(monkeypatch):
     """CLI sync-channel-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "sync-channel-cards"])
@@ -1702,7 +1702,7 @@ def _create_sample_report(vault, filename="2026-05-29_TechPod_vid001.md", conten
 
 def test_extract_topics_from_report_md():
     """_extract_topics_from_report_md 能从 hashtag 和表格提取 topic。"""
-    from podcast_research.exporters.obsidian import _extract_topics_from_report_md
+    from signalvault.exporters.obsidian import _extract_topics_from_report_md
 
     topics = _extract_topics_from_report_md(SAMPLE_REPORT_MD)
     assert "workload-patterns" in topics
@@ -1715,7 +1715,7 @@ def test_extract_topics_from_report_md():
 
 def test_extract_companies_from_report_md():
     """_extract_companies_from_report_md 能从 Entities 和表格提取公司。"""
-    from podcast_research.exporters.obsidian import _extract_companies_from_report_md
+    from signalvault.exporters.obsidian import _extract_companies_from_report_md
 
     companies = _extract_companies_from_report_md(SAMPLE_REPORT_MD)
     assert "NVIDIA" in companies
@@ -1726,7 +1726,7 @@ def test_extract_companies_from_report_md():
 
 def test_normalize_topic_name():
     """_normalize_topic_name 正确映射特殊 topic。"""
-    from podcast_research.exporters.obsidian import _normalize_topic_name
+    from signalvault.exporters.obsidian import _normalize_topic_name
 
     assert _normalize_topic_name("ai-infra") == "AI Infra"
     assert _normalize_topic_name("ai-agents") == "AI Agents"
@@ -1739,7 +1739,7 @@ def test_normalize_topic_name():
 
 def test_normalize_company_name():
     """_normalize_company_name 正确处理别名。"""
-    from podcast_research.exporters.obsidian import _normalize_company_name
+    from signalvault.exporters.obsidian import _normalize_company_name
 
     assert _normalize_company_name("nvidia") == "NVIDIA"
     assert _normalize_company_name("NVIDIA") == "NVIDIA"
@@ -1753,7 +1753,7 @@ def test_normalize_company_name():
 
 def test_generate_topic_card(tmp_path):
     """generate_cards 能生成 Topic Card。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1780,7 +1780,7 @@ def test_generate_topic_card(tmp_path):
 
 def test_generate_company_card(tmp_path):
     """generate_cards 能生成 Company Card。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1803,7 +1803,7 @@ def test_generate_company_card(tmp_path):
 
 def test_generate_card_existing_append_only(tmp_path):
     """已存在的卡片只追加 Source Reports。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1834,7 +1834,7 @@ def test_generate_card_existing_append_only(tmp_path):
 
 def test_generate_card_no_duplicate_links(tmp_path):
     """已存在的 report link 不重复追加。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1857,7 +1857,7 @@ def test_generate_card_no_duplicate_links(tmp_path):
 
 def test_generate_cards_dry_run_no_files(tmp_path):
     """dry-run 不写文件。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1873,7 +1873,7 @@ def test_generate_cards_dry_run_no_files(tmp_path):
 
 def test_generate_cards_topics_only(tmp_path):
     """--topics-only 只生成 topics。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1888,7 +1888,7 @@ def test_generate_cards_topics_only(tmp_path):
 
 def test_generate_cards_companies_only(tmp_path):
     """--companies-only 只生成 companies。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1903,7 +1903,7 @@ def test_generate_cards_companies_only(tmp_path):
 
 def test_generate_cards_channel_filter(tmp_path):
     """--channel 只处理指定频道的报告。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1930,7 +1930,7 @@ def test_generate_cards_channel_filter(tmp_path):
 
 def test_generate_topic_index(tmp_path):
     """Topic Index 正确生成。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1948,7 +1948,7 @@ def test_generate_topic_index(tmp_path):
 
 def test_generate_company_index(tmp_path):
     """Company Index 正确生成。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1966,7 +1966,7 @@ def test_generate_company_index(tmp_path):
 
 def test_generate_card_log(tmp_path):
     """Card Generation Log 正确生成。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1984,7 +1984,7 @@ def test_generate_card_log(tmp_path):
 
 def test_generate_cards_overwrite(tmp_path):
     """--overwrite 可重写卡片。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2007,7 +2007,7 @@ def test_generate_cards_overwrite(tmp_path):
 
 def test_generate_cards_empty_vault(tmp_path):
     """空 vault 不报错。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2020,7 +2020,7 @@ def test_generate_cards_empty_vault(tmp_path):
 
 def test_generate_cards_no_reports_dir(tmp_path):
     """无 01_Reports/ 目录不报错。"""
-    from podcast_research.exporters.obsidian import generate_cards
+    from signalvault.exporters.obsidian import generate_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2033,7 +2033,7 @@ def test_cli_generate_cards_dry_run(tmp_path):
     """CLI generate-cards --dry-run 工作。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2054,7 +2054,7 @@ def test_cli_generate_cards_real(tmp_path):
     """CLI generate-cards 实际执行。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2073,10 +2073,10 @@ def test_cli_generate_cards_no_vault(monkeypatch):
     """CLI generate-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "generate-cards"])
@@ -2087,7 +2087,7 @@ def test_cli_generate_cards_conflicting_flags(tmp_path):
     """--topics-only 和 --companies-only 不能同时使用。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2109,7 +2109,7 @@ def test_cli_generate_cards_conflicting_flags(tmp_path):
 
 def test_classify_company_whitelist():
     """Company whitelist 保留 NVIDIA / OpenAI / BlackRock。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     for name in ["NVIDIA", "OpenAI", "BlackRock", "Vanguard", "Meta"]:
         result = _classify_company_card(name)
@@ -2120,7 +2120,7 @@ def test_classify_company_whitelist():
 
 def test_classify_company_topic_pattern_cpu_supply():
     """CPU Supply 被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("CPU Supply")
     assert result["action"] == "migrate_to_topic"
@@ -2129,7 +2129,7 @@ def test_classify_company_topic_pattern_cpu_supply():
 
 def test_classify_company_topic_pattern_enterprise_saas():
     """Enterprise SaaS 被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("Enterprise SaaS")
     assert result["action"] == "migrate_to_topic"
@@ -2138,7 +2138,7 @@ def test_classify_company_topic_pattern_enterprise_saas():
 
 def test_classify_company_topic_pattern_kubernetes():
     """Kubernetes 被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("Kubernetes")
     assert result["action"] == "migrate_to_topic"
@@ -2147,7 +2147,7 @@ def test_classify_company_topic_pattern_kubernetes():
 
 def test_classify_company_topic_pattern_etf():
     """ETF 被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("ETF")
     assert result["action"] == "migrate_to_topic"
@@ -2155,7 +2155,7 @@ def test_classify_company_topic_pattern_etf():
 
 def test_classify_company_ai_agents():
     """AI Agents company card 被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("AI Agents")
     assert result["action"] == "migrate_to_topic"
@@ -2165,7 +2165,7 @@ def test_classify_company_ai_agents():
 
 def test_classify_company_uncertain():
     """不确定名称进入 manual_review。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("SomeRandomStartup")
     assert result["action"] == "manual_review"
@@ -2175,7 +2175,7 @@ def test_classify_company_uncertain():
 
 def test_classify_company_chinese():
     """中文公司名（含企业级AI安全等关键词）被建议迁移到 Topic。"""
-    from podcast_research.exporters.obsidian import _classify_company_card
+    from signalvault.exporters.obsidian import _classify_company_card
 
     result = _classify_company_card("企业级AI安全")
     assert result["action"] == "migrate_to_topic"
@@ -2183,7 +2183,7 @@ def test_classify_company_chinese():
 
 def test_find_topic_aliases(tmp_path):
     """topic alias 检测：Ai Agent → AI Agents。"""
-    from podcast_research.exporters.obsidian import (
+    from signalvault.exporters.obsidian import (
         _find_topic_aliases,
         _write_topic_card,
     )
@@ -2206,7 +2206,7 @@ def test_find_topic_aliases(tmp_path):
 
 def test_cleanup_cards_dry_run_no_files(tmp_path):
     """dry-run 不写文件。"""
-    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
+    from signalvault.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2233,7 +2233,7 @@ def test_cleanup_cards_dry_run_no_files(tmp_path):
 
 def test_cleanup_cards_apply_migrates_company(tmp_path):
     """apply 迁移 Company → Topic。"""
-    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
+    from signalvault.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2265,7 +2265,7 @@ def test_cleanup_cards_apply_migrates_company(tmp_path):
 
 def test_cleanup_cards_apply_no_delete(tmp_path):
     """apply 不删除旧文件，而是移到 backup。"""
-    from podcast_research.exporters.obsidian import _write_company_card, cleanup_cards
+    from signalvault.exporters.obsidian import _write_company_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2286,7 +2286,7 @@ def test_cleanup_cards_apply_no_delete(tmp_path):
 
 def test_cleanup_cards_topic_alias_merge(tmp_path):
     """topic alias merge 生效。"""
-    from podcast_research.exporters.obsidian import _write_topic_card, cleanup_cards
+    from signalvault.exporters.obsidian import _write_topic_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2313,7 +2313,7 @@ def test_cleanup_cards_topic_alias_merge(tmp_path):
 
 def test_cleanup_cards_source_reports_no_duplicate(tmp_path):
     """Source Reports 合并不重复。"""
-    from podcast_research.exporters.obsidian import _write_topic_card, cleanup_cards
+    from signalvault.exporters.obsidian import _write_topic_card, cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2340,7 +2340,7 @@ def test_cleanup_cards_source_reports_no_duplicate(tmp_path):
 
 def test_cleanup_cards_index_update(tmp_path):
     """Index 更新。"""
-    from podcast_research.exporters.obsidian import (
+    from signalvault.exporters.obsidian import (
         _write_company_card,
         _write_topic_card,
         cleanup_cards,
@@ -2371,7 +2371,7 @@ def test_cleanup_cards_index_update(tmp_path):
 
 def test_cleanup_cards_topics_only(tmp_path):
     """--topics-only 只处理 topics。"""
-    from podcast_research.exporters.obsidian import (
+    from signalvault.exporters.obsidian import (
         _write_company_card,
         _write_topic_card,
         cleanup_cards,
@@ -2398,7 +2398,7 @@ def test_cleanup_cards_topics_only(tmp_path):
 
 def test_cleanup_cards_companies_only(tmp_path):
     """--companies-only 只处理 companies。"""
-    from podcast_research.exporters.obsidian import (
+    from signalvault.exporters.obsidian import (
         _write_company_card,
         _write_topic_card,
         cleanup_cards,
@@ -2425,7 +2425,7 @@ def test_cleanup_cards_companies_only(tmp_path):
 
 def test_cleanup_cards_empty_vault(tmp_path):
     """空 vault 不报错。"""
-    from podcast_research.exporters.obsidian import cleanup_cards
+    from signalvault.exporters.obsidian import cleanup_cards
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2441,8 +2441,8 @@ def test_cli_cleanup_cards_dry_run(tmp_path):
     """CLI cleanup-cards --dry-run 工作。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
-    from podcast_research.exporters.obsidian import _write_company_card
+    from signalvault.cli import app
+    from signalvault.exporters.obsidian import _write_company_card
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2464,10 +2464,10 @@ def test_cli_cleanup_cards_no_vault(monkeypatch):
     """CLI cleanup-cards 无 vault 时报错。"""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "cleanup-cards"])
@@ -2478,7 +2478,7 @@ def test_cli_cleanup_cards_conflicting_flags(tmp_path):
     """--topics-only 和 --companies-only 不能同时使用。"""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2499,7 +2499,7 @@ def test_cli_cleanup_cards_conflicting_flags(tmp_path):
 
 def _create_topic_card(vault, topic_name, source_reports=None, report_count=0):
     """Helper: create a topic card file with Source Reports."""
-    from podcast_research.exporters.obsidian import _write_topic_card
+    from signalvault.exporters.obsidian import _write_topic_card
     topics_dir = vault / "02_Topics"
     topics_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2517,7 +2517,7 @@ def _create_topic_card(vault, topic_name, source_reports=None, report_count=0):
 
 def test_consolidate_core_taxonomy():
     """Core taxonomy topics are marked as core."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     core_topics = [
         "AI Infrastructure", "AI Capex", "Inference", "AI Agents",
@@ -2533,7 +2533,7 @@ def test_consolidate_core_taxonomy():
 
 def test_consolidate_alias_merge_ai_agent():
     """ai-agent / Ai Agent merges to AI Agents."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     for variant in ["ai agent", "ai-agent", "Ai Agent", "agentic ai"]:
         status, reason = _classify_topic_status(variant, 3)
@@ -2543,7 +2543,7 @@ def test_consolidate_alias_merge_ai_agent():
 
 def test_consolidate_alias_merge_ai_infra():
     """ai-infra / Ai Infra merges to AI Infrastructure."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     for variant in ["ai infra", "ai-infra", "ai compute"]:
         status, reason = _classify_topic_status(variant, 3)
@@ -2553,7 +2553,7 @@ def test_consolidate_alias_merge_ai_infra():
 
 def test_consolidate_alias_merge_enterprise_saas():
     """Enterprise SaaS merges to Enterprise AI."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     for variant in ["enterprise saas", "enterprise software", "b2b ai"]:
         status, reason = _classify_topic_status(variant, 3)
@@ -2563,7 +2563,7 @@ def test_consolidate_alias_merge_enterprise_saas():
 
 def test_consolidate_alias_merge_long_term_investing():
     """Long-term investing merges to Investment Framework."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     for variant in ["long-term investing", "investment thesis"]:
         status, reason = _classify_topic_status(variant, 3)
@@ -2573,7 +2573,7 @@ def test_consolidate_alias_merge_long_term_investing():
 
 def test_consolidate_alias_merge_open_source():
     """Open models merges to Open Source AI."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     for variant in ["open models", "open source models", "open weights"]:
         status, reason = _classify_topic_status(variant, 3)
@@ -2583,7 +2583,7 @@ def test_consolidate_alias_merge_open_source():
 
 def test_consolidate_emerging_topic():
     """Multi-report non-core topic is marked emerging."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     status, reason = _classify_topic_status("Some Emerging Topic", 5)
     assert status == "emerging"
@@ -2592,7 +2592,7 @@ def test_consolidate_emerging_topic():
 
 def test_consolidate_long_tail_topic():
     """Single-report topic is marked long_tail."""
-    from podcast_research.exporters.obsidian import _classify_topic_status
+    from signalvault.exporters.obsidian import _classify_topic_status
 
     status, reason = _classify_topic_status("Some Long Tail Topic", 1)
     assert status == "long_tail"
@@ -2601,7 +2601,7 @@ def test_consolidate_long_tail_topic():
 
 def test_consolidate_dry_run_no_files(tmp_path):
     """dry-run does not modify files."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2618,7 +2618,7 @@ def test_consolidate_dry_run_no_files(tmp_path):
 
 def test_consolidate_apply_merges_aliases(tmp_path):
     """apply merges alias topics into canonical."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2637,7 +2637,7 @@ def test_consolidate_apply_merges_aliases(tmp_path):
 
 def test_consolidate_apply_no_delete(tmp_path):
     """apply does not delete old files, only backs up."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2656,7 +2656,7 @@ def test_consolidate_apply_no_delete(tmp_path):
 
 def test_consolidate_source_reports_no_duplicate(tmp_path):
     """Source Reports merge without duplicates."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2677,7 +2677,7 @@ def test_consolidate_source_reports_no_duplicate(tmp_path):
 
 def test_consolidate_taxonomy_index(tmp_path):
     """Topic Taxonomy.md is generated."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2700,7 +2700,7 @@ def test_consolidate_taxonomy_index(tmp_path):
 
 def test_consolidate_topic_index_updated(tmp_path):
     """Topic Index is updated after consolidation."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2718,7 +2718,7 @@ def test_consolidate_topic_index_updated(tmp_path):
 
 def test_consolidate_mark_status(tmp_path):
     """Status is marked in frontmatter."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2733,7 +2733,7 @@ def test_consolidate_mark_status(tmp_path):
 
 def test_consolidate_empty_vault(tmp_path):
     """Empty vault does not error."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2748,7 +2748,7 @@ def test_cli_consolidate_topics_dry_run(tmp_path):
     """CLI consolidate-topics --dry-run works."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2768,10 +2768,10 @@ def test_cli_consolidate_topics_no_vault(monkeypatch):
     """CLI consolidate-topics without vault errors."""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["obsidian", "consolidate-topics"])
@@ -2784,7 +2784,7 @@ def test_cli_consolidate_topics_no_vault(monkeypatch):
 
 def test_hardening_ai_for_science_casing(tmp_path):
     """'Ai For Science' should be renamed to 'AI for Science' (correct casing)."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2807,7 +2807,7 @@ def test_hardening_ai_for_science_casing(tmp_path):
 
 def test_hardening_application_to_ai_applications(tmp_path):
     """Generic 'Application' should merge into 'AI Applications'."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2825,7 +2825,7 @@ def test_hardening_application_to_ai_applications(tmp_path):
 
 def test_hardening_model_to_ai_models(tmp_path):
     """Generic 'Model' should merge into 'AI Models'."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2841,7 +2841,7 @@ def test_hardening_model_to_ai_models(tmp_path):
 
 def test_hardening_enterprise_to_enterprise_ai(tmp_path):
     """Generic 'Enterprise' should merge into 'Enterprise AI'."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2857,7 +2857,7 @@ def test_hardening_enterprise_to_enterprise_ai(tmp_path):
 
 def test_hardening_enterprise_chinese_to_enterprise_ai(tmp_path):
     """Chinese '企业级' should merge into 'Enterprise AI'."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2873,7 +2873,7 @@ def test_hardening_enterprise_chinese_to_enterprise_ai(tmp_path):
 
 def test_hardening_capital_market_to_public_markets(tmp_path):
     """'Capital Market' should merge into 'Public Markets'."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2889,7 +2889,7 @@ def test_hardening_capital_market_to_public_markets(tmp_path):
 
 def test_hardening_generic_topic_guard():
     """Generic topics must be blocked from surviving as independent topics."""
-    from podcast_research.exporters.obsidian import _GENERIC_TOPICS
+    from signalvault.exporters.obsidian import _GENERIC_TOPICS
 
     # All these should be in the guard set
     assert "application" in _GENERIC_TOPICS
@@ -2904,7 +2904,7 @@ def test_hardening_generic_topic_guard():
 
 def test_hardening_source_reports_no_duplicate(tmp_path):
     """Source Reports merge without duplicates when merging generic topics."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2925,7 +2925,7 @@ def test_hardening_source_reports_no_duplicate(tmp_path):
 
 def test_hardening_backup_creation(tmp_path):
     """Old topic files are moved to backup, not deleted."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2945,7 +2945,7 @@ def test_hardening_backup_creation(tmp_path):
 
 def test_hardening_taxonomy_updated(tmp_path):
     """Topic Taxonomy.md is updated after hardening."""
-    from podcast_research.exporters.obsidian import consolidate_topics
+    from signalvault.exporters.obsidian import consolidate_topics
 
     vault = tmp_path / "vault"
     vault.mkdir()

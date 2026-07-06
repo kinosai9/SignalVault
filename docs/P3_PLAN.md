@@ -5,7 +5,7 @@
 
 ## 定位
 
-把 podcast_research 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。
+把 signalvault 从"可运行的数据处理流水线"升级为"可恢复、可审计、可被 Agent 查询的投资知识库后端"。
 
 P2 解决了"能处理什么"，P3 解决"运行时出问题怎么办"和"怎么让别人/别的程序来查询"。
 
@@ -113,7 +113,7 @@ P2 解决了"能处理什么"，P3 解决"运行时出问题怎么办"和"怎么
 
 - 新增 `mcp_server/` 包（4 个模块：`__init__.py`, `server.py`, `tools.py`, `serializers.py`）
 - 8 个只读 MCP tool：`search_reports`, `get_report`, `list_channels`, `search_entities`, `get_entity_profile`, `list_investment_views`, `list_tracking_signals`, `list_review_items`
-- CLI: `python -m podcast_research mcp-serve [--db-path path/to/db]`
+- CLI: `python -m signalvault mcp-serve [--db-path path/to/db]`
 - stdio transport，兼容 Claude Code / Codex / Claude Desktop
 - 依赖：`mcp>=1.0`
 - 71 个专项测试 — `tests/test_mcp_server.py`
@@ -143,7 +143,7 @@ create_mcp_server() → Server
 | `list_review_items` | 列出审核事项（type/status/severity） | review_items 表 |
 
 **验收标准：**
-- [x] `python -m podcast_research mcp-serve` 可启动
+- [x] `python -m signalvault mcp-serve` 可启动
 - [x] 8 个 tool 全部可用
 - [x] 只读验证（无写入 tool，查询不修改 DB）
 - [x] 空 DB / 无结果稳定返回

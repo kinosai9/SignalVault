@@ -16,7 +16,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _setup_vault_for_tracked(monkeypatch, tmp_path):
     """Set a temporary vault path in config_store so tracked source routes work."""
-    import podcast_research.config_store as cs
+    import signalvault.config_store as cs
 
     vault = tmp_path / "test_vault_tracked"
     vault.mkdir(parents=True)
@@ -120,7 +120,7 @@ def _mock_allin_homepage_fetch(monkeypatch, html=None):
         return html
 
     monkeypatch.setattr(
-        "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+        "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
         mock_fetch_html,
     )
 
@@ -136,7 +136,7 @@ def _mock_allin_episode_fetch(monkeypatch, episode_html=None):
         return MOCK_ALLIN_HOMEPAGE_HTML
 
     monkeypatch.setattr(
-        "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+        "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
         mock_fetch_html,
     )
 
@@ -187,7 +187,7 @@ class TestValidateURL:
     """P2-S.3.2 req 2: URL validation for tracking."""
 
     def test_allin_zh_notes_url_valid(self):
-        from podcast_research.sources.tracked_source_service import (
+        from signalvault.sources.tracked_source_service import (
             validate_url_for_tracking,
         )
         is_valid, adapter, provider, msg = validate_url_for_tracking(
@@ -199,7 +199,7 @@ class TestValidateURL:
         assert msg == ""
 
     def test_allin_in_path_valid(self):
-        from podcast_research.sources.tracked_source_service import (
+        from signalvault.sources.tracked_source_service import (
             validate_url_for_tracking,
         )
         is_valid, _, provider, _ = validate_url_for_tracking(
@@ -209,7 +209,7 @@ class TestValidateURL:
         assert provider == "allin-podcast-zh-notes"
 
     def test_generic_url_invalid(self):
-        from podcast_research.sources.tracked_source_service import (
+        from signalvault.sources.tracked_source_service import (
             validate_url_for_tracking,
         )
         is_valid, adapter, provider, msg = validate_url_for_tracking(
@@ -220,7 +220,7 @@ class TestValidateURL:
         assert "单网页导入" in msg
 
     def test_empty_url_invalid(self):
-        from podcast_research.sources.tracked_source_service import (
+        from signalvault.sources.tracked_source_service import (
             validate_url_for_tracking,
         )
         is_valid, _, _, _ = validate_url_for_tracking("")
@@ -291,7 +291,7 @@ class TestTrackedSourceCrud:
             return "<html><head><title>Test</title></head><body><article><h1>A Post</h1><p>Content here.</p><p>More content.</p><p>Even more.</p></article></body></html>"
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch,
         )
 
@@ -397,8 +397,8 @@ class TestTrackedSourceRefresh:
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
         # Count entries via DB
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -414,7 +414,7 @@ class TestTrackedSourceRefresh:
             raise RuntimeError("Connection refused")
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch_fail,
         )
 
@@ -427,8 +427,8 @@ class TestTrackedSourceRefresh:
         assert "error" in resp.headers["location"]
 
         # Verify source status is failed
-        from podcast_research.db.repository import get_tracked_source
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_tracked_source
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             ts = get_tracked_source(session, ts_id)
@@ -445,8 +445,8 @@ class TestTrackedSourceRefresh:
         ts_id = _seed_tracked_source(api_client)
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -472,7 +472,7 @@ class TestTrackedSourceRefresh:
             return MOCK_ALLIN_EPISODE_HTML
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch,
         )
 
@@ -483,8 +483,8 @@ class TestTrackedSourceRefresh:
         )
         assert resp.status_code == 303
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -512,8 +512,8 @@ class TestTrackedSourceImport:
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
         # Get entry IDs
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -532,7 +532,7 @@ class TestTrackedSourceImport:
         assert resp.status_code == 303
 
         # Check entry status updated
-        from podcast_research.db.repository import get_tracked_source_entry
+        from signalvault.db.repository import get_tracked_source_entry
         session = get_session()
         try:
             entry = get_tracked_source_entry(session, entry_id)
@@ -550,8 +550,8 @@ class TestTrackedSourceImport:
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
         # Get preview_ready entry IDs
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -592,8 +592,8 @@ class TestTrackedSourceImport:
         ts_id = _seed_tracked_source(api_client)
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -608,7 +608,7 @@ class TestTrackedSourceImport:
         )
         assert resp.status_code == 303
 
-        from podcast_research.db.repository import get_tracked_source_entry
+        from signalvault.db.repository import get_tracked_source_entry
         session = get_session()
         try:
             entry = get_tracked_source_entry(session, entry_id)
@@ -624,8 +624,8 @@ class TestTrackedSourceImport:
         ts_id = _seed_tracked_source(api_client)
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -660,8 +660,8 @@ class TestTrackedSourceImport:
         ts_id = _seed_tracked_source(api_client)
         api_client.post(f"/sources/tracked/{ts_id}/refresh", follow_redirects=False)
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -711,8 +711,8 @@ class TestTrackedSourceEntriesFilters:
         )
         assert resp.status_code == 200
         # All entries should be preview_ready after first refresh
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id, status_filter="preview_ready")
@@ -731,7 +731,7 @@ class TestTrackedSourceEntriesFilters:
             return MOCK_ALLIN_EPISODE_HTML
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch,
         )
 
@@ -743,8 +743,8 @@ class TestTrackedSourceEntriesFilters:
         )
         assert resp.status_code == 200
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id, status_filter="failed")
@@ -764,7 +764,7 @@ class TestTrackedSourceEntriesFilters:
             return MOCK_ALLIN_EPISODE_HTML
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch,
         )
 
@@ -774,8 +774,8 @@ class TestTrackedSourceEntriesFilters:
         resp = api_client.get(f"/sources/tracked/{ts_id}/entries")
         assert resp.status_code == 200
 
-        from podcast_research.db.repository import list_tracked_source_entries
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_tracked_source_entries
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             entries = list_tracked_source_entries(session, ts_id)
@@ -840,7 +840,7 @@ class TestTrackedSourceEdgeCases:
             return "<html><body><div class='episode-list'></div></body></html>"
 
         monkeypatch.setattr(
-            "podcast_research.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
+            "signalvault.adapters.external_html_notes.ExternalHTMLNotesAdapter._fetch_html",
             mock_fetch,
         )
 

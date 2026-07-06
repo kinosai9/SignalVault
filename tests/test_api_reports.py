@@ -55,7 +55,7 @@ def test_api_reports_empty_db(api_client, db_session) -> None:
 
 
 def test_api_reports_detail(api_client, seeded_db) -> None:
-    from podcast_research.db.repository import list_reports
+    from signalvault.db.repository import list_reports
     rows = list_reports(seeded_db)
     rid = rows[0]["id"]
 
@@ -75,7 +75,7 @@ def test_api_reports_detail_not_found(api_client, seeded_db) -> None:
 
 
 def test_api_reports_views(api_client, seeded_db) -> None:
-    from podcast_research.db.repository import list_reports
+    from signalvault.db.repository import list_reports
     rows = list_reports(seeded_db)
     rid = rows[0]["id"]
 
@@ -95,7 +95,7 @@ def test_api_reports_views_not_found(api_client, seeded_db) -> None:
 
 
 def test_api_reports_signals(api_client, seeded_db) -> None:
-    from podcast_research.db.repository import list_reports
+    from signalvault.db.repository import list_reports
     rows = list_reports(seeded_db)
     rid = rows[0]["id"]
 
@@ -152,7 +152,7 @@ def test_api_sources(api_client, seeded_db) -> None:
 def test_serve_command_help() -> None:
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["serve", "--help"])

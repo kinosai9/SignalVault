@@ -15,7 +15,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _setup_vault_for_sources(monkeypatch, tmp_path):
     """Set a temporary vault path in config_store so sources routes work."""
-    from podcast_research import config_store
+    from signalvault import config_store
 
     vault = tmp_path / "test_vault"
     vault.mkdir(parents=True)
@@ -49,7 +49,7 @@ class MockChannelAdapter:
 
     def fetch_channel_videos(self, channel_url: str, limit: int = 20):
         """Return mock videos."""
-        from podcast_research.adapters.channel_video_adapter import ChannelVideoItem
+        from signalvault.adapters.channel_video_adapter import ChannelVideoItem
         return [
             ChannelVideoItem(
                 video_id=v["video_id"],
@@ -233,8 +233,8 @@ class TestSourcesChannelActions:
         assert "TestChannel" not in resp2.text or f"/sources/channels/{ch_id}" not in resp2.text
 
         # But the channel should still exist in DB (soft-deleted)
-        from podcast_research.db.repository import get_channel
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_channel
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             ch = get_channel(session, ch_id)
@@ -265,7 +265,7 @@ class TestChannelRefresh:
         # Mock ChannelVideoAdapter
         mock_adapter = MockChannelAdapter()
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
 
@@ -296,7 +296,7 @@ class TestChannelRefresh:
 
         mock_adapter = MockChannelAdapter()
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
 
@@ -312,8 +312,8 @@ class TestChannelRefresh:
         time.sleep(0.3)
 
         # Check DB directly — should have exactly 3 videos (no duplicates)
-        from podcast_research.db.repository import list_channel_videos
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import list_channel_videos
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             videos = list_channel_videos(session, ch_id)
@@ -331,8 +331,8 @@ class TestVideoImportStatus:
 
     def test_new_video_is_new(self, api_client):
         """Unknown video_id should return 'new'."""
-        from podcast_research.db.repository import detect_video_import_status
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import detect_video_import_status
+        from signalvault.db.session import get_session
 
         session = get_session()
         try:
@@ -343,8 +343,8 @@ class TestVideoImportStatus:
 
     def test_analyzed_video_detected(self, api_client, seeded_db):
         """Video that exists in episodes table should be 'analyzed'."""
-        from podcast_research.db.repository import detect_video_import_status
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import detect_video_import_status
+        from signalvault.db.session import get_session
 
         session = get_session()
         try:
@@ -356,8 +356,8 @@ class TestVideoImportStatus:
 
     def test_synced_video_detected_in_vault(self, api_client, seeded_db, tmp_path):
         """Video in Obsidian vault frontmatter should be 'synced'."""
-        from podcast_research.db.repository import detect_video_import_status
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import detect_video_import_status
+        from signalvault.db.session import get_session
 
         # Create a fake vault with a report containing the video_id
         vault = tmp_path / "vault"
@@ -395,7 +395,7 @@ Test content.
 
         mock_adapter = MockChannelAdapter()
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
 
@@ -457,7 +457,7 @@ class TestTaskSuccessPage:
         """Success page should not show spinner."""
         import time
 
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_job,
             update_job,
         )
@@ -482,7 +482,7 @@ class TestTaskSuccessPage:
 
     def test_task_success_checklist_full_flow(self, api_client):
         """Full flow success page should show checklist."""
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_job,
             update_job,
         )
@@ -506,7 +506,7 @@ class TestTaskSuccessPage:
 
     def test_channel_refresh_success_result_links(self, api_client):
         """channel_refresh job success should have video list link."""
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_channel_refresh_job,
             update_job,
         )
@@ -540,7 +540,7 @@ class TestChannelRefreshJob:
 
     def test_channel_refresh_job_type_label(self, api_client):
         """channel_refresh job should appear in task list with readable label."""
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             create_channel_refresh_job,
             update_job,
         )
@@ -572,7 +572,7 @@ class TestVideoStatusSync:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -589,8 +589,8 @@ class TestVideoStatusSync:
         assert "/tasks/" in resp.headers["location"]
 
         # Check DB
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "importTest1")
@@ -604,12 +604,12 @@ class TestVideoStatusSync:
         ch_id = _seed_channel(api_client)
 
         # Directly insert a processing video into DB (bypass background refresh to avoid race)
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
             upsert_channel_video,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             upsert_channel_video(
@@ -643,7 +643,7 @@ class TestVideoStatusSync:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -651,11 +651,11 @@ class TestVideoStatusSync:
         time.sleep(0.5)
 
         # Set to synced
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "synVid")
@@ -676,7 +676,7 @@ class TestJobStatusWriteback:
 
     def test_full_flow_success_writes_synced(self, api_client, monkeypatch):
         """After full_flow job success, channel_videos status should be synced."""
-        from podcast_research.services.job_service import (
+        from signalvault.services.job_service import (
             AnalysisJob,
             _writeback_channel_video_status,
         )
@@ -688,7 +688,7 @@ class TestJobStatusWriteback:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -712,8 +712,8 @@ class TestJobStatusWriteback:
             job, status="synced", report_id=99,
         )
 
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "writeback1")
@@ -724,10 +724,10 @@ class TestJobStatusWriteback:
 
     def test_full_flow_failure_writes_failed(self, seeded_db, monkeypatch):
         """After full_flow failure, channel_videos status should be failed."""
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
-        from podcast_research.services.job_service import (
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
+        from signalvault.services.job_service import (
             AnalysisJob,
             _writeback_channel_video_status,
         )
@@ -772,10 +772,10 @@ class TestSyncRetryWriteback:
 
     def test_retry_sync_success_writes_synced(self, seeded_db):
         """Retry sync on a previously-failed video updates status to synced."""
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
-        from podcast_research.services.job_service import _writeback_sync_result
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
+        from signalvault.services.job_service import _writeback_sync_result
 
         # Create a ChannelVideo with failed status
         session = get_session()
@@ -807,10 +807,10 @@ class TestSyncRetryWriteback:
 
     def test_retry_sync_success_clears_failure_reason(self, seeded_db):
         """On sync retry success, failure_reason should be cleared."""
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
-        from podcast_research.services.job_service import _writeback_sync_result
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
+        from signalvault.services.job_service import _writeback_sync_result
 
         session = get_session()
         try:
@@ -839,10 +839,10 @@ class TestSyncRetryWriteback:
 
     def test_synced_not_downgraded_by_sync_failure(self, seeded_db):
         """Already synced video stays synced even if sync fails later."""
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
-        from podcast_research.services.job_service import _writeback_sync_result
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
+        from signalvault.services.job_service import _writeback_sync_result
 
         session = get_session()
         try:
@@ -874,7 +874,7 @@ class TestSyncRetryWriteback:
 
     def test_report_without_video_id_handled_gracefully(self, seeded_db):
         """Reports without video_id should not crash _writeback_sync_result."""
-        from podcast_research.services.job_service import _writeback_sync_result
+        from signalvault.services.job_service import _writeback_sync_result
 
         # Report 1 in seeded_db is local (no video_id).
         # _writeback_sync_result should return silently without error.
@@ -902,12 +902,12 @@ class _SeedChannelWithVideosMixin:
         """
         ch_id = _seed_channel(api_client)
 
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
             upsert_channel_video,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             upsert_channel_video(
@@ -1004,7 +1004,7 @@ class TestImportGuard(_SeedChannelWithVideosMixin):
         import time; time.sleep(0.3)
         # Verify the job exists and is a sync type
         task_id = location.split("/tasks/")[1]
-        from podcast_research.services.job_service import get_job_status
+        from signalvault.services.job_service import get_job_status
         status_data = get_job_status(task_id)
         if status_data:
             assert status_data["job_type"] == "sync", \
@@ -1154,7 +1154,7 @@ class TestSourcePagesDOMStructure:
              "published_at": "20260601", "duration_seconds": 1800},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -1199,7 +1199,7 @@ class TestActiveJobIdLifecycle:
     def test_active_job_id_written_on_import(self, api_client, monkeypatch):
         """Importing a video should set active_job_id on channel_video."""
         # Mock start_job/start_sync_job to prevent job thread from clearing active_job_id
-        import podcast_research.services.job_service as js
+        import signalvault.services.job_service as js
         monkeypatch.setattr(js, "start_job", lambda job: None)
         monkeypatch.setattr(js, "start_sync_job", lambda job: None)
 
@@ -1212,7 +1212,7 @@ class TestActiveJobIdLifecycle:
             },
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -1227,8 +1227,8 @@ class TestActiveJobIdLifecycle:
         assert resp.status_code == 303
 
         # Check active_job_id was set
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "ajTest1")
@@ -1239,10 +1239,10 @@ class TestActiveJobIdLifecycle:
 
     def test_active_job_id_cleared_on_writeback(self, seeded_db):
         """writeback should clear active_job_id."""
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
-        from podcast_research.services.job_service import (
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
+        from signalvault.services.job_service import (
             AnalysisJob,
             _writeback_channel_video_status,
         )
@@ -1293,18 +1293,18 @@ class TestRerunButton:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
         # Set to synced
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunBtnS")
@@ -1326,17 +1326,17 @@ class TestRerunButton:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunBtnA")
@@ -1362,17 +1362,17 @@ class TestRerunRoutes:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunGet1")
@@ -1392,7 +1392,7 @@ class TestRerunRoutes:
     def test_rerun_post_creates_job(self, api_client, monkeypatch):
         """POST /rerun creates job and redirects to /tasks/."""
         # Mock start_job to prevent background thread
-        import podcast_research.services.job_service as js
+        import signalvault.services.job_service as js
         monkeypatch.setattr(js, "start_job", lambda job: None)
 
         ch_id = _seed_channel(api_client)
@@ -1402,17 +1402,17 @@ class TestRerunRoutes:
              "published_at": "20260601", "duration_seconds": 1200},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
-        from podcast_research.db.repository import (
+        from signalvault.db.repository import (
             get_channel_video_by_video_id,
             update_channel_video_status,
         )
-        from podcast_research.db.session import get_session
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "rerunPost1")
@@ -1504,8 +1504,8 @@ class TestWatchlistMatch:
 
     def test_match_company_exact(self):
         """Exact company name match."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(companies=["OpenAI", "NVIDIA"])
 
@@ -1516,8 +1516,8 @@ class TestWatchlistMatch:
 
     def test_match_company_case_insensitive(self):
         """Company name match is case insensitive."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(companies=["NVIDIA"])
 
@@ -1529,8 +1529,8 @@ class TestWatchlistMatch:
 
     def test_match_company_alias(self):
         """Company alias map works."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(companies=["NVIDIA"])
 
@@ -1541,8 +1541,8 @@ class TestWatchlistMatch:
 
     def test_match_topic_exact(self):
         """Exact topic name match."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(topics=["AI Agents"])
 
@@ -1555,8 +1555,8 @@ class TestWatchlistMatch:
 
     def test_match_topic_normalized(self):
         """Normalized topic match (no spaces)."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(topics=["AI Agents"])
 
@@ -1566,8 +1566,8 @@ class TestWatchlistMatch:
 
     def test_match_theme_via_related_topic(self):
         """Theme matches via related topics."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(themes=["Agent 工具链"])
 
@@ -1580,8 +1580,8 @@ class TestWatchlistMatch:
 
     def test_no_match(self):
         """No match returns False."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(companies=["OpenAI"], topics=["AI Agents"])
 
@@ -1592,8 +1592,8 @@ class TestWatchlistMatch:
 
     def test_company_before_topic(self):
         """Company match takes priority over topic."""
-        from podcast_research.services.watchlist_matcher import match_video_to_watchlist
-        from podcast_research.workspace.watchlist import WatchlistConfig
+        from signalvault.services.watchlist_matcher import match_video_to_watchlist
+        from signalvault.workspace.watchlist import WatchlistConfig
 
         wl = WatchlistConfig(companies=["NVIDIA"], topics=["Chips"])
 
@@ -1608,7 +1608,7 @@ class TestRecommendationBadges:
 
     def test_new_plus_watchlist_gets_recommended(self):
         """new + watchlist_match → 'recommended' badge."""
-        from podcast_research.services.watchlist_matcher import (
+        from signalvault.services.watchlist_matcher import (
             MatchResult,
             compute_recommendation,
         )
@@ -1619,7 +1619,7 @@ class TestRecommendationBadges:
 
     def test_synced_no_recommended_badge(self):
         """synced videos don't get recommended badge even if watchlist matches."""
-        from podcast_research.services.watchlist_matcher import (
+        from signalvault.services.watchlist_matcher import (
             MatchResult,
             compute_recommendation,
         )
@@ -1630,19 +1630,19 @@ class TestRecommendationBadges:
 
     def test_long_video_badge(self):
         """Videos > 90 min get long_video badge."""
-        from podcast_research.services.watchlist_matcher import compute_recommendation
+        from signalvault.services.watchlist_matcher import compute_recommendation
         badges = compute_recommendation("new", None, duration_seconds=7200)
         assert "long_video" in badges
 
     def test_short_video_no_long_badge(self):
         """Videos ≤ 90 min don't get long_video badge."""
-        from podcast_research.services.watchlist_matcher import compute_recommendation
+        from signalvault.services.watchlist_matcher import compute_recommendation
         badges = compute_recommendation("new", None, duration_seconds=1800)
         assert "long_video" not in badges
 
     def test_both_badges(self):
         """new + watchlist + long → both badges."""
-        from podcast_research.services.watchlist_matcher import (
+        from signalvault.services.watchlist_matcher import (
             MatchResult,
             compute_recommendation,
         )
@@ -1673,8 +1673,8 @@ class TestChannelDefaultFocusEdit:
         assert "success" in resp.headers.get("location", "")
 
         # Verify in DB
-        from podcast_research.db.models import Channel
-        from podcast_research.db.session import get_session
+        from signalvault.db.models import Channel
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             ch = session.query(Channel).filter_by(id=ch_id).first()
@@ -1691,7 +1691,7 @@ class TestChannelDefaultFocusEdit:
              "published_at": "20260601", "duration_seconds": 1800},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
@@ -1735,18 +1735,18 @@ def _seed_channel_with_status_mix(api_client, monkeypatch):
          "published_at": "20260529", "duration_seconds": 1800},
     ])
     monkeypatch.setattr(
-        "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+        "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
         lambda: mock_adapter,
     )
     api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
     import time; time.sleep(0.3)
 
     # Set specific statuses
-    from podcast_research.db.repository import (
+    from signalvault.db.repository import (
         get_channel_video_by_video_id,
         update_channel_video_status,
     )
-    from podcast_research.db.session import get_session
+    from signalvault.db.session import get_session
     session = get_session()
     try:
         cv = get_channel_video_by_video_id(session, "syncVideo1")
@@ -1770,7 +1770,7 @@ def _seed_channel_with_status_mix(api_client, monkeypatch):
 
 def _write_test_watchlist_with_openai():
     """Write a temporary Watchlist.yaml with OpenAI in the test vault."""
-    from podcast_research import config_store
+    from signalvault import config_store
     vp_str = config_store.get_user_vault_path()
     if not vp_str:
         return
@@ -1807,14 +1807,14 @@ class TestLastJobIdWriteback:
              "published_at": "20260601", "duration_seconds": 1800},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
         # Mock start_job to avoid background thread
-        import podcast_research.services.job_service as js
+        import signalvault.services.job_service as js
         monkeypatch.setattr(js, "start_job", lambda job: None)
 
         resp = api_client.post(
@@ -1825,8 +1825,8 @@ class TestLastJobIdWriteback:
         assert resp.status_code == 303
 
         # Check channel_video has active_job_id for log linking
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "ljTest1")
@@ -1844,15 +1844,15 @@ class TestLastJobIdWriteback:
              "published_at": "20260601", "duration_seconds": 1800},
         ])
         monkeypatch.setattr(
-            "podcast_research.adapters.channel_video_adapter.ChannelVideoAdapter",
+            "signalvault.adapters.channel_video_adapter.ChannelVideoAdapter",
             lambda: mock_adapter,
         )
         api_client.post(f"/sources/channels/{ch_id}/refresh", follow_redirects=False)
         import time; time.sleep(0.3)
 
-        from podcast_research.db.models import ChannelVideo
-        from podcast_research.db.repository import get_channel_video_by_video_id
-        from podcast_research.db.session import get_session
+        from signalvault.db.models import ChannelVideo
+        from signalvault.db.repository import get_channel_video_by_video_id
+        from signalvault.db.session import get_session
         session = get_session()
         try:
             cv = get_channel_video_by_video_id(session, "failLog1")

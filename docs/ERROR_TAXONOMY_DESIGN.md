@@ -234,7 +234,7 @@ entity_ref       ──映射──→      source_path
 ### 7.1 创建错误记录
 
 ```python
-from podcast_research.diagnostics.error_codes import ErrorCodeRegistry
+from signalvault.diagnostics.error_codes import ErrorCodeRegistry
 
 # 获取预定义错误
 err = ErrorCodeRegistry.get("AUTH_ZSXQ_001")
@@ -265,7 +265,7 @@ Error [AUTH_ZSXQ_001]: 知识星球未登录
     "user_message": "知识星球未登录。请在终端运行 `zsxq-cli auth login` 后重试。",
     "suggested_actions": [
       "运行 zsxq-cli auth login",
-      "运行 podcast-research zsxq doctor 检查状态"
+      "运行 signalvault zsxq doctor 检查状态"
     ],
     "trace_id": "op_abc123"
   }

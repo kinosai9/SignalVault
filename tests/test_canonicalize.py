@@ -75,13 +75,13 @@ class TestNormalization:
     """Text normalization strips markdown, hashtags, boilerplate."""
 
     def test_strips_bold_markdown(self):
-        from podcast_research.workspace.canonicalize import normalize_claim_text
+        from signalvault.workspace.canonicalize import normalize_claim_text
         result = normalize_claim_text("**AI agents are transforming enterprise**")
         assert "**" not in result
         assert "ai agents are transforming enterprise" in result
 
     def test_strips_hashtags(self):
-        from podcast_research.workspace.canonicalize import normalize_claim_text
+        from signalvault.workspace.canonicalize import normalize_claim_text
         result = normalize_claim_text("AI agents transform enterprise #ui #agents #human")
         assert "#ui" not in result
         assert "#agents" not in result
@@ -89,27 +89,27 @@ class TestNormalization:
         assert "ai agents transform enterprise" in result
 
     def test_strips_trailing_tag_fragment(self):
-        from podcast_research.workspace.canonicalize import normalize_claim_text
+        from signalvault.workspace.canonicalize import normalize_claim_text
         result = normalize_claim_text("AI agents transform enterprise `#ui #agents")
         assert "`" not in result
         assert "#ui" not in result
 
     def test_strips_wiki_links(self):
-        from podcast_research.workspace.canonicalize import normalize_text
+        from signalvault.workspace.canonicalize import normalize_text
         result = normalize_text("[[NVIDIA]] releases new [[AI Models|model]]")
         assert "[[" not in result
         assert "nvidia" in result
         assert "model" in result
 
     def test_normalizes_cjk_punctuation(self):
-        from podcast_research.workspace.canonicalize import normalize_text
+        from signalvault.workspace.canonicalize import normalize_text
         result = normalize_text("AI技术，正在改变。投资方向；重要。")
         assert "，" not in result
         assert "。" not in result
         assert "；" not in result
 
     def test_fingerprint_stable_after_normalization(self):
-        from podcast_research.workspace.canonicalize import (
+        from signalvault.workspace.canonicalize import (
             claim_fingerprint,
         )
         text1 = "**AI agents are transforming enterprise workflows with automation** `#ui #agents"
@@ -119,7 +119,7 @@ class TestNormalization:
         assert fp1 == fp2
 
     def test_fingerprint_diff_for_different_claims(self):
-        from podcast_research.workspace.canonicalize import claim_fingerprint
+        from signalvault.workspace.canonicalize import claim_fingerprint
         fp1 = claim_fingerprint("NVIDIA GPU supply chain constrained")
         fp2 = claim_fingerprint("OpenAI releases GPT-5 with agent capabilities")
         assert fp1 != fp2
@@ -131,8 +131,8 @@ class TestDuplicateGrouping:
     """Canonical dedup groups markdown-variant duplicates."""
 
     def test_bold_vs_plain_grouped_together(self, tmp_path):
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -148,8 +148,8 @@ class TestDuplicateGrouping:
         assert groups[0].group_size == 2
 
     def test_different_hashtags_grouped_together(self, tmp_path):
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -165,8 +165,8 @@ class TestDuplicateGrouping:
         assert len(groups) == 1
 
     def test_distinct_claims_separate_groups(self, tmp_path):
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -181,8 +181,8 @@ class TestDuplicateGrouping:
         assert len(groups) == 2
 
     def test_canonical_selects_more_source_reports(self, tmp_path):
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -199,10 +199,10 @@ class TestDuplicateGrouping:
         assert groups[0].canonical.card_id == "claim_b"
 
     def test_duplicate_not_in_canonical_list(self, tmp_path):
-        from podcast_research.workspace.canonicalize import (
+        from signalvault.workspace.canonicalize import (
             canonical_claims,
         )
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -219,8 +219,8 @@ class TestDuplicateGrouping:
 
     def test_go_go_era_claims_same_group(self, tmp_path):
         """go-go era duplicate pair should be grouped."""
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         text = ("1960年代go-go时代，投资者从保守的平衡基金转向快速交易、"
@@ -239,8 +239,8 @@ class TestDuplicateGrouping:
 
     def test_ai_jobs_claims_same_group(self, tmp_path):
         """AI jobs duplicate pair should be grouped."""
-        from podcast_research.workspace.canonicalize import group_duplicate_claims
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         text = ("AI对就业的影响存在分歧：Cloudflare和Meta将裁员归因于AI，"
@@ -263,8 +263,8 @@ class TestActionability:
     """Actionability gate for claims and signals."""
 
     def test_watching_signal_already_followed(self, tmp_path):
-        from podcast_research.workspace.actionability import get_signal_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_signal_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_signal(vault, "sig_001", status="watching",
@@ -276,8 +276,8 @@ class TestActionability:
         assert a.status_label == "已在跟踪"
 
     def test_open_high_priority_signal_is_actionable(self, tmp_path):
-        from podcast_research.workspace.actionability import get_signal_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_signal_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_signal(vault, "sig_001", status="open",
@@ -292,8 +292,8 @@ class TestActionability:
         assert a.primary_action == "follow"
 
     def test_verified_claim_already_accepted(self, tmp_path):
-        from podcast_research.workspace.actionability import get_claim_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_claim_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_001", status="verified",
@@ -305,8 +305,8 @@ class TestActionability:
         assert a.status_label == "已采纳"
 
     def test_challenged_high_priority_claim_is_actionable(self, tmp_path):
-        from podcast_research.workspace.actionability import get_claim_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_claim_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_001", status="challenged",
@@ -319,8 +319,8 @@ class TestActionability:
         assert a.primary_action == "accept"
 
     def test_duplicate_claim_not_actionable(self, tmp_path):
-        from podcast_research.workspace.actionability import get_claim_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_claim_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_001", status="active",
@@ -332,8 +332,8 @@ class TestActionability:
         assert a.status_label == "重复"
 
     def test_resolved_signal_not_actionable(self, tmp_path):
-        from podcast_research.workspace.actionability import get_signal_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_signal_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_signal(vault, "sig_001", status="resolved",
@@ -345,8 +345,8 @@ class TestActionability:
         assert a.status_label == "已关闭"
 
     def test_signal_with_active_tracking_already_followed(self, tmp_path):
-        from podcast_research.workspace.actionability import get_signal_actionability
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.actionability import get_signal_actionability
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_signal(vault, "sig_001", status="open", tracking_status="active",
@@ -358,10 +358,10 @@ class TestActionability:
         assert a.status_label == "已在跟踪"
 
     def test_actionable_recommendations_exclude_duplicates(self, tmp_path):
-        from podcast_research.workspace.actionability import (
+        from signalvault.workspace.actionability import (
             build_actionable_recommendations,
         )
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="challenged",
@@ -392,8 +392,8 @@ class TestReinforcedClaimsDedup:
     """Research brief reinforced_claims uses canonical dedup."""
 
     def test_reinforced_claims_no_duplicates(self, tmp_path):
-        from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -410,8 +410,8 @@ class TestReinforcedClaimsDedup:
 
     def test_reinforced_claims_clean_display(self, tmp_path):
         """Reinforced claims output should not have markdown bold or hashtags."""
-        from podcast_research.workspace.research_brief import generate_brief
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="active",
@@ -432,8 +432,8 @@ class TestHomeNeedsReviewCanonical:
     """Home needs_review section uses canonical dedup."""
 
     def test_home_shows_only_canonical(self, tmp_path):
-        from podcast_research.workspace.generators import generate_home_dashboard
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.generators import generate_home_dashboard
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = _make_vault(tmp_path)
         _add_claim(vault, "claim_a", status="challenged",

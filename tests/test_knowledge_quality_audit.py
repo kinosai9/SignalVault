@@ -2,7 +2,7 @@
 
 import json
 
-from podcast_research.workspace.quality_audit import (
+from signalvault.workspace.quality_audit import (
     _COMPANY_ALIASES,
     _NOT_COMPANY,
     _NOT_TOPIC,
@@ -110,11 +110,11 @@ def test_microsoft_not_topic():
 
 def test_audit_detects_duplicate_video_id_report(tmp_path, monkeypatch):
     """Duplicate video_id in DB should be detected."""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session, init_db, reset_engine
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session, init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -147,11 +147,11 @@ def test_audit_detects_duplicate_video_id_report(tmp_path, monkeypatch):
 
 def test_audit_json_output(tmp_path, monkeypatch):
     """Audit JSON output is valid."""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session, init_db, reset_engine
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session, init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -171,7 +171,7 @@ def test_audit_json_output(tmp_path, monkeypatch):
 
     # Export JSON
     json_path = tmp_path / "audit.json"
-    from podcast_research.workspace.quality_audit import export_audit_json
+    from signalvault.workspace.quality_audit import export_audit_json
     export_audit_json(result, json_path)
     assert json_path.exists()
     data = json.loads(json_path.read_text(encoding="utf-8"))
@@ -182,11 +182,11 @@ def test_audit_json_output(tmp_path, monkeypatch):
 
 def test_audit_markdown_output(tmp_path, monkeypatch):
     """Audit Markdown output is valid."""
-    from podcast_research.db.models import Episode, Report
-    from podcast_research.db.session import get_session, init_db, reset_engine
+    from signalvault.db.models import Episode, Report
+    from signalvault.db.session import get_session, init_db, reset_engine
 
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr("podcast_research.config.DB_PATH", db_path)
+    monkeypatch.setattr("signalvault.config.DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
 
@@ -205,7 +205,7 @@ def test_audit_markdown_output(tmp_path, monkeypatch):
     result = run_quality_audit(db_path=str(db_path))
 
     md_path = tmp_path / "audit.md"
-    from podcast_research.workspace.quality_audit import export_audit_markdown
+    from signalvault.workspace.quality_audit import export_audit_markdown
     export_audit_markdown(result, md_path)
     assert md_path.exists()
     text = md_path.read_text(encoding="utf-8")
@@ -241,8 +241,8 @@ def test_entity_confusion_topic_to_company(tmp_path):
     )
     (vault / "03_Companies").mkdir(parents=True)
 
-    from podcast_research.workspace.quality_audit import _audit_entity_hygiene
-    from podcast_research.workspace.quality_models import QualityAuditResult
+    from signalvault.workspace.quality_audit import _audit_entity_hygiene
+    from signalvault.workspace.quality_models import QualityAuditResult
     result = QualityAuditResult()
     _audit_entity_hygiene(result, vault)
     confusions = [e for e in result.entity_confusions if e.name == "Anthropic"]
@@ -260,8 +260,8 @@ def test_entity_confusion_company_to_topic(tmp_path):
     )
     (vault / "02_Topics").mkdir(parents=True)
 
-    from podcast_research.workspace.quality_audit import _audit_entity_hygiene
-    from podcast_research.workspace.quality_models import QualityAuditResult
+    from signalvault.workspace.quality_audit import _audit_entity_hygiene
+    from signalvault.workspace.quality_models import QualityAuditResult
     result = QualityAuditResult()
     _audit_entity_hygiene(result, vault)
     confusions = [e for e in result.entity_confusions if e.name == "Agent"]
@@ -278,8 +278,8 @@ def test_orphan_claim_detection(tmp_path):
         encoding="utf-8",
     )
 
-    from podcast_research.workspace.quality_audit import _audit_graph_integrity
-    from podcast_research.workspace.quality_models import QualityAuditResult
+    from signalvault.workspace.quality_audit import _audit_graph_integrity
+    from signalvault.workspace.quality_models import QualityAuditResult
     result = QualityAuditResult()
     _audit_graph_integrity(result, vault)
     assert len(result.orphan_claims) >= 1

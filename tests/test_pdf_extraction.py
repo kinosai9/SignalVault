@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.sources.pdf_extraction import (
+from signalvault.sources.pdf_extraction import (
     PdfExtractionResult,
     PdfMetadata,
     PdfPage,
@@ -388,14 +388,14 @@ class TestBuildPdfReviewFindings:
 class TestIngestJobsPdf:
     def test_pdf_upload_job_key_format(self):
         """pdf_upload job_key uses content_hash."""
-        from podcast_research.sources.ingest_jobs import _make_job_key
+        from signalvault.sources.ingest_jobs import _make_job_key
         key = _make_job_key("pdf_upload", source_hash="abc123def456")
         assert key.startswith("pdf_upload:")
         assert "abc123def456" in key
 
     def test_create_pdf_upload_job(self, text_pdf_2page, db_session):
         """Create an ingest job for a PDF upload."""
-        from podcast_research.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.ingest_jobs import IngestJobManager
 
         result = extract_pdf(text_pdf_2page)
 
@@ -423,7 +423,7 @@ class TestIngestJobsPdf:
 
     def test_duplicate_pdf_no_duplicate_job(self, text_pdf_2page, db_session):
         """Same PDF hash → second create_job fails due to unique index."""
-        from podcast_research.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.ingest_jobs import IngestJobManager
 
         result = extract_pdf(text_pdf_2page)
 
@@ -448,7 +448,7 @@ class TestIngestJobsPdf:
 
     def test_pdf_upload_job_listable(self, text_pdf_2page, db_session):
         """Created PDF job appears in list_jobs."""
-        from podcast_research.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.ingest_jobs import IngestJobManager
 
         result = extract_pdf(text_pdf_2page)
         IngestJobManager.create_job(
@@ -471,7 +471,7 @@ class TestIngestJobsPdf:
 class TestReviewItemsPdf:
     def test_pdf_needs_ocr_creates_review_item(self, blank_page_pdf, db_session):
         """When needs_ocr=True, review item should be created."""
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         result = extract_pdf(blank_page_pdf)
         findings = build_pdf_review_findings(result)
@@ -489,7 +489,7 @@ class TestReviewItemsPdf:
 
     def test_pdf_extraction_failed_creates_review_item(self, encrypted_pdf, db_session):
         """Failed extraction → review item with pdf_extraction_failed."""
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
 
         result = extract_pdf(encrypted_pdf)
         findings = build_pdf_review_findings(result)
@@ -501,7 +501,7 @@ class TestReviewItemsPdf:
 
     def test_valid_item_types_include_pdf(self):
         """VALID_ITEM_TYPES includes the 3 new PDF types."""
-        from podcast_research.sources.review_items import VALID_ITEM_TYPES
+        from signalvault.sources.review_items import VALID_ITEM_TYPES
         assert "pdf_needs_ocr" in VALID_ITEM_TYPES
         assert "pdf_quality_issue" in VALID_ITEM_TYPES
         assert "pdf_extraction_failed" in VALID_ITEM_TYPES
@@ -517,7 +517,7 @@ class TestCliPdf:
         """pdf preview command is registered."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         app = cli_mod.app
         # Check that typer group 'pdf' is in the registered groups
@@ -531,7 +531,7 @@ class TestCliPdf:
         """pdf preview --help works."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -543,7 +543,7 @@ class TestCliPdf:
         """pdf extract --help works."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -555,7 +555,7 @@ class TestCliPdf:
         """pdf preview on a valid text PDF."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -569,7 +569,7 @@ class TestCliPdf:
         """pdf preview --json returns structured output."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -586,7 +586,7 @@ class TestCliPdf:
         """pdf extract --json returns structured output."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -599,7 +599,7 @@ class TestCliPdf:
         """pdf extract --output writes to file."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         output_file = tmp_path / "extracted.txt"
@@ -616,7 +616,7 @@ class TestCliPdf:
         """pdf preview on nonexistent file → error."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -628,7 +628,7 @@ class TestCliPdf:
         """pdf preview --write-review writes review items."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -642,7 +642,7 @@ class TestCliPdf:
         """pdf extract --write-review writes review items."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -676,7 +676,7 @@ class TestFullTextFormat:
 class TestResultSerialization:
     def test_result_is_serializable(self, text_pdf_2page):
         """PdfExtractionResult can be serialized to JSON-safe dict."""
-        from podcast_research.cli import _serialize_result
+        from signalvault.cli import _serialize_result
         result = extract_pdf(text_pdf_2page)
         data = _serialize_result(result)
         assert data["page_count"] == 2

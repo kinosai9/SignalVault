@@ -12,26 +12,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from podcast_research.analysis.models import (
+from signalvault.analysis.models import (
     Entity,
     ExtractionResult,
     InvestmentView,
     TechIndustryInsight,
     TrackingSignal,
 )
-from podcast_research.db.repository import (
+from signalvault.db.repository import (
     save_entities,
     save_episode,
     save_investment_views,
     save_report,
     save_tracking_signals,
 )
-from podcast_research.db.session import get_session, init_db, reset_engine
-from podcast_research.services.sync_service import (
+from signalvault.db.session import get_session, init_db, reset_engine
+from signalvault.services.sync_service import (
     SyncResult,
     sync_report_to_knowledge_base,
 )
-from podcast_research.workspace.scanner import VaultScanner
+from signalvault.workspace.scanner import VaultScanner
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -644,7 +644,7 @@ class TestReadTextSafe:
 
     def test_read_text_safe_utf8(self, tmp_path):
         """read_text_safe should read UTF-8 files correctly."""
-        from podcast_research.utils.file_io import read_text_safe
+        from signalvault.utils.file_io import read_text_safe
 
         path = tmp_path / "utf8.md"
         content = "中文测试 content with UTF-8 你好世界\n第二行"
@@ -656,7 +656,7 @@ class TestReadTextSafe:
 
     def test_read_text_safe_gb18030(self, tmp_path):
         """read_text_safe should fall back to gb18030 for GBK-encoded files."""
-        from podcast_research.utils.file_io import read_text_safe
+        from signalvault.utils.file_io import read_text_safe
 
         path = tmp_path / "gbk.md"
         content = "GBK编码的中文内容测试\n包含特殊字符：【投资分析】"
@@ -668,7 +668,7 @@ class TestReadTextSafe:
 
     def test_read_text_safe_utf8_sig(self, tmp_path):
         """read_text_safe should handle UTF-8 with BOM."""
-        from podcast_research.utils.file_io import read_text_safe
+        from signalvault.utils.file_io import read_text_safe
 
         path = tmp_path / "bom.md"
         content = "BOM file content 带中文"
@@ -680,7 +680,7 @@ class TestReadTextSafe:
 
     def test_read_text_safe_fallback_replace(self, tmp_path):
         """read_text_safe should fall back to replace mode for invalid bytes."""
-        from podcast_research.utils.file_io import read_text_safe
+        from signalvault.utils.file_io import read_text_safe
 
         path = tmp_path / "broken.bin"
         # Write raw bytes that are invalid in all common encodings
@@ -694,7 +694,7 @@ class TestReadTextSafe:
 
     def test_write_text_utf8_roundtrip(self, tmp_path):
         """write_text_utf8 should produce files that read_text_safe can read."""
-        from podcast_research.utils.file_io import read_text_safe, write_text_utf8
+        from signalvault.utils.file_io import read_text_safe, write_text_utf8
 
         path = tmp_path / "roundtrip.md"
         content = "中文 roundtrip test ★ 特殊字符"
@@ -708,7 +708,7 @@ class TestReadTextSafe:
 
     def test_sync_survives_gb18030_card(self, tmp_path):
         """Sync should not crash when vault contains a GBK-encoded topic card."""
-        from podcast_research.utils.file_io import read_text_safe
+        from signalvault.utils.file_io import read_text_safe
 
         vault = tmp_path / "vault"
         vault.mkdir()
@@ -743,7 +743,7 @@ class TestArchiveCurrentVideoOutputs:
 
     def test_archive_copies_old_report(self, tmp_path):
         """Old report is copied to Archive/Reports/."""
-        from podcast_research.exporters.obsidian import archive_current_video_outputs
+        from signalvault.exporters.obsidian import archive_current_video_outputs
 
         vault = tmp_path / "vault"
         reports_dir = vault / "01_Reports"
@@ -763,7 +763,7 @@ class TestArchiveCurrentVideoOutputs:
 
     def test_archive_moves_original_to_archive(self, tmp_path):
         """Archive moves (not copies) the original file to Archive/Reports."""
-        from podcast_research.exporters.obsidian import archive_current_video_outputs
+        from signalvault.exporters.obsidian import archive_current_video_outputs
 
         vault = tmp_path / "vault"
         reports_dir = vault / "01_Reports"
@@ -782,7 +782,7 @@ class TestArchiveCurrentVideoOutputs:
 
     def test_archive_marks_claims_as_archived(self, tmp_path):
         """Claims referencing the archived report are marked status: archived."""
-        from podcast_research.exporters.obsidian import archive_current_video_outputs
+        from signalvault.exporters.obsidian import archive_current_video_outputs
 
         vault = tmp_path / "vault"
         (vault / "01_Reports").mkdir(parents=True)
@@ -804,7 +804,7 @@ class TestArchiveCurrentVideoOutputs:
 
     def test_archive_marks_signals_as_archived(self, tmp_path):
         """Signals referencing the archived report are marked status: archived."""
-        from podcast_research.exporters.obsidian import archive_current_video_outputs
+        from signalvault.exporters.obsidian import archive_current_video_outputs
 
         vault = tmp_path / "vault"
         (vault / "01_Reports").mkdir(parents=True)
@@ -828,7 +828,7 @@ class TestScannerArchivedFiltering:
 
     def test_archived_claim_excluded_from_scanner(self, tmp_path):
         """Archived claims are NOT included in WorkspaceSnapshot."""
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = tmp_path / "vault"
         (vault / "06_Claims").mkdir(parents=True)
@@ -848,7 +848,7 @@ class TestScannerArchivedFiltering:
 
     def test_archived_signal_excluded_from_scanner(self, tmp_path):
         """Archived signals are NOT included in WorkspaceSnapshot."""
-        from podcast_research.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner import VaultScanner
 
         vault = tmp_path / "vault"
         (vault / "07_Signals").mkdir(parents=True)
@@ -866,7 +866,7 @@ class TestScannerArchivedFiltering:
 
     def test_source_report_no_duplicate_after_rerun(self, tmp_path):
         """Card Source Reports should not duplicate after rerun with same filename."""
-        from podcast_research.exporters.obsidian import _append_source_reports
+        from signalvault.exporters.obsidian import _append_source_reports
 
         vault = tmp_path / "vault"
         card_dir = vault / "02_Topics"

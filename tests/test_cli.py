@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from podcast_research.cli import app
+from signalvault.cli import app
 
 SAMPLE_SRT = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
 
@@ -66,7 +66,7 @@ MOCK_TRANSCRIPT_DATA = [
 ]
 
 
-@patch("podcast_research.adapters.youtube_transcript.YouTubeTranscriptApi")
+@patch("signalvault.adapters.youtube_transcript.YouTubeTranscriptApi")
 def test_cli_youtube_url_mock(mock_api_class: MagicMock, db_session, tmp_path) -> None:
     """--youtube-url + --mock 模式完整测试（不调用真实 API）。"""
     mock_transcript = MagicMock()

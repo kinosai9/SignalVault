@@ -37,7 +37,7 @@ updated_at: "2026-05-30T00:00:00"
 
 def test_update_tracking_status(tmp_path):
     """Test update_signal_tracking sets tracking_status."""
-    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
+    from signalvault.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -51,7 +51,7 @@ def test_update_tracking_status(tmp_path):
 
 def test_update_tracking_method(tmp_path):
     """Test update_signal_tracking sets tracking_method."""
-    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
+    from signalvault.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -64,7 +64,7 @@ def test_update_tracking_method(tmp_path):
 
 def test_update_tracking_query(tmp_path):
     """Test update_signal_tracking sets tracking_query."""
-    from podcast_research.claim_signal.review import get_signal, update_signal_tracking
+    from signalvault.claim_signal.review import get_signal, update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -77,7 +77,7 @@ def test_update_tracking_query(tmp_path):
 
 def test_invalid_tracking_status_rejected(tmp_path):
     """Test invalid tracking_status is rejected."""
-    from podcast_research.claim_signal.review import update_signal_tracking
+    from signalvault.claim_signal.review import update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -87,7 +87,7 @@ def test_invalid_tracking_status_rejected(tmp_path):
 
 def test_invalid_tracking_method_rejected(tmp_path):
     """Test invalid tracking_method is rejected."""
-    from podcast_research.claim_signal.review import update_signal_tracking
+    from signalvault.claim_signal.review import update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -97,7 +97,7 @@ def test_invalid_tracking_method_rejected(tmp_path):
 
 def test_add_update_appends(tmp_path):
     """Test add_signal_update appends to Updates section."""
-    from podcast_research.claim_signal.review import add_signal_update, get_signal
+    from signalvault.claim_signal.review import add_signal_update, get_signal
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -112,7 +112,7 @@ def test_add_update_appends(tmp_path):
 
 def test_add_update_updates_last_checked(tmp_path):
     """Test add_signal_update sets last_checked_at."""
-    from podcast_research.claim_signal.review import add_signal_update, get_signal
+    from signalvault.claim_signal.review import add_signal_update, get_signal
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -124,7 +124,7 @@ def test_add_update_updates_last_checked(tmp_path):
 
 def test_add_update_with_status_change(tmp_path):
     """Test add_signal_update optionally updates status."""
-    from podcast_research.claim_signal.review import add_signal_update, get_signal
+    from signalvault.claim_signal.review import add_signal_update, get_signal
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")
@@ -137,7 +137,7 @@ def test_add_update_with_status_change(tmp_path):
 
 def test_tracking_backlog_generated(tmp_path):
     """Test tracking-backlog generates file."""
-    from podcast_research.claim_signal.review import generate_signal_tracking_backlog
+    from signalvault.claim_signal.review import generate_signal_tracking_backlog
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", signal_text="Test signal A")
@@ -148,7 +148,7 @@ def test_tracking_backlog_generated(tmp_path):
 
 def test_tracking_backlog_sorted(tmp_path):
     """Test tracking backlog sorts by tracking status priority."""
-    from podcast_research.claim_signal.review import (
+    from signalvault.claim_signal.review import (
         generate_signal_tracking_backlog,
         update_signal_tracking,
     )
@@ -165,7 +165,7 @@ def test_tracking_backlog_sorted(tmp_path):
 
 def test_signal_index_includes_tracking(tmp_path):
     """Test Signal Index includes tracking fields."""
-    from podcast_research.claim_signal.review import update_signal_tracking
+    from signalvault.claim_signal.review import update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -179,7 +179,7 @@ def test_signal_index_includes_tracking(tmp_path):
 
 def test_tracking_log_written(tmp_path):
     """Test update-tracking writes Signal_Tracking_Log.md."""
-    from podcast_research.claim_signal.review import update_signal_tracking
+    from signalvault.claim_signal.review import update_signal_tracking
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -192,7 +192,7 @@ def test_tracking_log_written(tmp_path):
 
 def test_nonexistent_signal_tracking_error(tmp_path):
     """Test update-tracking on non-existent signal returns False."""
-    from podcast_research.claim_signal.review import update_signal_tracking
+    from signalvault.claim_signal.review import update_signal_tracking
 
     vault = tmp_path / "vault"
     ok = update_signal_tracking(vault, "nonexistent", tracking_status="active")
@@ -203,7 +203,7 @@ def test_cli_signals_update_tracking(tmp_path):
     """Test CLI signals update-tracking."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -223,7 +223,7 @@ def test_cli_signals_add_update(tmp_path):
     """Test CLI signals add-update."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -242,7 +242,7 @@ def test_cli_signals_tracking_backlog(tmp_path):
     """Test CLI signals tracking-backlog."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")

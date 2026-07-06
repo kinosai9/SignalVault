@@ -261,17 +261,17 @@ def get_evidence_trail(
 
 ```bash
 # 图谱管理
-python -m podcast_research graph build                     # 全量重建
-python -m podcast_research graph update --report-id 15     # 增量更新
-python -m podcast_research graph stats                     # 节点/边统计
+python -m signalvault graph build                     # 全量重建
+python -m signalvault graph update --report-id 15     # 增量更新
+python -m signalvault graph stats                     # 节点/边统计
 
 # 图谱查询
-python -m podcast_research graph neighborhood "NVIDIA"     # 实体邻域
-python -m podcast_research graph neighborhood "NVIDIA" --depth 2
-python -m podcast_research graph evidence-trail --view 123 # 证据链
+python -m signalvault graph neighborhood "NVIDIA"     # 实体邻域
+python -m signalvault graph neighborhood "NVIDIA" --depth 2
+python -m signalvault graph evidence-trail --view 123 # 证据链
 
 # 图谱导出
-python -m podcast_research graph export --output graph.json
+python -m signalvault graph export --output graph.json
 ```
 
 ## 六、MCP Tools
@@ -332,13 +332,13 @@ python -m podcast_research graph export --output graph.json
 ## 七、模块结构
 
 ```
-src/podcast_research/db/
+src/signalvault/db/
     models.py            ← 扩展：KnowledgeNode + KnowledgeEdge ORM
     session.py           ← 扩展：_migrate_knowledge_graph_tables
     graph.py             ← NEW: rebuild/update/query/export
     graph_serializers.py ← NEW: node/edge → JSON-safe dict
 
-src/podcast_research/mcp_server/
+src/signalvault/mcp_server/
     tools.py             ← 扩展：3 个新 tool
     serializers.py       ← 扩展：serialize_graph_node / serialize_graph_edge
 

@@ -310,7 +310,7 @@ class DiagnosticBundleBuilder:
 
 ```bash
 # 导出诊断包
-$ podcast-research diagnostics bundle --output ./diagnostics
+$ signalvault diagnostics bundle --output ./diagnostics
   📦 收集系统信息...
   ✅ summary.json
   ✅ config.json (脱敏)
@@ -333,7 +333,7 @@ $ # 将 zip 文件发送给技术支持人员即可
 ### 4.1 doctor — 全系统健康检查
 
 ```bash
-$ podcast-research doctor
+$ signalvault doctor
 
   System Health: degraded
 
@@ -368,36 +368,36 @@ $ podcast-research doctor
 ### 4.2 diagnostics summary — JSON 摘要
 
 ```bash
-$ podcast-research diagnostics summary
+$ signalvault diagnostics summary
 # 输出 JSON（适合程序消费）
 
-$ podcast-research diagnostics summary --format table
+$ signalvault diagnostics summary --format table
 # 输出表格（适合人类阅读）
 ```
 
 ### 4.3 diagnostics bundle — 导出
 
 ```bash
-$ podcast-research diagnostics bundle
+$ signalvault diagnostics bundle
 # 默认输出到 ./diagnostics/
 
-$ podcast-research diagnostics bundle --output /tmp/diag
+$ signalvault diagnostics bundle --output /tmp/diag
 # 指定输出目录
 ```
 
 ### 4.4 logs — 操作日志查询
 
 ```bash
-$ podcast-research logs list
+$ signalvault logs list
 # 最近 50 条操作日志
 
-$ podcast-research logs list --type zsxq.topic.analyze
+$ signalvault logs list --type zsxq.topic.analyze
 # 按操作类型过滤
 
-$ podcast-research logs list --status failed
+$ signalvault logs list --status failed
 # 只看失败的
 
-$ podcast-research logs show op_abc123
+$ signalvault logs show op_abc123
 # 查看单条日志详情
 ```
 
@@ -465,27 +465,27 @@ RECOVERY_ACTIONS = {
     },
     "ingest_retry": {
         "label": "重试失败任务",
-        "cli_template": "podcast-research ingest retry {job_id}",
+        "cli_template": "signalvault ingest retry {job_id}",
         "doctor_check": "ingest.failed_jobs",
     },
     "vault_lint": {
         "label": "检查 Vault 健康",
-        "cli": "podcast-research vault-lint --vault <path>",
+        "cli": "signalvault vault-lint --vault <path>",
         "doctor_check": "vault.lint_issues",
     },
     "graph_rebuild": {
         "label": "重建知识图谱",
-        "cli": "podcast-research graph rebuild",
+        "cli": "signalvault graph rebuild",
         "doctor_check": "graph.needs_rebuild",
     },
     "pdf_skip_low_quality": {
         "label": "跳过低质量 PDF",
-        "cli": "podcast-research review skip {item_id}",
+        "cli": "signalvault review skip {item_id}",
         "doctor_check": "pdf.pending_ocr",
     },
     "review_queue": {
         "label": "查看审核队列",
-        "cli": "podcast-research review list",
+        "cli": "signalvault review list",
         "doctor_check": "review.open_items",
     },
 }

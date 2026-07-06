@@ -185,7 +185,7 @@ class OperationLogManager:
 ### 5.1 典型操作生命周期
 
 ```python
-from podcast_research.diagnostics.operation_log import OperationLogManager
+from signalvault.diagnostics.operation_log import OperationLogManager
 
 # 1. 开始操作
 op = OperationLogManager.start(
@@ -218,14 +218,14 @@ except Exception as e:
 ### 5.2 CLI 查询
 
 ```bash
-$ podcast-research logs list
+$ signalvault logs list
   ID       操作                          状态      耗时     时间
   op_001   zsxq.topic.analyze            success   3.2s    07-03 14:30
   op_002   pdf.preview                   success   0.5s    07-03 14:28
   op_003   graph.rebuild                 success   1.1s    07-03 14:25
   op_004   zsxq.groups.refresh           failed    0.8s    07-03 14:20
 
-$ podcast-research logs show op_004
+$ signalvault logs show op_004
   Operation: zsxq.groups.refresh
   Status:    failed
   Error:     AUTH_ZSXQ_001 — 知识星球未登录

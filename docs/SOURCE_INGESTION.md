@@ -106,9 +106,9 @@ Web 导入入口遵循同一管道：
 当前 PDF 能力以 CLI 为主：
 
 ```bash
-python -m podcast_research pdf preview report.pdf
-python -m podcast_research pdf extract report.pdf
-python -m podcast_research pdf analyze report.pdf --focus "AI投资"
+python -m signalvault pdf preview report.pdf
+python -m signalvault pdf extract report.pdf
+python -m signalvault pdf analyze report.pdf --focus "AI投资"
 ```
 
 - `source_type = pdf_upload`
@@ -123,10 +123,10 @@ python -m podcast_research pdf analyze report.pdf --focus "AI投资"
 当前 ZSXQ 能力以 CLI 为主：
 
 ```bash
-python -m podcast_research zsxq doctor
-python -m podcast_research zsxq groups --refresh
-python -m podcast_research zsxq import-topic --group-id <id> --topic-id <id>
-python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --focus "AI芯片"
+python -m signalvault zsxq doctor
+python -m signalvault zsxq groups --refresh
+python -m signalvault zsxq import-topic --group-id <id> --topic-id <id>
+python -m signalvault zsxq analyze --group-id <id> --topic-id <id> --focus "AI芯片"
 ```
 
 - `source_type = zsxq_topic`
@@ -150,7 +150,7 @@ python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --focus 
 
 ## 统一状态文案
 
-详见 `podcast_research.sources.models.SOURCE_STATUS_LABELS`：
+详见 `signalvault.sources.models.SOURCE_STATUS_LABELS`：
 
 | 内部状态 | 用户文案 |
 |----------|----------|
@@ -168,7 +168,7 @@ python -m podcast_research zsxq analyze --group-id <id> --topic-id <id> --focus 
 
 ## 统一操作文案
 
-详见 `podcast_research.sources.models.ACTION_LABELS`：
+详见 `signalvault.sources.models.ACTION_LABELS`：
 
 | 操作 | 按钮文案 |
 |------|----------|

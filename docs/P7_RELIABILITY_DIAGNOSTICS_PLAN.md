@@ -183,11 +183,11 @@ recent_failures:
 **CLI 新增命令：**
 
 ```bash
-podcast-research doctor              # 全系统健康检查
-podcast-research diagnostics summary # 诊断摘要
-podcast-research diagnostics bundle --output <path>  # 导出诊断包
-podcast-research logs list           # 操作日志列表
-podcast-research logs show <id>      # 操作日志详情
+signalvault doctor              # 全系统健康检查
+signalvault diagnostics summary # 诊断摘要
+signalvault diagnostics bundle --output <path>  # 导出诊断包
+signalvault logs list           # 操作日志列表
+signalvault logs show <id>      # 操作日志详情
 ```
 
 **Web/API 对接说明（供 Codex 前端使用）：**
@@ -202,7 +202,7 @@ podcast-research logs show <id>      # 操作日志详情
 ## 五、模块结构（计划）
 
 ```
-src/podcast_research/
+src/signalvault/
   diagnostics/
     __init__.py
     error_codes.py        # ErrorCode enum + ErrorRecord dataclass

@@ -7,7 +7,7 @@ wikilinks, duplicates, orphans), lint→review integration, and CLI smoke.
 
 import pytest
 
-from podcast_research.db.session import init_db, reset_engine
+from signalvault.db.session import init_db, reset_engine
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Fixtures
@@ -18,7 +18,7 @@ from podcast_research.db.session import init_db, reset_engine
 def _isolate_db(tmp_path, monkeypatch):
     """Isolate DB to temp file."""
     db_path = tmp_path / "test_lint.db"
-    import podcast_research.config as cfg
+    import signalvault.config as cfg
     monkeypatch.setattr(cfg, "DB_PATH", db_path)
     reset_engine()
     init_db(str(db_path))
@@ -28,7 +28,7 @@ def _isolate_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def review_mgr():
-    from podcast_research.sources.review_items import ReviewItemManager
+    from signalvault.sources.review_items import ReviewItemManager
     return ReviewItemManager
 
 
@@ -182,7 +182,7 @@ class TestFrontmatterLint:
     """Tests for frontmatter lint rules."""
 
     def test_valid_frontmatter_no_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_frontmatter_invalid
+        from signalvault.workspace.vault_lint import lint_frontmatter_invalid
         rpt = vault_dir / "01_Reports" / "good.md"
         rpt.write_text(
             "---\ntype: report\nchannel: Test\nvideo_id: abc123\nanalyzed_at: 2026-01-01\n---\n# OK\n",
@@ -192,7 +192,7 @@ class TestFrontmatterLint:
         assert len(findings) == 0
 
     def test_missing_closing_delimiter(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_frontmatter_invalid
+        from signalvault.workspace.vault_lint import lint_frontmatter_invalid
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\ntype: report\n# No closing ---\n", encoding="utf-8")
         findings = lint_frontmatter_invalid(vault_dir)
@@ -200,7 +200,7 @@ class TestFrontmatterLint:
         assert any("未闭合" in f["message"] for f in findings)
 
     def test_yaml_parse_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_frontmatter_invalid
+        from signalvault.workspace.vault_lint import lint_frontmatter_invalid
         rpt = vault_dir / "01_Reports" / "bad_yaml.md"
         rpt.write_text("---\n{invalid: yaml: [\n---\n# Bad\n", encoding="utf-8")
         findings = lint_frontmatter_invalid(vault_dir)
@@ -208,7 +208,7 @@ class TestFrontmatterLint:
         assert any("解析失败" in f["message"] for f in findings)
 
     def test_no_frontmatter_no_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_frontmatter_invalid
+        from signalvault.workspace.vault_lint import lint_frontmatter_invalid
         rpt = vault_dir / "99_System" / "notes.md"
         rpt.write_text("# Just notes\nNo frontmatter.\n", encoding="utf-8")
         # no frontmatter is not an error for lint_frontmatter_invalid
@@ -220,7 +220,7 @@ class TestRequiredFieldsLint:
     """Tests for missing required fields."""
 
     def test_report_missing_type(self, vault_dir):
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             lint_frontmatter_missing_fields,
         )
         rpt = vault_dir / "01_Reports" / "nofield.md"
@@ -230,7 +230,7 @@ class TestRequiredFieldsLint:
         assert any("type" in f["detail"] for f in findings)
 
     def test_topic_missing_status(self, vault_dir):
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             lint_frontmatter_missing_fields,
         )
         topic = vault_dir / "02_Topics" / "ai.md"
@@ -239,7 +239,7 @@ class TestRequiredFieldsLint:
         assert any("status" in f["detail"] for f in findings)
 
     def test_claim_missing_claim_id(self, vault_dir):
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             lint_frontmatter_missing_fields,
         )
         claim = vault_dir / "06_Claims" / "claim1.md"
@@ -248,7 +248,7 @@ class TestRequiredFieldsLint:
         assert any("claim_id" in f["detail"] for f in findings)
 
     def test_all_fields_present_no_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             lint_frontmatter_missing_fields,
         )
         rpt = vault_dir / "01_Reports" / "good.md"
@@ -270,7 +270,7 @@ class TestDeadWikilinkLint:
     """Tests for dead wikilink detection."""
 
     def test_valid_wikilink_no_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_dead_wikilinks
+        from signalvault.workspace.vault_lint import lint_dead_wikilinks
         # Create the target file
         (vault_dir / "Target.md").write_text("# Target\n", encoding="utf-8")
         src = vault_dir / "01_Reports" / "ref.md"
@@ -279,7 +279,7 @@ class TestDeadWikilinkLint:
         assert len(findings) == 0
 
     def test_dead_wikilink_detected(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_dead_wikilinks
+        from signalvault.workspace.vault_lint import lint_dead_wikilinks
         src = vault_dir / "01_Reports" / "ref.md"
         src.write_text("---\ntype: report\n---\n[[Ghost]]\n", encoding="utf-8")
         findings = lint_dead_wikilinks(vault_dir)
@@ -287,7 +287,7 @@ class TestDeadWikilinkLint:
         assert any("Ghost" in f["detail"] for f in findings)
 
     def test_wikilink_with_alias(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_dead_wikilinks
+        from signalvault.workspace.vault_lint import lint_dead_wikilinks
         src = vault_dir / "01_Reports" / "ref.md"
         src.write_text(
             "---\ntype: report\n---\n[[Ghost|A friendly ghost]]\n", encoding="utf-8",
@@ -297,7 +297,7 @@ class TestDeadWikilinkLint:
         assert any("Ghost" in f["detail"] for f in findings)
 
     def test_wikilink_with_section(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_dead_wikilinks
+        from signalvault.workspace.vault_lint import lint_dead_wikilinks
         src = vault_dir / "01_Reports" / "ref.md"
         src.write_text(
             "---\ntype: report\n---\n[[Ghost#section]]\n", encoding="utf-8",
@@ -315,7 +315,7 @@ class TestDuplicateReportLint:
     """Tests for duplicate report detection."""
 
     def test_same_video_id_duplicate(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_duplicate_reports
+        from signalvault.workspace.vault_lint import lint_duplicate_reports
         r1 = vault_dir / "01_Reports" / "a.md"
         r1.write_text(
             "---\ntype: report\nvideo_id: dup123\n---\n# Report A\n", encoding="utf-8",
@@ -329,7 +329,7 @@ class TestDuplicateReportLint:
         assert any("dup123" in f["detail"] for f in findings)
 
     def test_unique_video_ids_no_error(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_duplicate_reports
+        from signalvault.workspace.vault_lint import lint_duplicate_reports
         r1 = vault_dir / "01_Reports" / "a.md"
         r1.write_text(
             "---\ntype: report\nvideo_id: abc\n---\n# A\n", encoding="utf-8",
@@ -342,7 +342,7 @@ class TestDuplicateReportLint:
         assert len(findings) == 0
 
     def test_same_content_hash_duplicate(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_duplicate_reports
+        from signalvault.workspace.vault_lint import lint_duplicate_reports
         r1 = vault_dir / "01_Reports" / "a.md"
         r1.write_text(
             "---\ntype: report\ncontent_hash: hash_abc\n---\n# A\n", encoding="utf-8",
@@ -364,7 +364,7 @@ class TestOrphanCardLint:
     """Tests for orphan card detection."""
 
     def test_topic_without_report_is_orphan(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_orphan_cards
+        from signalvault.workspace.vault_lint import lint_orphan_cards
         topic = vault_dir / "02_Topics" / "AI_Safety.md"
         topic.write_text(
             "---\ntype: topic\nname: AI Safety\nstatus: core\n---\n# AI Safety\n",
@@ -375,7 +375,7 @@ class TestOrphanCardLint:
         assert any("AI Safety" in f["detail"] for f in findings)
 
     def test_topic_with_report_not_orphan(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_orphan_cards
+        from signalvault.workspace.vault_lint import lint_orphan_cards
         topic = vault_dir / "02_Topics" / "GPU.md"
         topic.write_text(
             "---\ntype: topic\nname: GPU\nstatus: core\n---\n# GPU\n",
@@ -393,7 +393,7 @@ class TestOrphanCardLint:
         assert len(gpu_findings) == 0
 
     def test_company_card_without_report(self, vault_dir):
-        from podcast_research.workspace.vault_lint import lint_orphan_cards
+        from signalvault.workspace.vault_lint import lint_orphan_cards
         company = vault_dir / "03_Companies" / "Startup_XYZ.md"
         company.write_text(
             "---\ntype: company\nname: Startup XYZ\nstatus: emerging\n---\n# XYZ\n",
@@ -412,7 +412,7 @@ class TestLintRunner:
     """Tests for run_vault_lint and write_lint_to_review."""
 
     def test_run_all_rules(self, vault_dir):
-        from podcast_research.workspace.vault_lint import run_vault_lint
+        from signalvault.workspace.vault_lint import run_vault_lint
         # Create a file with known issues
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\ntype: report\nvideo_id: v1\n---\n[[Ghost]]\n", encoding="utf-8")
@@ -423,7 +423,7 @@ class TestLintRunner:
         assert "findings" in result
 
     def test_filter_rules(self, vault_dir):
-        from podcast_research.workspace.vault_lint import run_vault_lint
+        from signalvault.workspace.vault_lint import run_vault_lint
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\ntype: report\n---\n[[Ghost]]\n", encoding="utf-8")
         result = run_vault_lint(vault_dir, rules=["dead_wikilink"])
@@ -431,7 +431,7 @@ class TestLintRunner:
         assert "frontmatter_invalid" not in result["rule_counts"]
 
     def test_exclude_rules(self, vault_dir):
-        from podcast_research.workspace.vault_lint import run_vault_lint
+        from signalvault.workspace.vault_lint import run_vault_lint
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\n{invalid\n---\n", encoding="utf-8")
         result = run_vault_lint(vault_dir, exclude=["frontmatter_invalid"])
@@ -439,7 +439,7 @@ class TestLintRunner:
 
     def test_write_lint_to_review(self, vault_dir, review_mgr):
         """Lint findings can be written as review items."""
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             run_vault_lint,
             write_lint_to_review,
         )
@@ -459,7 +459,7 @@ class TestLintRunner:
 
     def test_dedup_lint_findings(self, vault_dir):
         """Same lint finding twice should not create duplicate review items."""
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             run_vault_lint,
             write_lint_to_review,
         )
@@ -484,7 +484,7 @@ class TestLintCLI:
     def test_vault_lint_table_output(self, vault_dir):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\ntype: report\n---\n[[Ghost]]\n", encoding="utf-8")
@@ -497,7 +497,7 @@ class TestLintCLI:
     def test_vault_lint_json_output(self, vault_dir):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["vault-lint", "--vault", str(vault_dir), "--json"])
@@ -510,7 +510,7 @@ class TestLintCLI:
     def test_vault_lint_missing_path(self):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["vault-lint", "--vault", "/nonexistent/path"])
@@ -519,7 +519,7 @@ class TestLintCLI:
     def test_vault_lint_write_review(self, vault_dir):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         rpt = vault_dir / "01_Reports" / "bad.md"
         rpt.write_text("---\ntype: report\n---\n[[Ghost]]\n", encoding="utf-8")
@@ -538,7 +538,7 @@ class TestReviewCLI:
     def test_review_list_empty(self):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "list"])
@@ -548,7 +548,7 @@ class TestReviewCLI:
         review_mgr.create_item(item_type="manual", title="CLI test item")
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "list"])
@@ -557,7 +557,7 @@ class TestReviewCLI:
     def test_review_show_nonexistent(self):
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "show", "99999"])
@@ -568,7 +568,7 @@ class TestReviewCLI:
         assert item is not None
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "show", str(item["id"])])
@@ -580,7 +580,7 @@ class TestReviewCLI:
         assert item is not None
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "accept", str(item["id"])])
@@ -591,7 +591,7 @@ class TestReviewCLI:
         assert item is not None
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "skip", str(item["id"])])
@@ -602,7 +602,7 @@ class TestReviewCLI:
         assert item is not None
         from typer.testing import CliRunner
 
-        from podcast_research.cli import app
+        from signalvault.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["review", "resolve", str(item["id"])])
@@ -618,21 +618,21 @@ class TestEdgeCases:
     """Edge case tests."""
 
     def test_empty_vault_no_crash(self, vault_dir):
-        from podcast_research.workspace.vault_lint import run_vault_lint
+        from signalvault.workspace.vault_lint import run_vault_lint
         result = run_vault_lint(vault_dir)
         assert result["total_findings"] == 0
 
     def test_binary_file_in_vault(self, vault_dir):
         """Non-UTF8 files should not crash lint."""
         (vault_dir / "01_Reports" / "binary.md").write_bytes(b"\x00\x01\x02\xff\xfe")
-        from podcast_research.workspace.vault_lint import lint_frontmatter_invalid
+        from signalvault.workspace.vault_lint import lint_frontmatter_invalid
         findings = lint_frontmatter_invalid(vault_dir)
         # Should not crash
         assert isinstance(findings, list)
 
     def test_review_create_from_lint_dedup_by_source_path(self, vault_dir, review_mgr):
         """Same file+type should not create duplicate open items."""
-        from podcast_research.workspace.vault_lint import (
+        from signalvault.workspace.vault_lint import (
             run_vault_lint,
             write_lint_to_review,
         )

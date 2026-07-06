@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.llm_wiki import (
+from signalvault.llm_wiki import (
     build_topic_context,
     find_core_topics,
     generate_topic_patch,
@@ -294,7 +294,7 @@ def test_cli_llm_wiki_dry_run(tmp_path):
     """Test CLI llm-wiki generate-patches --dry-run."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -323,7 +323,7 @@ def test_cli_llm_wiki_mock_mode(tmp_path):
     """Test CLI llm-wiki generate-patches --mock."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -359,7 +359,7 @@ def test_cli_llm_wiki_specific_topic(tmp_path):
     """Test CLI llm-wiki generate-patches --topic."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -395,7 +395,7 @@ def test_cli_llm_wiki_core_only(tmp_path):
     """Test CLI llm-wiki generate-patches --core-only."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -430,10 +430,10 @@ def test_cli_llm_wiki_no_vault(monkeypatch):
     """Test CLI llm-wiki generate-patches without vault."""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "OBSIDIAN_VAULT_PATH", "")
+    monkeypatch.setattr(signalvault.config, "OBSIDIAN_VAULT_PATH", "")
 
     runner = CliRunner()
     result = runner.invoke(app, ["llm-wiki", "generate-patches"])
@@ -446,7 +446,7 @@ def test_cli_llm_wiki_topic_not_found(tmp_path):
     """Test CLI llm-wiki generate-patches with non-existent topic."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -467,7 +467,7 @@ def test_cli_llm_wiki_no_source_reports(tmp_path):
     """Test CLI llm-wiki generate-patches when topic has no source reports."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -550,11 +550,11 @@ def test_cli_llm_wiki_no_mock_without_api_key(tmp_path, monkeypatch):
     """Test CLI --no-mock fails gracefully without API config."""
     from typer.testing import CliRunner
 
-    import podcast_research.config
-    from podcast_research.cli import app
+    import signalvault.config
+    from signalvault.cli import app
 
-    monkeypatch.setattr(podcast_research.config, "LLM_API_KEY", "")
-    monkeypatch.setattr(podcast_research.config, "LLM_BASE_URL", "")
+    monkeypatch.setattr(signalvault.config, "LLM_API_KEY", "")
+    monkeypatch.setattr(signalvault.config, "LLM_BASE_URL", "")
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -666,7 +666,7 @@ def test_validate_patches_valid_patch(tmp_path):
     patch_md = generate_topic_patch(context, provider="mock")
     patch_path = write_patch_file(vault, "AI Agents", patch_md)
 
-    from podcast_research.llm_wiki.validator import validate_patches
+    from signalvault.llm_wiki.validator import validate_patches
 
     results = validate_patches(vault)
     assert len(results) >= 1
@@ -746,7 +746,7 @@ Test
     patch_path = patches_dir / "bad_source.md"
     patch_path.write_text(bad_patch, encoding="utf-8")
 
-    from podcast_research.llm_wiki.validator import validate_patches
+    from signalvault.llm_wiki.validator import validate_patches
 
     results = validate_patches(vault)
     our_result = [r for r in results if r.patch_filename == "bad_source.md"]
@@ -803,7 +803,7 @@ Test
     patch_path = patches_dir / "bad_patch.md"
     patch_path.write_text(bad_patch, encoding="utf-8")
 
-    from podcast_research.llm_wiki.validator import validate_patches
+    from signalvault.llm_wiki.validator import validate_patches
 
     results = validate_patches(vault)
     our_result = [r for r in results if r.patch_filename == "bad_patch.md"]
@@ -822,7 +822,7 @@ def test_validate_patches_no_frontmatter(tmp_path):
     patch_path = patches_dir / "no_fm.md"
     patch_path.write_text(bad_patch, encoding="utf-8")
 
-    from podcast_research.llm_wiki.validator import validate_patches
+    from signalvault.llm_wiki.validator import validate_patches
 
     results = validate_patches(vault)
     our_result = [r for r in results if r.patch_filename == "no_fm.md"]
@@ -835,7 +835,7 @@ def test_cli_validate_patches(tmp_path):
     """Test CLI llm-wiki validate-patches command."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -868,7 +868,7 @@ def test_cli_validate_patches_empty(tmp_path):
     """Test CLI validate-patches with no patches."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -887,7 +887,7 @@ def test_cli_validate_patches_specific_patch(tmp_path):
     """Test CLI validate-patches --patch for a specific file."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -920,7 +920,7 @@ def test_cli_llm_wiki_dry_run_does_not_write(tmp_path):
     """Test that dry-run does not write patch files."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -1051,7 +1051,7 @@ def _setup_vault_for_apply(tmp_path, target_name="AI Agents", patch_status="pend
 
 def test_apply_patch_dry_run_does_not_write(tmp_path):
     """Test apply-patch dry-run does not modify target card."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1071,7 +1071,7 @@ def test_apply_patch_dry_run_does_not_write(tmp_path):
 
 def test_apply_patch_invalid_patch_rejected(tmp_path):
     """Test that invalid patch is rejected."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     str(patch_path.relative_to(vault))
@@ -1087,7 +1087,7 @@ def test_apply_patch_invalid_patch_rejected(tmp_path):
 
 def test_apply_patch_missing_target_card_rejected(tmp_path):
     """Test that patch with missing target card is rejected."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -1103,7 +1103,7 @@ def test_apply_patch_missing_target_card_rejected(tmp_path):
 
 def test_apply_patch_status_applied_rejected(tmp_path):
     """Test that already-applied patch is rejected."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, patch_status="applied")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1115,7 +1115,7 @@ def test_apply_patch_status_applied_rejected(tmp_path):
 
 def test_apply_patch_status_rejected_rejected(tmp_path):
     """Test that rejected patch cannot be applied."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, patch_status="rejected")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1127,7 +1127,7 @@ def test_apply_patch_status_rejected_rejected(tmp_path):
 
 def test_apply_patch_pending_review_without_confirm_rejected(tmp_path):
     """Test pending_review patch requires --confirm-reviewed."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, patch_status="pending_review")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1139,7 +1139,7 @@ def test_apply_patch_pending_review_without_confirm_rejected(tmp_path):
 
 def test_apply_patch_pending_review_with_confirm_allowed(tmp_path):
     """Test pending_review patch with --confirm-reviewed can apply."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, patch_status="pending_review")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1151,7 +1151,7 @@ def test_apply_patch_pending_review_with_confirm_allowed(tmp_path):
 
 def test_apply_patch_section_mapping(tmp_path):
     """Test section mapping from patch to target card."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1168,7 +1168,7 @@ def test_apply_patch_section_mapping(tmp_path):
 
 def test_apply_patch_creates_missing_section(tmp_path):
     """Test that missing target section is created."""
-    from podcast_research.llm_wiki.applier import _extract_patch_id, apply_patch
+    from signalvault.llm_wiki.applier import _extract_patch_id, apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, target_name="New Topic")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1187,7 +1187,7 @@ def test_apply_patch_creates_missing_section(tmp_path):
 
 def test_apply_patch_marker_prevents_duplicate(tmp_path):
     """Test that marker prevents duplicate patch application."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1213,7 +1213,7 @@ def test_apply_patch_marker_prevents_duplicate(tmp_path):
 
 def test_apply_patch_updates_patch_status(tmp_path):
     """Test that patch frontmatter status is updated to 'applied' after apply."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1230,7 +1230,7 @@ def test_apply_patch_updates_patch_status(tmp_path):
 
 def test_apply_patch_generates_apply_log(tmp_path):
     """Test that apply generates Patch_Apply_Log.md."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1246,7 +1246,7 @@ def test_apply_patch_generates_apply_log(tmp_path):
 
 def test_apply_patch_source_reports_untouched(tmp_path):
     """Test that source reports are not modified by apply."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     report_path = vault / "01_Reports" / "report1.md"
@@ -1260,7 +1260,7 @@ def test_apply_patch_source_reports_untouched(tmp_path):
 
 def test_apply_patch_company_cards_untouched(tmp_path):
     """Test that company cards are not modified by apply."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1282,7 +1282,7 @@ def test_cli_apply_patch_dry_run(tmp_path):
     """Test CLI apply-patch --dry-run."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1305,7 +1305,7 @@ def test_cli_apply_patch_apply_without_confirm_rejected(tmp_path):
     """Test CLI apply-patch --apply without --confirm-reviewed is rejected."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1325,7 +1325,7 @@ def test_cli_apply_patch_apply_with_confirm(tmp_path):
     """Test CLI apply-patch --apply --confirm-reviewed."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault, patch_path = _setup_vault_for_apply(tmp_path)
     patch_rel = str(patch_path.relative_to(vault))
@@ -1345,7 +1345,7 @@ def test_cli_apply_patch_apply_with_confirm(tmp_path):
 
 def test_apply_patch_auto_apply_true_rejected(tmp_path):
     """Test that patch with auto_apply=true is rejected."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -1371,8 +1371,8 @@ def test_apply_patch_auto_apply_true_rejected(tmp_path):
 
 def test_section_inserted_at_correct_position(tmp_path):
     """Test that missing sections are inserted at correct canonical position."""
-    from podcast_research.llm_wiki.applier import apply_patch
-    from podcast_research.llm_wiki.taxonomy import SECTION_ORDER
+    from signalvault.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.taxonomy import SECTION_ORDER
 
     vault, patch_path = _setup_vault_for_apply(tmp_path, target_name="NewTopic")
     patch_rel = str(patch_path.relative_to(vault))
@@ -1412,7 +1412,7 @@ def test_section_inserted_at_correct_position(tmp_path):
 
 def test_topic_canonical_normalization(tmp_path):
     """Test that Related Topics are normalized to canonical names."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -1444,7 +1444,7 @@ def test_topic_canonical_normalization(tmp_path):
 
 def test_entity_type_annotation(tmp_path):
     """Test that known non-company entities get type annotations."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     topics_dir = vault / "02_Topics"
@@ -1478,7 +1478,7 @@ def test_entity_type_annotation(tmp_path):
 
 def test_normalize_topic_name():
     """Test topic canonical normalization function."""
-    from podcast_research.llm_wiki.taxonomy import normalize_topic_name
+    from signalvault.llm_wiki.taxonomy import normalize_topic_name
 
     assert normalize_topic_name("enterprise saas") == "Enterprise AI"
     assert normalize_topic_name("ai agents") == "AI Agents"
@@ -1489,7 +1489,7 @@ def test_normalize_topic_name():
 
 def test_classify_entity():
     """Test entity classification function."""
-    from podcast_research.llm_wiki.taxonomy import classify_entity
+    from signalvault.llm_wiki.taxonomy import classify_entity
 
     assert classify_entity("Claude Code") == "tool"
     assert classify_entity("LangChain") == "framework"
@@ -1500,8 +1500,8 @@ def test_classify_entity():
 
 def test_source_report_context_includes_channel():
     """Test that source report context includes channel info."""
-    from podcast_research.llm_wiki.context_builder import SourceReport
-    from podcast_research.llm_wiki.prompts import build_source_reports_context
+    from signalvault.llm_wiki.context_builder import SourceReport
+    from signalvault.llm_wiki.prompts import build_source_reports_context
 
     reports = [
         SourceReport(
@@ -1571,7 +1571,7 @@ def test_find_companies(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1", "report2"])
     _create_company_card(companies_dir, "OpenAI", ["report3"])
 
-    from podcast_research.llm_wiki.context_builder import find_companies
+    from signalvault.llm_wiki.context_builder import find_companies
     companies = find_companies(vault)
     assert len(companies) == 2
     names = {p.stem for p in companies}
@@ -1587,7 +1587,7 @@ def test_find_companies_specific(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1"])
     _create_company_card(companies_dir, "OpenAI", ["report2"])
 
-    from podcast_research.llm_wiki.context_builder import find_companies
+    from signalvault.llm_wiki.context_builder import find_companies
     companies = find_companies(vault, company_name="NVIDIA")
     assert len(companies) == 1
     assert companies[0].stem == "NVIDIA"
@@ -1605,7 +1605,7 @@ def test_build_company_context(tmp_path):
     _create_report(reports_dir, "report1", "Channel", "vid1")
     _create_report(reports_dir, "report2", "Channel2", "vid2")
 
-    from podcast_research.llm_wiki.context_builder import build_company_context
+    from signalvault.llm_wiki.context_builder import build_company_context
     company_path = companies_dir / "NVIDIA.md"
     context = build_company_context(vault, company_path, max_reports=5)
 
@@ -1625,8 +1625,8 @@ def test_generate_company_patch_mock(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1"])
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
-    from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import generate_company_patch
+    from signalvault.llm_wiki.context_builder import build_company_context
+    from signalvault.llm_wiki.patch_generator import generate_company_patch
 
     company_path = companies_dir / "NVIDIA.md"
     context = build_company_context(vault, company_path, max_reports=5)
@@ -1650,7 +1650,7 @@ def test_cli_company_mock(tmp_path):
     """Test CLI --company --mock."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     companies_dir = vault / "03_Companies"
@@ -1682,7 +1682,7 @@ def test_cli_company_dry_run(tmp_path):
     """Test CLI --company --dry-run."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     companies_dir = vault / "03_Companies"
@@ -1710,7 +1710,7 @@ def test_cli_topic_and_company_mutually_exclusive(tmp_path):
     """Test --topic and --company cannot be used together."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1740,8 +1740,8 @@ def test_validate_company_patch(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1"])
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
-    from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import (
+    from signalvault.llm_wiki.context_builder import build_company_context
+    from signalvault.llm_wiki.patch_generator import (
         generate_company_patch,
         write_patch_file,
     )
@@ -1751,7 +1751,7 @@ def test_validate_company_patch(tmp_path):
     patch_md = generate_company_patch(context, provider="mock")
     write_patch_file(vault, "NVIDIA", patch_md, patch_prefix="company")
 
-    from podcast_research.llm_wiki.validator import validate_patches
+    from signalvault.llm_wiki.validator import validate_patches
     results = validate_patches(vault)
 
     company_patches = [r for r in results if "company_NVIDIA" in r.patch_filename]
@@ -1761,7 +1761,7 @@ def test_validate_company_patch(tmp_path):
 
 def test_apply_company_patch_dry_run(tmp_path):
     """Test apply-patch dry-run for company patches."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     companies_dir = vault / "03_Companies"
@@ -1774,8 +1774,8 @@ def test_apply_company_patch_dry_run(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1"])
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
-    from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import (
+    from signalvault.llm_wiki.context_builder import build_company_context
+    from signalvault.llm_wiki.patch_generator import (
         generate_company_patch,
         write_patch_file,
     )
@@ -1801,7 +1801,7 @@ def test_apply_company_patch_dry_run(tmp_path):
 
 def test_apply_company_patch_with_marker(tmp_path):
     """Test company patch apply with marker."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     companies_dir = vault / "03_Companies"
@@ -1814,8 +1814,8 @@ def test_apply_company_patch_with_marker(tmp_path):
     _create_company_card(companies_dir, "NVIDIA", ["report1"])
     _create_report(reports_dir, "report1", "Channel", "vid1")
 
-    from podcast_research.llm_wiki.context_builder import build_company_context
-    from podcast_research.llm_wiki.patch_generator import (
+    from signalvault.llm_wiki.context_builder import build_company_context
+    from signalvault.llm_wiki.patch_generator import (
         generate_company_patch,
         write_patch_file,
     )
@@ -1904,7 +1904,7 @@ Some content
 
 def test_list_applied_patches(tmp_path):
     """Test list-applied-patches finds applied patches."""
-    from podcast_research.llm_wiki.rollback import list_applied_patches
+    from signalvault.llm_wiki.rollback import list_applied_patches
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1922,7 +1922,7 @@ def test_list_applied_patches(tmp_path):
 
 def test_list_applied_patches_missing_marker(tmp_path):
     """Test that missing marker is detected."""
-    from podcast_research.llm_wiki.rollback import list_applied_patches
+    from signalvault.llm_wiki.rollback import list_applied_patches
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -1950,7 +1950,7 @@ applied_to: "02_Topics/Missing.md"
 
 def test_rollback_dry_run_does_not_write(tmp_path):
     """Test rollback dry-run doesn't modify files."""
-    from podcast_research.llm_wiki.rollback import _count_marker_blocks, rollback_patch
+    from signalvault.llm_wiki.rollback import _count_marker_blocks, rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1968,7 +1968,7 @@ def test_rollback_dry_run_does_not_write(tmp_path):
 
 def test_rollback_apply_removes_markers(tmp_path):
     """Test rollback apply removes marker blocks."""
-    from podcast_research.llm_wiki.rollback import _count_marker_blocks, rollback_patch
+    from signalvault.llm_wiki.rollback import _count_marker_blocks, rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -1984,7 +1984,7 @@ def test_rollback_apply_removes_markers(tmp_path):
 
 def test_rollback_updates_patch_status(tmp_path):
     """Test rollback updates patch status to rolled_back."""
-    from podcast_research.llm_wiki.rollback import rollback_patch
+    from signalvault.llm_wiki.rollback import rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2000,7 +2000,7 @@ def test_rollback_updates_patch_status(tmp_path):
 
 def test_rollback_writes_rollback_log(tmp_path):
     """Test rollback writes Patch_Rollback_Log.md."""
-    from podcast_research.llm_wiki.rollback import rollback_patch
+    from signalvault.llm_wiki.rollback import rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2015,7 +2015,7 @@ def test_rollback_writes_rollback_log(tmp_path):
 
 def test_rollback_missing_marker_rejected(tmp_path):
     """Test rollback with missing marker returns error."""
-    from podcast_research.llm_wiki.rollback import rollback_patch
+    from signalvault.llm_wiki.rollback import rollback_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2043,7 +2043,7 @@ applied_to: "02_Topics/NoMarker.md"
 
 def test_rollback_non_applied_rejected(tmp_path):
     """Test rollback rejects non-applied patch."""
-    from podcast_research.llm_wiki.rollback import rollback_patch
+    from signalvault.llm_wiki.rollback import rollback_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2065,7 +2065,7 @@ auto_apply: false
 
 def test_rollback_by_patch_id(tmp_path):
     """Test rollback with --patch-id."""
-    from podcast_research.llm_wiki.rollback import rollback_patch
+    from signalvault.llm_wiki.rollback import rollback_patch
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2077,7 +2077,7 @@ def test_rollback_by_patch_id(tmp_path):
 
 def test_reject_pending_review_succeeds(tmp_path):
     """Test reject-patch on pending_review patch."""
-    from podcast_research.llm_wiki.rollback import reject_patch
+    from signalvault.llm_wiki.rollback import reject_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2102,7 +2102,7 @@ auto_apply: false
 
 def test_reject_approved_succeeds(tmp_path):
     """Test reject-patch on approved patch."""
-    from podcast_research.llm_wiki.rollback import reject_patch
+    from signalvault.llm_wiki.rollback import reject_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2123,7 +2123,7 @@ auto_apply: false
 
 def test_reject_applied_rejected(tmp_path):
     """Test reject-patch refuses applied patch."""
-    from podcast_research.llm_wiki.rollback import reject_patch
+    from signalvault.llm_wiki.rollback import reject_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2145,7 +2145,7 @@ auto_apply: false
 
 def test_reject_writes_reject_log(tmp_path):
     """Test reject-patch writes Patch_Reject_Log.md."""
-    from podcast_research.llm_wiki.rollback import reject_patch
+    from signalvault.llm_wiki.rollback import reject_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2170,7 +2170,7 @@ def test_cli_list_applied(tmp_path):
     """Test CLI list-applied-patches."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2187,7 +2187,7 @@ def test_cli_rollback_dry_run(tmp_path):
     """Test CLI rollback-patch --dry-run."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -2209,7 +2209,7 @@ def test_cli_reject_patch(tmp_path):
     """Test CLI reject-patch."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"
@@ -2237,7 +2237,7 @@ auto_apply: false
 
 def test_apply_patch_rolled_back_rejected(tmp_path):
     """Test that rolled_back patch cannot be applied."""
-    from podcast_research.llm_wiki.applier import apply_patch
+    from signalvault.llm_wiki.applier import apply_patch
 
     vault = tmp_path / "vault"
     patches_dir = vault / "00_Inbox" / "LLM_Patches"

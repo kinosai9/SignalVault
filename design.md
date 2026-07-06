@@ -734,7 +734,7 @@ P1 阶段不强制引入向量数据库。采用三层检索：
 ┌──────────────────────────▼──────────────────────────────────┐
 │ Local Storage                                                │
 │ SQLite + local files                                         │
-│ - podcast_analyst.db                                        │
+│ - signalvault.db                                        │
 │ - subtitles/                                                 │
 │ - reports/                                                   │
 │ - logs/                                                      │
@@ -1075,7 +1075,7 @@ CREATE TABLE qa_logs (
 #### 输入示例
 
 ```bash
-python -m podcast_research analyze data/subtitles/sample.srt --mock
+python -m signalvault analyze data/subtitles/sample.srt --mock
 ```
 
 #### 输出目录
@@ -1084,7 +1084,7 @@ python -m podcast_research analyze data/subtitles/sample.srt --mock
 data/
   subtitles/
   reports/
-  podcast_analyst.db
+  signalvault.db
 logs/
 ```
 

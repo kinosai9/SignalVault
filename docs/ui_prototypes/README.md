@@ -16,8 +16,8 @@ Current prototype naming:
 ## Scope Rules
 
 - Prototype files live only under `docs/ui_prototypes/`.
-- Do not import code from `src/podcast_research/web/templates/`.
-- Do not edit production templates or `src/podcast_research/web/static/style.css`
+- Do not import code from `src/signalvault/web/templates/`.
+- Do not edit production templates or `src/signalvault/web/static/style.css`
   while iterating on these prototypes.
 - Use static mock data that reflects the investment research workflow.
 - Keep the desktop web console as the primary target. Mobile polish is not a

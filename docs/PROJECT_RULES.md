@@ -1,6 +1,6 @@
 # Project Rules
 
-> 本文档定义 podcast_research 项目的工程规范、约束和边界。
+> 本文档定义 signalvault 项目的工程规范、约束和边界。
 > 所有阶段（P0–P7 及后续前端体验改造）的开发和设计必须遵守这些规则。
 > 与 CLAUDE.md（AI 助手指令）互补：CLAUDE.md 面向 AI 编码助手，本文档面向人类开发者。
 

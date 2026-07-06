@@ -2,7 +2,7 @@
 
 from typer.testing import CliRunner
 
-from podcast_research.cli import app
+from signalvault.cli import app
 
 runner = CliRunner()
 
@@ -27,7 +27,7 @@ def test_cli_reports_list_with_limit(seeded_db) -> None:
 
 def test_cli_reports_show(seeded_db) -> None:
     # 先拿一个真实存在的 report ID
-    from podcast_research.db.repository import list_reports
+    from signalvault.db.repository import list_reports
     rows = list_reports(seeded_db)
     rid = str(rows[0]["id"])
 
@@ -37,7 +37,7 @@ def test_cli_reports_show(seeded_db) -> None:
 
 
 def test_cli_reports_show_full(seeded_db) -> None:
-    from podcast_research.db.repository import list_reports
+    from signalvault.db.repository import list_reports
     rows = list_reports(seeded_db)
     rid = str(rows[0]["id"])
 

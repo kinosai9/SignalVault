@@ -1,6 +1,6 @@
 """P2-N.4.1: Filename sanitization tests."""
 
-from podcast_research.exporters.markdown_utils import (
+from signalvault.exporters.markdown_utils import (
     sanitize_filename,
     unique_filename,
 )

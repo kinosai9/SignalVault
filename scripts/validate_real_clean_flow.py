@@ -7,7 +7,7 @@ consistency, and sync postconditions.
 Usage:
     uv run python scripts/validate_real_clean_flow.py \
       --vault "D:/path/to/vault" \
-      --db "data/podcast_analyst.db"
+      --db "data/signalvault.db"
 
     # Or with video URLs to test full flow:
     uv run python scripts/validate_real_clean_flow.py \

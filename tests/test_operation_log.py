@@ -12,7 +12,7 @@ import time
 
 class TestOperationLifecycle:
     def test_start_creates_log(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="graph.rebuild",
@@ -33,7 +33,7 @@ class TestOperationLifecycle:
         assert stored["status"] == "started"
 
     def test_start_then_succeed(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="pdf.preview",
@@ -62,7 +62,7 @@ class TestOperationLifecycle:
         assert "5 pages" in stored["summary"]
 
     def test_start_then_fail(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="zsxq.topic.analyze",
@@ -88,7 +88,7 @@ class TestOperationLifecycle:
         assert stored["error_code"] == "AUTH_ZSXQ_001"
 
     def test_unknown_operation_type_logged(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="custom.action",  # not in VALID_OPERATION_TYPES
@@ -105,7 +105,7 @@ class TestOperationLifecycle:
 
 class TestOperationQueries:
     def test_list_operations(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         OperationLogManager.start(
             operation_type="pdf.preview", session=db_session,
@@ -118,7 +118,7 @@ class TestOperationQueries:
         assert len(ops) >= 2
 
     def test_list_filter_by_type(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         OperationLogManager.start(
             operation_type="pdf.preview", session=db_session,
@@ -133,7 +133,7 @@ class TestOperationQueries:
         assert all(o["operation_type"] == "pdf.preview" for o in pdf_ops)
 
     def test_list_filter_by_status(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op1 = OperationLogManager.start(
             operation_type="graph.rebuild", session=db_session,
@@ -155,7 +155,7 @@ class TestOperationQueries:
         assert all(o["status"] == "failed" for o in failed)
 
     def test_count_by_status(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="graph.rebuild", session=db_session,
@@ -167,7 +167,7 @@ class TestOperationQueries:
         assert counts["succeeded"] >= 1
 
     def test_recent_failures(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="pdf.analyze", session=db_session,
@@ -184,7 +184,7 @@ class TestOperationQueries:
         assert failures[0]["status"] == "failed"
 
     def test_get_nonexistent(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         result = OperationLogManager.get("nonexistent-id", session=db_session)
         assert result is None
@@ -197,7 +197,7 @@ class TestOperationQueries:
 
 class TestSanitization:
     def test_api_key_redacted(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="graph.rebuild",
@@ -211,7 +211,7 @@ class TestSanitization:
         assert meta["user"] == "test"
 
     def test_token_password_secret_redacted(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="zsxq.doctor",
@@ -232,7 +232,7 @@ class TestSanitization:
         assert meta["group_name"] == "投资研究"
 
     def test_long_content_truncated(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         long_text = "A" * 1000
         op = OperationLogManager.start(
@@ -246,7 +246,7 @@ class TestSanitization:
         assert len(meta["notes"]) <= 505  # 500 + "..." max
 
     def test_full_text_content_redacted(self, db_session):
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         op = OperationLogManager.start(
             operation_type="zsxq.topic.analyze",
@@ -274,7 +274,7 @@ class TestLogsCLI:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 
@@ -307,7 +307,7 @@ class TestLogsCLI:
 
     def test_logs_list_json_output(self, db_session):
         """Verify --json flag produces valid JSON."""
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.operation_log import OperationLogManager
         OperationLogManager.start(
             operation_type="graph.rebuild",
             summary="test",
@@ -330,8 +330,8 @@ class TestLogsCLI:
 
 class TestOperationWithError:
     def test_fail_with_error_record(self, db_session):
-        from podcast_research.diagnostics.errors import create_error_record
-        from podcast_research.diagnostics.operation_log import OperationLogManager
+        from signalvault.diagnostics.errors import create_error_record
+        from signalvault.diagnostics.operation_log import OperationLogManager
 
         error = create_error_record("EXTRACT_PDF_001", entity_ref="test.pdf")
         assert error is not None

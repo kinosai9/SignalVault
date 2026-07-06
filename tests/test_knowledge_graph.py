@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 
-from podcast_research.db.knowledge_graph import (
+from signalvault.db.knowledge_graph import (
     export_graph_json,
     get_entity_neighborhood,
     get_evidence_trail,
@@ -172,7 +172,7 @@ class TestCliGraph:
     def _reload_cli(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         return cli_mod
 
@@ -210,7 +210,7 @@ class TestCliGraph:
 
 class TestMcpGraph:
     def test_graph_tools_registered(self):
-        from podcast_research.mcp_server.tools import TOOLS
+        from signalvault.mcp_server.tools import TOOLS
         names = {t.name for t in TOOLS}
         assert "get_entity_neighborhood" in names
         assert "list_graph_edges" in names
@@ -220,7 +220,7 @@ class TestMcpGraph:
     def test_neighborhood_mcp_handler(self, seeded_db):
         import asyncio
         rebuild_knowledge_graph(seeded_db)
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "get_entity_neighborhood",
             {"entity_name": "宁德时代", "limit": 10},
@@ -234,7 +234,7 @@ class TestMcpGraph:
     def test_list_edges_mcp_handler(self, seeded_db):
         import asyncio
         rebuild_knowledge_graph(seeded_db)
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "list_graph_edges", {"limit": 5},
         ))
@@ -244,7 +244,7 @@ class TestMcpGraph:
     def test_evidence_trail_mcp_handler(self, seeded_db):
         import asyncio
         rebuild_knowledge_graph(seeded_db)
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "get_evidence_trail", {"view_id": 1},
         ))
@@ -254,7 +254,7 @@ class TestMcpGraph:
     def test_evidence_trail_empty_mcp(self, seeded_db):
         import asyncio
 
-        from podcast_research.mcp_server.tools import handle_call_tool
+        from signalvault.mcp_server.tools import handle_call_tool
         result = asyncio.run(handle_call_tool(
             "get_evidence_trail", {},
         ))
@@ -271,7 +271,7 @@ class TestDbMigration:
     def test_knowledge_tables_exist(self, db_session):
         from sqlalchemy import inspect
 
-        from podcast_research.db.session import _engine
+        from signalvault.db.session import _engine
         insp = inspect(_engine)
         tables = insp.get_table_names()
         assert "knowledge_nodes" in tables

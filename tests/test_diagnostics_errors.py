@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from podcast_research.diagnostics.errors import (
+from signalvault.diagnostics.errors import (
     ErrorCategory,
     ErrorCodeRegistry,
     ErrorRecord,
@@ -153,28 +153,28 @@ class TestCreateErrorRecord:
 
 class TestMapExceptionToError:
     def test_zsxq_cli_missing_maps_to_config_dep(self):
-        from podcast_research.sources.zsxq_cli import ZsxqCliMissingError
+        from signalvault.sources.zsxq_cli import ZsxqCliMissingError
         exc = ZsxqCliMissingError("zsxq-cli not found")
         rec = map_exception_to_error(exc)
         assert rec is not None
         assert rec.error_code == "CONFIG_DEP_001"
 
     def test_zsxq_auth_maps_to_auth(self):
-        from podcast_research.sources.zsxq_cli import ZsxqAuthRequiredError
+        from signalvault.sources.zsxq_cli import ZsxqAuthRequiredError
         exc = ZsxqAuthRequiredError("not logged in")
         rec = map_exception_to_error(exc)
         assert rec is not None
         assert rec.error_code == "AUTH_ZSXQ_001"
 
     def test_zsxq_permission_maps_to_perm(self):
-        from podcast_research.sources.zsxq_cli import ZsxqPermissionDeniedError
+        from signalvault.sources.zsxq_cli import ZsxqPermissionDeniedError
         exc = ZsxqPermissionDeniedError("access denied")
         rec = map_exception_to_error(exc)
         assert rec is not None
         assert rec.error_code == "PERM_ZSXQ_001"
 
     def test_zsxq_parse_maps_to_source_parse(self):
-        from podcast_research.sources.zsxq_cli import ZsxqParseError
+        from signalvault.sources.zsxq_cli import ZsxqParseError
         exc = ZsxqParseError("invalid JSON")
         rec = map_exception_to_error(exc)
         assert rec is not None

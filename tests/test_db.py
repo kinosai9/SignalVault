@@ -2,19 +2,19 @@
 
 import tempfile
 
-from podcast_research.analysis.models import (
+from signalvault.analysis.models import (
     Entity,
     ExtractionResult,
     InvestmentView,
     TrackingSignal,
 )
-from podcast_research.db.models import Episode, InvestmentViewRecord, Report
-from podcast_research.db.repository import (
+from signalvault.db.models import Episode, InvestmentViewRecord, Report
+from signalvault.db.repository import (
     save_episode,
     save_investment_views,
     save_report,
 )
-from podcast_research.db.session import get_session, init_db, reset_engine
+from signalvault.db.session import get_session, init_db, reset_engine
 
 
 def _make_extraction() -> ExtractionResult:
@@ -42,7 +42,7 @@ def test_init_db_creates_tables() -> None:
     db = tempfile.mktemp(suffix=".db")
     init_db(db)
     session = get_session()
-    from podcast_research.db.models import Base
+    from signalvault.db.models import Base
     tables = Base.metadata.tables.keys()
     assert "episodes" in tables
     assert "reports" in tables

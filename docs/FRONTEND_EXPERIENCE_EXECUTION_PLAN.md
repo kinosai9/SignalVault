@@ -55,9 +55,9 @@ This frontend effort must not destabilize the recently completed backend work.
 
 ### 3.1 Allowed Changes
 
-- Jinja templates under `src/podcast_research/web/templates/`
-- Web CSS under `src/podcast_research/web/static/style.css`
-- Web route glue in `src/podcast_research/web/routes.py` when it only calls existing managers/services
+- Jinja templates under `src/signalvault/web/templates/`
+- Web CSS under `src/signalvault/web/static/style.css`
+- Web route glue in `src/signalvault/web/routes.py` when it only calls existing managers/services
 - API route additions for already implemented read-only data, if required by Web rendering
 - Tests for changed DOM, route behavior, and UI smoke
 - Documentation updates under `docs/`

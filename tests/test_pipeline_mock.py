@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from podcast_research.analysis.pipeline import analyze
+from signalvault.analysis.pipeline import analyze
 
 SAMPLE_SRT = Path(__file__).resolve().parent.parent / "data" / "subtitles" / "sample.srt"
 

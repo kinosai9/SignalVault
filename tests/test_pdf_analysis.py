@@ -18,13 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from podcast_research.sources.pdf_analysis import (
+from signalvault.sources.pdf_analysis import (
     _check_analysis_eligibility,
     _pages_to_segments,
     analyze_pdf,
     build_pdf_source_profile,
 )
-from podcast_research.sources.pdf_extraction import (
+from signalvault.sources.pdf_extraction import (
     PdfExtractionResult,
     PdfPage,
     extract_pdf,
@@ -244,7 +244,7 @@ class TestAnalyzePdf:
         )
         assert result["eligible"] is False
         # Verify review items were created
-        from podcast_research.sources.review_items import ReviewItemManager
+        from signalvault.sources.review_items import ReviewItemManager
         items = ReviewItemManager.list_items(
             item_type="pdf_analysis_skipped", session=db_session,
         )
@@ -258,12 +258,12 @@ class TestAnalyzePdf:
 
 class TestEvidencePageNumber:
     def test_evidence_model_has_page_number(self):
-        from podcast_research.analysis.models import Evidence
+        from signalvault.analysis.models import Evidence
         e = Evidence(page_number=12)
         assert e.page_number == 12
 
     def test_evidence_page_number_defaults_to_none(self):
-        from podcast_research.analysis.models import Evidence
+        from signalvault.analysis.models import Evidence
         e = Evidence()
         assert e.page_number is None
 
@@ -273,7 +273,7 @@ class TestEvidencePageNumber:
         if not result["success"]:
             pytest.skip("Analysis not eligible")
 
-        from podcast_research.db.repository import get_report_detail
+        from signalvault.db.repository import get_report_detail
         detail = get_report_detail(db_session, result["report_id"])
         if detail and detail.get("views"):
             # Mock provider may or may not produce views; if it does,
@@ -289,7 +289,7 @@ class TestEvidencePageNumber:
 
 class TestMcpSerializersPdf:
     def test_serialize_investment_view_includes_evidence_page(self):
-        from podcast_research.mcp_server.serializers import serialize_investment_view
+        from signalvault.mcp_server.serializers import serialize_investment_view
         result = serialize_investment_view({
             "target_name": "Test",
             "evidence_page": 5,
@@ -297,12 +297,12 @@ class TestMcpSerializersPdf:
         assert result["evidence_page"] == 5
 
     def test_serialize_investment_view_evidence_page_none(self):
-        from podcast_research.mcp_server.serializers import serialize_investment_view
+        from signalvault.mcp_server.serializers import serialize_investment_view
         result = serialize_investment_view({"target_name": "Test"})
         assert "evidence_page" in result
 
     def test_serialize_report_detail_includes_source_file(self):
-        from podcast_research.mcp_server.serializers import serialize_report_detail
+        from signalvault.mcp_server.serializers import serialize_report_detail
         result = serialize_report_detail({
             "id": 1,
             "episode_title": "Test",
@@ -322,7 +322,7 @@ class TestMcpSerializersPdf:
 
 class TestReviewItemsP4B:
     def test_pdf_analysis_skipped_in_valid_types(self):
-        from podcast_research.sources.review_items import VALID_ITEM_TYPES
+        from signalvault.sources.review_items import VALID_ITEM_TYPES
         assert "pdf_analysis_skipped" in VALID_ITEM_TYPES
         assert "pdf_evidence_missing" in VALID_ITEM_TYPES
 
@@ -335,7 +335,7 @@ class TestReviewItemsP4B:
         )
         # Good quality → eligible → no analysis_skipped review
         if result["eligible"]:
-            from podcast_research.sources.review_items import ReviewItemManager
+            from signalvault.sources.review_items import ReviewItemManager
             items = ReviewItemManager.list_items(
                 item_type="pdf_analysis_skipped", session=db_session,
             )
@@ -352,7 +352,7 @@ class TestCliPdfAnalyze:
     def test_analyze_help(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -364,7 +364,7 @@ class TestCliPdfAnalyze:
         """pdf analyze on a valid text PDF with mock provider."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -378,7 +378,7 @@ class TestCliPdfAnalyze:
         """pdf analyze on minimal PDF should skip with explanation."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -391,7 +391,7 @@ class TestCliPdfAnalyze:
     def test_analyze_nonexistent_file(self):
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -404,7 +404,7 @@ class TestCliPdfAnalyze:
         """pdf analyze --write-review on minimal PDF."""
         import importlib
 
-        import podcast_research.cli as cli_mod
+        import signalvault.cli as cli_mod
         importlib.reload(cli_mod)
         from typer.testing import CliRunner
         runner = CliRunner()
@@ -424,7 +424,7 @@ class TestDbMigration:
         """evidence_page column should exist in investment_views table."""
         from sqlalchemy import inspect
 
-        from podcast_research.db.session import _engine
+        from signalvault.db.session import _engine
         insp = inspect(_engine)
         cols = {c["name"] for c in insp.get_columns("investment_views")}
         assert "evidence_page" in cols

@@ -1,7 +1,7 @@
 """Repository 查询层测试（P1-A）。"""
 
 
-from podcast_research.db.repository import (
+from signalvault.db.repository import (
     get_report,
     get_report_detail,
     list_reports,

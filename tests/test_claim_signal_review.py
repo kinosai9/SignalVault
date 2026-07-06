@@ -75,7 +75,7 @@ updated_at: "2026-05-30T00:00:00"
 
 def test_list_claims(tmp_path):
     """Test listing claims."""
-    from podcast_research.claim_signal.review import list_claims
+    from signalvault.claim_signal.review import list_claims
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
@@ -88,7 +88,7 @@ def test_list_claims(tmp_path):
 
 def test_list_claims_status_filter(tmp_path):
     """Test listing claims with status filter."""
-    from podcast_research.claim_signal.review import list_claims
+    from signalvault.claim_signal.review import list_claims
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
@@ -101,7 +101,7 @@ def test_list_claims_status_filter(tmp_path):
 
 def test_list_signals(tmp_path):
     """Test listing signals."""
-    from podcast_research.claim_signal.review import list_signals
+    from signalvault.claim_signal.review import list_signals
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")
@@ -113,7 +113,7 @@ def test_list_signals(tmp_path):
 
 def test_list_signals_status_filter(tmp_path):
     """Test listing signals with status filter."""
-    from podcast_research.claim_signal.review import list_signals
+    from signalvault.claim_signal.review import list_signals
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")
@@ -125,7 +125,7 @@ def test_list_signals_status_filter(tmp_path):
 
 def test_show_claim(tmp_path):
     """Test showing a claim card."""
-    from podcast_research.claim_signal.review import get_claim
+    from signalvault.claim_signal.review import get_claim
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", claim_text="AI Agents bottleneck is harness")
@@ -136,7 +136,7 @@ def test_show_claim(tmp_path):
 
 def test_show_signal(tmp_path):
     """Test showing a signal card."""
-    from podcast_research.claim_signal.review import get_signal
+    from signalvault.claim_signal.review import get_signal
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", signal_text="Monitor CPU bottleneck")
@@ -147,14 +147,14 @@ def test_show_signal(tmp_path):
 
 def test_update_claim_status(tmp_path):
     """Test updating claim status."""
-    from podcast_research.claim_signal.review import update_claim_status
+    from signalvault.claim_signal.review import update_claim_status
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
     ok = update_claim_status(vault, "claim_test_001", "verified", note="source confirmed")
     assert ok
 
-    from podcast_research.claim_signal.review import get_claim
+    from signalvault.claim_signal.review import get_claim
     content = get_claim(vault, "claim_test_001")
     assert "status: verified" in content
     assert "## Review History" in content
@@ -163,14 +163,14 @@ def test_update_claim_status(tmp_path):
 
 def test_update_signal_status(tmp_path):
     """Test updating signal status."""
-    from podcast_research.claim_signal.review import update_signal_status
+    from signalvault.claim_signal.review import update_signal_status
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")
     ok = update_signal_status(vault, "signal_test_001", "watching", note="needs tracking")
     assert ok
 
-    from podcast_research.claim_signal.review import get_signal
+    from signalvault.claim_signal.review import get_signal
     content = get_signal(vault, "signal_test_001")
     assert "status: watching" in content
     assert "needs tracking" in content
@@ -178,7 +178,7 @@ def test_update_signal_status(tmp_path):
 
 def test_invalid_claim_status_rejected(tmp_path):
     """Test that invalid claim status is rejected."""
-    from podcast_research.claim_signal.review import update_claim_status
+    from signalvault.claim_signal.review import update_claim_status
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001")
@@ -188,7 +188,7 @@ def test_invalid_claim_status_rejected(tmp_path):
 
 def test_invalid_signal_status_rejected(tmp_path):
     """Test that invalid signal status is rejected."""
-    from podcast_research.claim_signal.review import update_signal_status
+    from signalvault.claim_signal.review import update_signal_status
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -198,7 +198,7 @@ def test_invalid_signal_status_rejected(tmp_path):
 
 def test_nonexistent_claim_error(tmp_path):
     """Test that non-existent claim returns error."""
-    from podcast_research.claim_signal.review import update_claim_status
+    from signalvault.claim_signal.review import update_claim_status
 
     vault = tmp_path / "vault"
     ok = update_claim_status(vault, "nonexistent", "verified")
@@ -207,7 +207,7 @@ def test_nonexistent_claim_error(tmp_path):
 
 def test_nonexistent_signal_error(tmp_path):
     """Test that non-existent signal returns error."""
-    from podcast_research.claim_signal.review import update_signal_status
+    from signalvault.claim_signal.review import update_signal_status
 
     vault = tmp_path / "vault"
     ok = update_signal_status(vault, "nonexistent", "watching")
@@ -216,7 +216,7 @@ def test_nonexistent_signal_error(tmp_path):
 
 def test_update_writes_review_log(tmp_path):
     """Test that status update writes Claim_Review_Log.md."""
-    from podcast_research.claim_signal.review import update_claim_status
+    from signalvault.claim_signal.review import update_claim_status
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001")
@@ -229,7 +229,7 @@ def test_update_writes_review_log(tmp_path):
 
 def test_update_writes_signal_review_log(tmp_path):
     """Test that status update writes Signal_Review_Log.md."""
-    from podcast_research.claim_signal.review import update_signal_status
+    from signalvault.claim_signal.review import update_signal_status
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -242,7 +242,7 @@ def test_update_writes_signal_review_log(tmp_path):
 
 def test_update_updates_index(tmp_path):
     """Test that status update rebuilds index."""
-    from podcast_research.claim_signal.review import update_claim_status
+    from signalvault.claim_signal.review import update_claim_status
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
@@ -259,7 +259,7 @@ def test_cli_claims_list(tmp_path):
     """Test CLI claims list."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
@@ -274,7 +274,7 @@ def test_cli_signals_list(tmp_path):
     """Test CLI signals list."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")
@@ -289,7 +289,7 @@ def test_cli_claims_update(tmp_path):
     """Test CLI claims update-status."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", status="active")
@@ -308,7 +308,7 @@ def test_cli_signals_update(tmp_path):
     """Test CLI signals update-status."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", status="open")

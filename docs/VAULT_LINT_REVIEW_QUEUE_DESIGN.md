@@ -28,19 +28,19 @@
 
 ```bash
 # 运行全部 lint 规则
-python -m podcast_research vault-lint --vault /path/to/vault
+python -m signalvault vault-lint --vault /path/to/vault
 
 # 仅运行指定规则
-python -m podcast_research vault-lint --vault /path/to/vault --rules dead_wikilink,orphan_card
+python -m signalvault vault-lint --vault /path/to/vault --rules dead_wikilink,orphan_card
 
 # 排除某些规则
-python -m podcast_research vault-lint --vault /path/to/vault --exclude frontmatter_invalid
+python -m signalvault vault-lint --vault /path/to/vault --exclude frontmatter_invalid
 
 # JSON 输出
-python -m podcast_research vault-lint --vault /path/to/vault --json
+python -m signalvault vault-lint --vault /path/to/vault --json
 
 # Lint 发现写入 review_items
-python -m podcast_research vault-lint --vault /path/to/vault --write-review
+python -m signalvault vault-lint --vault /path/to/vault --write-review
 ```
 
 ### Lint Finding 数据结构
@@ -60,7 +60,7 @@ python -m podcast_research vault-lint --vault /path/to/vault --write-review
 ### Runner API
 
 ```python
-from podcast_research.workspace.vault_lint import run_vault_lint, write_lint_to_review
+from signalvault.workspace.vault_lint import run_vault_lint, write_lint_to_review
 
 result = run_vault_lint(vault_path, rules=["dead_wikilink"], exclude=["orphan_card"])
 # result = {run_id, vault_path, total_findings, findings: list[dict], rule_counts: dict}
@@ -71,7 +71,7 @@ created = write_lint_to_review(result["findings"])
 
 ### 问题陈述
 
-Obsidian vault 是 podcast_research 的核心输出产物。随着使用时间增长，vault 中的质量问题会累积：
+Obsidian vault 是 signalvault 的核心输出产物。随着使用时间增长，vault 中的质量问题会累积：
 
 | 问题类型 | 例子 | 影响 |
 |----------|------|------|
@@ -147,21 +147,21 @@ open ──→ accepted ──→ resolved
 
 ```bash
 # 列出所有 open 的 review items
-python -m podcast_research review list --status open
+python -m signalvault review list --status open
 
 # 按类型过滤
-python -m podcast_research review list --type lint_dead_wikilink
+python -m signalvault review list --type lint_dead_wikilink
 
 # 查看详情
-python -m podcast_research review show 1
+python -m signalvault review show 1
 
 # 接受 / 跳过 / 解决
-python -m podcast_research review accept 1 --note "已修复"
-python -m podcast_research review skip 1 --note "暂不处理"
-python -m podcast_research review resolve 1 --note "已解决"
+python -m signalvault review accept 1 --note "已修复"
+python -m signalvault review skip 1 --note "暂不处理"
+python -m signalvault review resolve 1 --note "已解决"
 
 # Lint 后自动创建 review items
-python -m podcast_research vault-lint --vault /path/to/vault --write-review
+python -m signalvault vault-lint --vault /path/to/vault --write-review
 ```
 
 ### `--write-review` 行为
@@ -272,19 +272,19 @@ CLI: llm-wiki apply-patch     Web: 一键 accept → 触发 apply
 
 ```bash
 # 列出 review items
-python -m podcast_research reviews list --status pending --type lint_issue
+python -m signalvault reviews list --status pending --type lint_issue
 
 # 查看详情
-python -m podcast_research reviews show 1
+python -m signalvault reviews show 1
 
 # 更新状态
-python -m podcast_research reviews update 1 --status accepted --note "fixed"
+python -m signalvault reviews update 1 --status accepted --note "fixed"
 
 # 自动生成 review items（从 lint 结果）
-python -m podcast_research reviews generate --from-lint --run-id <uuid>
+python -m signalvault reviews generate --from-lint --run-id <uuid>
 
 # 统计
-python -m podcast_research reviews stats
+python -m signalvault reviews stats
 ```
 
 ### 十五、测试计划

@@ -2,17 +2,17 @@
 
 > 分析日期：2026-07-01
 > 参考项目：[nashsu/llm_wiki](https://github.com/nashsu/llm_wiki) v0.5.4
-> 当前项目：[podcast_research](https://github.com/kinosai9/podcast_research)
+> 当前项目：[signalvault](https://github.com/kinosai9/signalvault)
 
 ## 一、许可协议分析
 
-| | llm_wiki | podcast_research |
+| | llm_wiki | signalvault |
 |---|---|---|
 | **许可证** | GPL v3 | 未声明（默认保留所有权利） |
 | **版权方** | Yong Su (2024–2026) | Kinoc |
 | **传染性** | 强 copyleft — 任何衍生作品必须同样以 GPL v3 发布 | N/A |
 
-**结论：不能直接合并代码。** GPL v3 要求任何包含 GPL 代码的派生项目也以 GPL v3 开源。如果 podcast_research 保持闭源或商业用途，不能直接引入 llm_wiki 的代码。但**设计理念、架构模式、算法思路**不受版权保护，可以借鉴。
+**结论：不能直接合并代码。** GPL v3 要求任何包含 GPL 代码的派生项目也以 GPL v3 开源。如果 signalvault 保持闭源或商业用途，不能直接引入 llm_wiki 的代码。但**设计理念、架构模式、算法思路**不受版权保护，可以借鉴。
 
 **安全做法：**
 - 架构和设计可以借鉴（不受 GPL 约束）
@@ -26,7 +26,7 @@
 
 ### 2.1 基本定位
 
-| 维度 | llm_wiki | podcast_research |
+| 维度 | llm_wiki | signalvault |
 |------|----------|------------------|
 | **目标** | 通用个人知识库自动构建 | 投资播客/视频结构化分析 |
 | **用户** | 知识工作者、研究者、任何人 | 投资研究者 |
@@ -37,7 +37,7 @@
 
 ### 2.2 技术栈
 
-| 维度 | llm_wiki | podcast_research |
+| 维度 | llm_wiki | signalvault |
 |------|----------|------------------|
 | **语言** | TypeScript + Rust | Python |
 | **前端** | React 19 + Tailwind CSS 4 + shadcn/ui | Jinja2 模板 + 手写 CSS |
@@ -51,7 +51,7 @@
 
 ### 2.3 核心功能对比
 
-| 功能 | llm_wiki | podcast_research |
+| 功能 | llm_wiki | signalvault |
 |------|----------|------------------|
 | **信息摄入** | ✓ 文件系统监听 + 计划导入 | ✓ 四类入口（频道/URL/跟踪源/文件上传） |
 | **摄入队列** | ✓ 持久化队列 + 崩溃恢复 | ✗ 内存 `_preview_store`（重启丢失） |
@@ -79,7 +79,7 @@
 
 **llm_wiki 做法：** `ingest-queue.ts` 实现持久化队列，支持崩溃恢复、重试、状态追踪。
 
-**当前问题：** podcast_research 的 `_preview_store` 和 `_file_preview_store` 是进程内 dict，重启丢失，不支持多 worker。
+**当前问题：** signalvault 的 `_preview_store` 和 `_file_preview_store` 是进程内 dict，重启丢失，不支持多 worker。
 
 **借鉴方案：**
 - 在 SQLite 中新增 `ingest_queue` 表（status, preview_data, created_at, confirmed_at）
@@ -97,7 +97,7 @@ ingest_queue
 
 **llm_wiki 做法：** `lint.ts` 定期检查 wiki 健康状态：死链、孤立页、过期内容、frontmatter 格式错误。`lint-fixes.ts` 生成修复建议。
 
-**当前问题：** podcast_research 没有报告质量/一致性的自动检查。
+**当前问题：** signalvault 没有报告质量/一致性的自动检查。
 
 **借鉴方案：**
 - `workspace/lint.py` — 扫描 vault 检查：
@@ -112,7 +112,7 @@ ingest_queue
 
 **llm_wiki 做法：** 4 信号评分（直接链接、source overlap、Adamic-Adar、type affinity）+ Louvain 社区检测，Sigma.js 可视化。
 
-**当前问题：** podcast_research 有 topic/company/claim/signal 卡片但缺少可视化关联。
+**当前问题：** signalvault 有 topic/company/claim/signal 卡片但缺少可视化关联。
 
 **借鉴方案（简化版）：**
 - `workspace/graph.py` — 构建报告→观点→标的→信号的关联图
@@ -126,7 +126,7 @@ ingest_queue
 
 **llm_wiki 做法：** `review-store.ts` 管理矛盾发现、建议采纳、知识差距等审查项。
 
-**当前问题：** podcast_research 的 Patch Review 系统只覆盖 LLM-WIKI 卡片修改，没有通用审查机制。
+**当前问题：** signalvault 的 Patch Review 系统只覆盖 LLM-WIKI 卡片修改，没有通用审查机制。
 
 **借鉴方案：**
 - 复用现有 `patches` 表或新建 `reviews` 表
@@ -149,7 +149,7 @@ ingest_queue
 
 **llm_wiki 做法：** 关键词 BM25 + 向量搜索 + Reciprocal Rank Fusion (RRF)。
 
-**当前问题：** podcast_research 只有 FTS5 关键词搜索。
+**当前问题：** signalvault 只有 FTS5 关键词搜索。
 
 **借鉴方案：**
 - 短期：增强 FTS5 搜索（权重调整、中文分词优化）
@@ -161,12 +161,12 @@ ingest_queue
 **llm_wiki 做法：** `mcp-server/` 提供 8 个 tool 暴露给 Claude Desktop / Cursor 等 AI Agent。
 
 **借鉴方案：**
-- `mcp_server/` — FastMCP server 暴露 podcast_research 能力给 Claude：
+- `mcp_server/` — FastMCP server 暴露 signalvault 能力给 Claude：
   - `search_reports` — 搜索报告
   - `get_report` — 获取报告详情
   - `list_channels` — 列出频道
   - `get_claims` / `get_signals` — 查询观点/信号
-- 让 Claude 可以直接查询 podcast_research 的知识库
+- 让 Claude 可以直接查询 signalvault 的知识库
 - Python 原生支持，用 `mcp` 包即可
 
 ### 3.3 低优先级 —— 远期参考
@@ -177,11 +177,11 @@ llm_wiki 的 Chrome 扩展通过 Readability.js + Turndown.js 提取网页内容
 
 #### I. Scenario Templates
 
-llm_wiki 有 `templates.ts` 提供场景模板选择器（研究项目、学习笔记、写作项目等）。我们可以为 podcast_research 提供类似的分析模板（深度分析、快速扫描、技术尽调等）。
+llm_wiki 有 `templates.ts` 提供场景模板选择器（研究项目、学习笔记、写作项目等）。我们可以为 signalvault 提供类似的分析模板（深度分析、快速扫描、技术尽调等）。
 
 #### J. 多语言支持
 
-llm_wiki 使用 i18next 支持中/英/日/韩。podcast_research 目前只有中文，可以规划英文 UI。
+llm_wiki 使用 i18next 支持中/英/日/韩。signalvault 目前只有中文，可以规划英文 UI。
 
 ---
 
@@ -189,7 +189,7 @@ llm_wiki 使用 i18next 支持中/英/日/韩。podcast_research 目前只有中
 
 ### 4.1 前端架构：我们需要升级吗？
 
-| | llm_wiki | podcast_research |
+| | llm_wiki | signalvault |
 |---|---|---|
 | **框架** | React 19 + Vite | Jinja2 服务端渲染 |
 | **UI 组件** | shadcn/ui + Tailwind | 手写 CSS |
@@ -197,20 +197,20 @@ llm_wiki 使用 i18next 支持中/英/日/韩。podcast_research 目前只有中
 | **状态** | Zustand（客户端状态管理） | 无（服务端状态，每次请求重建） |
 
 **判断：不需要升级前端框架。** 原因：
-1. podcast_research 是本地研究工具，不是面向大众消费者的产品。Jinja2 模板足够。
+1. signalvault 是本地研究工具，不是面向大众消费者的产品。Jinja2 模板足够。
 2. React 迁移成本极高（80 个模块、20 个模板全部需要重写）
 3. 当前约束明确说"不做 React/Vue"
 4. 但可以考虑渐进式增强：在关键交互页面（如 dashboard）使用 HTMX 或 Alpine.js 实现局部刷新，不引入构建工具链
 
 ### 4.2 Desktop 化：Tauri 对我们的价值
 
-llm_wiki 使用 Tauri 2 打包成桌面应用。podcast_research 是 `python -m podcast_research serve` 启动本地 server。
+llm_wiki 使用 Tauri 2 打包成桌面应用。signalvault 是 `python -m signalvault serve` 启动本地 server。
 
-**判断：当前不需要。** podcast_research 的 serve 模式已经足够好。Tauri 引入 Rust 工具链会增加构建复杂度。可以等用户规模扩大后再考虑。
+**判断：当前不需要。** signalvault 的 serve 模式已经足够好。Tauri 引入 Rust 工具链会增加构建复杂度。可以等用户规模扩大后再考虑。
 
 ### 4.3 LLM Provider 抽象层
 
-llm_wiki 的 `llm-client.ts` + `llm-providers.ts` 统一了 9 家供应商的流式调用接口。podcast_research 目前只有 `OpenAICompatibleProvider`。
+llm_wiki 的 `llm-client.ts` + `llm-providers.ts` 统一了 9 家供应商的流式调用接口。signalvault 目前只有 `OpenAICompatibleProvider`。
 
 **判断：值得借鉴，简化实现。** 不需要支持 9 家，但统一 provider 接口设计可以参考：
 - 所有 provider 实现同一个 `stream_chat(messages, options) -> AsyncIterator[Chunk]` 接口
@@ -243,21 +243,21 @@ P5（远期参考）：
 
 ## 六、许可证行动建议
 
-1. **当前状态：** podcast_research 无开源许可证声明。GitHub 默认条款下其他人无权使用、复制、修改。
+1. **当前状态：** signalvault 无开源许可证声明。GitHub 默认条款下其他人无权使用、复制、修改。
 2. **如果计划开源：** 建议 MIT 或 Apache 2.0（允许商业使用，不强制下游开源），与 GPL v3 的 llm_wiki 保持距离。
 3. **如果计划闭源/商业使用：** 保持当前 unlicensed 状态即可，但注明 copyright。
-4. **如果考虑整合 llm_wiki 代码：** 必须先决定以 GPL v3 发布 podcast_research，并接受 copyleft 义务。
+4. **如果考虑整合 llm_wiki 代码：** 必须先决定以 GPL v3 发布 signalvault，并接受 copyleft 义务。
 
 ---
 
 ## 七、总结
 
-llm_wiki 是一个工程化程度很高的项目（比 podcast_research 大一个数量级：React + Rust + MCP + Extension + Desktop），但它解决的问题域更通用（通用知识库），podcast_research 更垂直（投资音视频分析）。
+llm_wiki 是一个工程化程度很高的项目（比 signalvault 大一个数量级：React + Rust + MCP + Extension + Desktop），但它解决的问题域更通用（通用知识库），signalvault 更垂直（投资音视频分析）。
 
 **最有价值的三个借鉴方向：**
 1. **持久化摄入队列** — 直接填补当前最大架构短板（内存存储丢失问题）
 2. **Vault Health Lint + Review Queue** — 提升知识库质量和可维护性
-3. **MCP Server** — 让 AI Agent 直接访问 podcast_research 的知识库，打开新的使用场景
+3. **MCP Server** — 让 AI Agent 直接访问 signalvault 的知识库，打开新的使用场景
 
 **不需要做的事情：**
 - 迁移到 React/Tauri

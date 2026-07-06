@@ -66,7 +66,7 @@ python -m pytest tests/test_ui_smoke.py -v  # UI smoke tests（需要 playwright
 ## 真实 LLM 手动验证
 
 ```bash
-python -m podcast_research --youtube-url "URL" --focus "AI投资" --no-mock
+python -m signalvault --youtube-url "URL" --focus "AI投资" --no-mock
 ```
 
 - 需 `.env` 配置：`LLM_PROVIDER` / `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`
@@ -94,7 +94,7 @@ python -m podcast_research --youtube-url "URL" --focus "AI投资" --no-mock
 ## Git
 
 - commit message 用英文。Push 仅用于跨设备同步，等用户说。
-- GitHub 仓库用 SSH：`ssh://git@github.com/kinosai9/podcast_research.git`
+- GitHub 仓库用 SSH：`ssh://git@github.com/kinosai9/signalvault.git`
 
 ## 项目文档
 

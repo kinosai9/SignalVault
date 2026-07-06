@@ -73,7 +73,7 @@ updated_at: "2026-05-30T00:00:00"
 
 def test_update_claim_meta(tmp_path):
     """Test update_claim_meta adds quality/review_priority/granularity."""
-    from podcast_research.claim_signal.review import get_claim, update_claim_meta
+    from signalvault.claim_signal.review import get_claim, update_claim_meta
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", claim_text="AI harness claim")
@@ -89,7 +89,7 @@ def test_update_claim_meta(tmp_path):
 
 def test_update_signal_meta(tmp_path):
     """Test update_signal_meta adds quality/priority/signal_type."""
-    from podcast_research.claim_signal.review import get_signal, update_signal_meta
+    from signalvault.claim_signal.review import get_signal, update_signal_meta
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001", signal_text="CPU bottleneck signal")
@@ -105,7 +105,7 @@ def test_update_signal_meta(tmp_path):
 
 def test_invalid_quality_rejected(tmp_path):
     """Test invalid quality is rejected."""
-    from podcast_research.claim_signal.review import update_claim_meta
+    from signalvault.claim_signal.review import update_claim_meta
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001")
@@ -115,7 +115,7 @@ def test_invalid_quality_rejected(tmp_path):
 
 def test_invalid_signal_type_rejected(tmp_path):
     """Test invalid signal_type is rejected."""
-    from podcast_research.claim_signal.review import update_signal_meta
+    from signalvault.claim_signal.review import update_signal_meta
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -125,7 +125,7 @@ def test_invalid_signal_type_rejected(tmp_path):
 
 def test_index_includes_meta(tmp_path):
     """Test that index rebuild includes quality/review_priority."""
-    from podcast_research.claim_signal.review import update_claim_meta
+    from signalvault.claim_signal.review import update_claim_meta
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001", claim_text="AI claim")
@@ -139,7 +139,7 @@ def test_index_includes_meta(tmp_path):
 
 def test_find_similar_claims(tmp_path):
     """Test find_similar_claims detects similar claims."""
-    from podcast_research.claim_signal.review import find_similar_claims
+    from signalvault.claim_signal.review import find_similar_claims
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_a", claim_text="NVIDIA GPU supply is the bottleneck for AI training")
@@ -154,7 +154,7 @@ def test_find_similar_claims(tmp_path):
 
 def test_find_similar_does_not_modify(tmp_path):
     """Test find_similar doesn't modify files."""
-    from podcast_research.claim_signal.review import find_similar_claims
+    from signalvault.claim_signal.review import find_similar_claims
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_a", claim_text="NVIDIA GPU supply bottleneck")
@@ -168,7 +168,7 @@ def test_find_similar_does_not_modify(tmp_path):
 
 def test_backlog_generated(tmp_path):
     """Test backlog is generated."""
-    from podcast_research.claim_signal.review import (
+    from signalvault.claim_signal.review import (
         generate_claim_backlog,
         generate_signal_backlog,
     )
@@ -186,7 +186,7 @@ def test_backlog_generated(tmp_path):
 
 def test_backlog_sorted(tmp_path):
     """Test backlog sorts by priority."""
-    from podcast_research.claim_signal.review import (
+    from signalvault.claim_signal.review import (
         generate_claim_backlog,
         update_claim_meta,
     )
@@ -206,7 +206,7 @@ def test_backlog_sorted(tmp_path):
 
 def test_update_meta_writes_log(tmp_path):
     """Test update-meta writes review log."""
-    from podcast_research.claim_signal.review import update_claim_meta
+    from signalvault.claim_signal.review import update_claim_meta
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001")
@@ -221,7 +221,7 @@ def test_cli_claims_update_meta(tmp_path):
     """Test CLI claims update-meta."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_test_001")
@@ -240,7 +240,7 @@ def test_cli_signals_update_meta(tmp_path):
     """Test CLI signals update-meta."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")
@@ -259,7 +259,7 @@ def test_cli_find_similar(tmp_path):
     """Test CLI claims find-similar."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_claim(vault, "claim_a", claim_text="NVIDIA GPU supply bottleneck for AI")
@@ -275,7 +275,7 @@ def test_cli_backlog(tmp_path):
     """Test CLI signals backlog."""
     from typer.testing import CliRunner
 
-    from podcast_research.cli import app
+    from signalvault.cli import app
 
     vault = tmp_path / "vault"
     _create_test_signal(vault, "signal_test_001")

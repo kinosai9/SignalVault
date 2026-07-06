@@ -5,7 +5,7 @@ company relations, language consistency, and sync postconditions.
 
 Usage:
     uv run python scripts/diagnose_clean_vault.py --vault "D:/path/to/vault"
-    uv run python scripts/diagnose_clean_vault.py --vault "D:/path/to/vault" --db "data/podcast_analyst.db"
+    uv run python scripts/diagnose_clean_vault.py --vault "D:/path/to/vault" --db "data/signalvault.db"
     uv run python scripts/diagnose_clean_vault.py --vault "D:/path/to/vault" --json  # machine-readable output
 """
 
@@ -184,8 +184,8 @@ def audit_db_metadata(vault_path: Path, db_path: Path | None = None) -> list[dic
     if db_path is None:
         # Try default locations
         for candidate in [
-            Path("data/podcast_analyst.db"),
-            Path("D:/claude/xyz_analysis/data/podcast_analyst.db"),
+            Path("data/signalvault.db"),
+            Path("D:/claude/xyz_analysis/data/signalvault.db"),
         ]:
             if candidate.exists():
                 db_path = candidate
@@ -331,8 +331,8 @@ def audit_companies(vault_path: Path, db_path: Path | None = None) -> dict:
 
     if db_path is None:
         for candidate in [
-            Path("data/podcast_analyst.db"),
-            Path("D:/claude/xyz_analysis/data/podcast_analyst.db"),
+            Path("data/signalvault.db"),
+            Path("D:/claude/xyz_analysis/data/signalvault.db"),
         ]:
             if candidate.exists():
                 db_path = candidate
