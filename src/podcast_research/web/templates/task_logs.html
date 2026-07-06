@@ -2,92 +2,88 @@
 {% block title %}任务日志 — {{ job.title if job else job_id }}{% endblock %}
 {% block content %}
 
-<a href="/tasks" class="back-link">&larr; 返回整理任务</a>
+<a href="/tasks" class="back-link">&larr; 返回诊断中心</a>
 
 {% if not_found %}
 <div class="error-page">
     <h2>任务记录不存在或已过期</h2>
     <p>该任务可能已完成或从未创建。服务重启后内存中的任务记录会被清空。</p>
-    <a href="/tasks" class="btn-action" style="margin-top:12px">查看所有任务</a>
+    <a href="/tasks" class="btn-action" style="margin-top:12px">返回诊断中心</a>
 </div>
 
 {% else %}
 
-<h2 class="page-title">任务日志</h2>
+<section class="diagnostics-hero status-{{ status.status }}">
+    <div>
+        <p class="eyebrow">Operation Timeline</p>
+        <h2 class="page-title">任务日志</h2>
+        <p class="page-desc">按时间查看系统完成了什么、卡在哪里，以及失败时可以带给技术支持的关键信息。</p>
+    </div>
+    <div class="diagnostics-hero-actions">
+        <a href="/tasks/{{ job_id }}" class="btn-action">返回任务详情</a>
+        <a href="/tasks" class="btn-action btn-secondary">诊断中心</a>
+    </div>
+</section>
 
-<div class="section-card" style="margin-bottom:20px">
-    <table class="data-table" style="margin:0">
-        <tr><td style="width:120px;font-weight:600">任务 ID</td><td><code>{{ job_id }}</code></td></tr>
-        <tr><td style="font-weight:600">任务类型</td><td>{{ job.job_type or '—' }}</td></tr>
-        <tr><td style="font-weight:600">状态</td><td>
-            {% if status.status == "success" %}<span class="badge badge-synced">成功</span>
-            {% elif status.status in ("failed", "stale") %}<span class="badge badge-failed">失败</span>
-            {% elif status.status in ("running", "long_running") %}<span class="badge badge-processing">进行中</span>
-            {% else %}<span class="badge">{{ status.status }}</span>
-            {% endif %}
-        </td></tr>
-        <tr><td style="font-weight:600">开始时间</td><td>{{ job.started_at or '—' }}</td></tr>
-        {% if status.status in ("success", "failed") %}
-        <tr><td style="font-weight:600">结束时间</td><td>{{ job.updated_at or '—' }}</td></tr>
-        {% endif %}
-        {% if status.error %}
-        <tr><td style="font-weight:600">错误信息</td><td style="color:var(--error)">{{ status.error }}</td></tr>
-        {% endif %}
-        {% if status.failure_kind %}
-        <tr><td style="font-weight:600">失败类型</td><td>{{ status.failure_kind }}</td></tr>
-        {% endif %}
-    </table>
+<div class="task-log-summary">
+    <div class="source-fact">
+        <span>任务 ID</span>
+        <strong>{{ job_id }}</strong>
+    </div>
+    <div class="source-fact">
+        <span>任务类型</span>
+        <strong>{{ job.job_type or '—' }}</strong>
+    </div>
+    <div class="source-fact">
+        <span>状态</span>
+        <strong>{{ status.status or job.status }}</strong>
+    </div>
+    <div class="source-fact">
+        <span>开始时间</span>
+        <strong>{{ job.started_at or '—' }}</strong>
+    </div>
+    {% if status.error %}
+    <div class="source-fact wide danger">
+        <span>错误信息</span>
+        <strong>{{ status.error }}</strong>
+    </div>
+    {% endif %}
+    {% if status.failure_kind %}
+    <div class="source-fact danger">
+        <span>失败类型</span>
+        <strong>{{ status.failure_kind }}</strong>
+    </div>
+    {% endif %}
 </div>
 
-<h3>事件时间线</h3>
+<h3 class="section-title">事件时间线</h3>
 
 {% if events %}
-<table class="data-table">
-    <thead>
-        <tr>
-            <th style="width:160px">时间</th>
-            <th style="width:60px">级别</th>
-            <th style="width:140px">阶段</th>
-            <th>消息</th>
-        </tr>
-    </thead>
-    <tbody>
+<div class="event-timeline">
     {% for evt in events %}
-        <tr>
-            <td style="font-size:0.78rem">{{ evt.timestamp }}</td>
-            <td>
-                {% if evt.level == "error" %}
-                <span class="badge badge-failed">错误</span>
-                {% elif evt.level == "warning" %}
-                <span class="badge" style="background:#f0ad4e20;color:#f0ad4e">警告</span>
-                {% else %}
-                <span class="badge" style="background:var(--bg-soft)">信息</span>
-                {% endif %}
-            </td>
-            <td style="font-size:0.82rem">{{ evt.stage }}</td>
-            <td>
-                <span style="font-size:0.85rem">{{ evt.message }}</span>
-                {% if evt.detail %}
-                <details style="margin-top:4px;font-size:0.78rem">
-                    <summary style="cursor:pointer;color:var(--accent)">详情</summary>
-                    <pre style="margin:4px 0 0 0;padding:8px;background:var(--bg-soft);border-radius:4px;font-size:0.75rem;white-space:pre-wrap;word-break:break-all">{{ evt.detail }}</pre>
-                </details>
-                {% endif %}
-            </td>
-        </tr>
+    <article class="event-row level-{{ evt.level }}">
+        <div class="event-dot"></div>
+        <div class="event-main">
+            <div class="event-head">
+                <strong>{{ evt.message }}</strong>
+                <span>{{ evt.level }}</span>
+            </div>
+            <p>{{ evt.stage or "系统" }} · {{ evt.timestamp }}</p>
+            {% if evt.detail %}
+            <details>
+                <summary>查看详情</summary>
+                <pre>{{ evt.detail }}</pre>
+            </details>
+            {% endif %}
+        </div>
+    </article>
     {% endfor %}
-    </tbody>
-</table>
+</div>
 {% else %}
 <div class="empty-state">
     <p>该任务暂无事件记录。</p>
 </div>
 {% endif %}
-
-<div style="margin-top:20px">
-    <a href="/tasks/{{ job_id }}" class="btn-action">返回任务详情</a>
-    <a href="/tasks" class="btn-action btn-secondary">查看所有任务</a>
-</div>
 
 {% endif %}
 {% endblock %}

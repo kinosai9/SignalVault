@@ -1,71 +1,63 @@
 {% extends "base.html" %}
-{% block title %}上传文件 — 投资音视频研究助手{% endblock %}
+{% block title %}上传文件 — SignalVault{% endblock %}
 {% block content %}
 
 {% if flash_msg %}
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/dashboard" class="back-link">&larr; 返回首页</a>
+<a href="/sources/import/new" class="back-link">&larr; 返回导入中心</a>
 
-<h2 class="page-title">上传文本文件</h2>
-<p class="page-desc">上传 .md / .txt / .html / .htm 文本文件，系统会提取内容生成预览，由你决定是否归档。</p>
-
-<div class="section-card">
-    <form method="post" action="/sources/files/preview" enctype="multipart/form-data" class="content-form">
-        <div class="form-group">
-            <label class="form-label" for="file">选择文件</label>
-            <input type="file" id="file" name="file"
-                   accept=".md,.txt,.html,.htm"
-                   class="form-input" required autofocus>
-            <p class="form-help">支持 .md / .txt / .html / .htm 文本类型文件。最大 {{ max_upload_mb }} MB。</p>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn-action">生成预览</button>
-            <a href="/dashboard" class="btn-action btn-secondary">取消</a>
-        </div>
-    </form>
-</div>
-
-<div class="section-card" style="margin-top:20px">
-    <h2>导入流程</h2>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:0.85rem">
-        <div>
-            <h3 style="margin:0 0 8px;color:var(--accent)">1. 上传</h3>
-            <p class="form-help">选择本地文本文件上传。系统自动识别文件类型和编码。</p>
-        </div>
-        <div>
-            <h3 style="margin:0 0 8px;color:var(--accent)">2. 预览</h3>
-            <p class="form-help">系统提取文本内容，判断入库资格，检测重复，推荐归档方式。</p>
-        </div>
-        <div>
-            <h3 style="margin:0 0 8px;color:var(--accent)">3. 确认</h3>
-            <p class="form-help">你决定是否归档。确认后写入 SourceArchive，文件名自动 sanitize。</p>
-        </div>
+<section class="import-hero">
+    <div>
+        <p class="eyebrow">本地文件</p>
+        <h1>上传文本资料</h1>
+        <p>适合已经整理好的 Markdown、纯文本或 HTML。系统先提取内容并生成预览，你确认后才归档。</p>
     </div>
+</section>
+
+<div class="import-layout">
+    <section class="section-card import-form-card">
+        <h2>生成文件预览</h2>
+        <form method="post" action="/sources/files/preview" enctype="multipart/form-data" class="content-form">
+            <div class="form-group">
+                <label class="form-label" for="file">选择文件</label>
+                <input type="file" id="file" name="file"
+                       accept=".md,.txt,.html,.htm"
+                       class="form-input" required autofocus>
+                <p class="form-help">当前 Web 上传支持 .md / .txt / .html / .htm，最大 {{ max_upload_mb }} MB。</p>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-action">生成预览</button>
+                <a href="/sources" class="btn-action btn-secondary">取消</a>
+            </div>
+        </form>
+    </section>
+
+    <aside class="import-guide">
+        <h2>系统会检查什么</h2>
+        <ol>
+            <li><strong>文件类型</strong><span>只接收可直接提取正文的文本类文件。</span></li>
+            <li><strong>内容质量</strong><span>判断正文长度、标题和解析质量是否适合归档。</span></li>
+            <li><strong>重复内容</strong><span>通过内容哈希检测是否已经入库。</span></li>
+            <li><strong>保存位置</strong><span>确认后写入 SourceArchive，并保留来源元数据。</span></li>
+        </ol>
+    </aside>
 </div>
 
-<div class="section-card" style="margin-top:20px">
-    <h2>当前支持</h2>
-    <table style="width:100%;font-size:0.85rem;border-collapse:collapse">
-        <tr style="border-bottom:1px solid var(--line-strong,#ddd)">
-            <th style="text-align:left;padding:6px 8px">文件类型</th>
-            <th style="text-align:left;padding:6px 8px">说明</th>
-        </tr>
-        <tr style="border-bottom:1px solid var(--line-soft,#eee)">
-            <td style="padding:6px 8px"><code>.md</code></td>
-            <td style="padding:6px 8px;color:var(--text-soft)">Markdown 文档，提取首个 H1 作为标题，保留正文</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--line-soft,#eee)">
-            <td style="padding:6px 8px"><code>.txt</code></td>
-            <td style="padding:6px 8px;color:var(--text-soft)">纯文本文件，自动检测编码（UTF-8 / GB18030）</td>
-        </tr>
-        <tr>
-            <td style="padding:6px 8px"><code>.html / .htm</code></td>
-            <td style="padding:6px 8px;color:var(--text-soft)">HTML 页面，提取标题和正文，清除脚本和样式</td>
-        </tr>
-    </table>
-    <p class="form-help" style="margin-top:10px">本轮不支持 .pdf / .docx / .xlsx / 图片 / 音视频 / 压缩包。这些格式将在后续版本支持。</p>
-</div>
+<section class="source-capability-strip">
+    <div>
+        <strong>文本资料</strong>
+        <span>Markdown、TXT、HTML 会提取正文并归档为普通资料。</span>
+    </div>
+    <div>
+        <strong>PDF 资料</strong>
+        <span>PDF 已具备预览、提取和分析能力，当前主要通过专用命令保留页码证据。</span>
+    </div>
+    <div>
+        <strong>不会自动分析</strong>
+        <span>普通文件上传不会直接生成投资报告，避免把资料归档误当成观点抽取。</span>
+    </div>
+</section>
 
 {% endblock %}

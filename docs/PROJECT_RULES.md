@@ -1,7 +1,7 @@
 # Project Rules
 
 > 本文档定义 podcast_research 项目的工程规范、约束和边界。
-> 所有阶段（P0–P3）的开发和设计必须遵守这些规则。
+> 所有阶段（P0–P7 及后续前端体验改造）的开发和设计必须遵守这些规则。
 > 与 CLAUDE.md（AI 助手指令）互补：CLAUDE.md 面向 AI 编码助手，本文档面向人类开发者。
 
 ## 架构边界
@@ -14,27 +14,29 @@ db/        → SQLAlchemy + SQLite。不包含业务逻辑。
 api/       → FastAPI 只读 JSON API。不返回 HTML。
 web/       → Jinja2 HTML。不直接写 DB（通过 repository）。
 services/  → 业务编排。协调多个层，不持有状态。
-sources/   → 信息源摄入管道。只写 SourceArchive/DeepNotes，不生成 Report。
+sources/   → 信息源摄入管道。普通网页/文本默认写 SourceArchive/DeepNotes；PDF/ZSXQ 可通过专用 analysis workflow 生成 Report。
 exporters/ → Obsidian Vault 导出。只写文件，不修改 DB。
 llm_wiki/  → Patch Review 生命周期。只操作卡片文件，不修改 DB。
 workspace/ → Vault 管理。只扫描/生成 Markdown，不调用 LLM。
-mcp_server/ → MCP Server（P3-D）。只读查询，不修改任何内容。
+diagnostics/ → 错误分类、操作日志、诊断中心、诊断包导出。
+mcp_server/ → MCP Server（P3/P5）。只读查询，不修改任何内容。
 ```
 
 ## 禁止事项
 
 - 不输出投资建议，不把 AI 推断伪装成嘉宾原话
-- 核心观点必须有 source_quote + timestamp
+- 核心观点必须有 source_quote；视频证据必须保留 timestamp，PDF 证据必须保留 evidence_page，ZSXQ 证据必须保留 group/topic/source_url 追溯
 - API Key 不进代码、不进日志、不进 git
 - `.env` 不提交，`.env.example` 只用占位值
-- 不做：React/Vue/Next.js、Whisper、RAG、向量库、PDF/Word 导出、登录鉴权、自动定时抓取、团队协作
+- 不做：React/Vue/Next.js、Whisper、RAG、向量库、PDF/Word 导出、登录鉴权、自动定时抓取、团队协作、ZSXQ 写入型客户端
 - 不做桌面 UI（Tauri/Electron）
 - 不新增 LLM Provider（保持 OpenAI-compatible + mock）
 
 ## 测试规则
 
 ```bash
-python -m pytest tests/ -v    # 1385 tests（mock provider）
+python -m pytest tests/ -v    # full suite（mock provider）
+python -m pytest --collect-only -q  # 当前可收集 1908 tests
 python -m pytest tests/ -q    # 快速模式
 ```
 
@@ -74,10 +76,19 @@ python -m pytest tests/ -q    # 快速模式
 ## P3 新增规则
 
 - `ingest_jobs` 表独立于现有表，仅通过 ingest_jobs 模块访问
-- `lint_results` 表仅由 vault-lint 命令写入，其他模块只读
-- `review_items` 表仅通过 reviews 模块写入
+- Vault lint 结果通过 `review_items` 写入统一审核队列
+- `review_items` 表仅通过 `sources.review_items` 模块写入
 - MCP server 只读，不持有数据库连接（每次 tool 调用新建 session）
 - MCP server 不引入新的环境变量（复用 OBSIDIAN_VAULT_PATH）
+
+## P4–P7 新增规则
+
+- PDF 只默认处理文本型 PDF；扫描件进入 Review Queue，不自动外传 OCR。
+- ZSXQ 只做已订阅内容的只读导入，不做订阅、发布、评论、点赞、删除或运营管理。
+- Unified Search 和 Knowledge Graph 保持 SQLite 自包含，不引入向量库或图数据库。
+- `operation_logs` 只记录脱敏后的操作摘要、错误码和元数据，不记录密钥、cookie、完整原文、报告全文。
+- Diagnostic Bundle 必须脱敏，不包含 API Key、Token、密码、完整付费内容或隐私字段。
+- 前端体验改造保持后端数据契约不变；必要适配放在 Web route context builder，不改核心服务返回结构。
 
 ## Git
 

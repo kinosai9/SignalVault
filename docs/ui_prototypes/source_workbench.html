@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>信息源工作台 Prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/signalvault-icon.svg" alt="">
+        <div class="brand-text">
+          <div class="brand-title">SignalVault</div>
+          <div class="brand-subtitle">多源投资研究助手</div>
+        </div>
+      </div>
+
+      <div class="nav-label">研究工作台</div>
+      <nav class="nav-group">
+        <a class="nav-item" href="investment_radar.html">变化雷达 <span class="count">12</span></a>
+        <a class="nav-item" href="knowledge_search.html">知识库搜索</a>
+        <a class="nav-item active" href="source_workbench.html">信息源工作台 <span class="count">9</span></a>
+        <a class="nav-item" href="guided_import.html">导入向导</a>
+      </nav>
+
+      <div class="nav-label">来源类型</div>
+      <nav class="nav-group">
+        <a class="nav-item active" href="#">全部来源</a>
+        <a class="nav-item" href="#">YouTube</a>
+        <a class="nav-item" href="#">网页</a>
+        <a class="nav-item" href="#">PDF / 文件</a>
+        <a class="nav-item" href="#">知识星球</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="page-kicker">Source Workbench</div>
+          <h1 class="page-title">信息源工作台</h1>
+        </div>
+        <div class="top-actions">
+          <button class="btn">诊断来源</button>
+          <a class="btn primary" href="guided_import.html">导入新资料</a>
+        </div>
+      </header>
+
+      <section class="source-board" aria-label="source summary">
+        <div class="source-tile">
+          <div class="source-type"><strong>YouTube 字幕</strong><span class="tag green">正常</span></div>
+          <div><div class="source-primary">61</div><div class="source-summary">新视频等待筛选</div></div>
+          <button class="btn">查看候选池</button>
+        </div>
+        <div class="source-tile">
+          <div class="source-type"><strong>网页资料</strong><span class="tag blue">空闲</span></div>
+          <div><div class="source-primary">0</div><div class="source-summary">无待确认预览</div></div>
+          <button class="btn">粘贴链接</button>
+        </div>
+        <div class="source-tile">
+          <div class="source-type"><strong>PDF 研报</strong><span class="tag amber">需确认</span></div>
+          <div><div class="source-primary">3</div><div class="source-summary">2 份可分析，1 份需 OCR</div></div>
+          <button class="btn">处理 PDF</button>
+        </div>
+        <div class="source-tile">
+          <div class="source-type"><strong>文本文件</strong><span class="tag green">正常</span></div>
+          <div><div class="source-primary">5</div><div class="source-summary">本周已归档</div></div>
+          <button class="btn">上传文件</button>
+        </div>
+        <div class="source-tile">
+          <div class="source-type"><strong>知识星球</strong><span class="tag red">需登录</span></div>
+          <div><div class="source-primary">2</div><div class="source-summary">星球授权待刷新</div></div>
+          <button class="btn">修复连接</button>
+        </div>
+      </section>
+
+      <div class="page-grid" style="margin-top:18px">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">待处理队列</h2>
+            <span class="panel-meta">系统已识别来源和建议动作，用户只需要确认下一步</span>
+          </div>
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>资料</th>
+                <th>来源</th>
+                <th>系统判断</th>
+                <th>建议动作</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="item-title">2026 AI Infrastructure Outlook.pdf</div>
+                  <div class="item-sub">48 页，约 52,400 字，含页码证据</div>
+                </td>
+                <td><span class="tag blue">PDF</span></td>
+                <td class="status-cell"><span class="tag green">质量良好</span><span class="item-sub">可进入分析</span></td>
+                <td>生成投资观点与信号</td>
+                <td><button class="btn primary">确认分析</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="item-title">AI芯片需求分析</div>
+                  <div class="item-sub">知识星球主题，2,340 字，含附件元数据</div>
+                </td>
+                <td><span class="tag green">知识星球</span></td>
+                <td class="status-cell"><span class="tag amber">等待确认</span><span class="item-sub">只读导入</span></td>
+                <td>导入并分析</td>
+                <td><button class="btn primary">确认导入</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="item-title">Scanned Financial Report.pdf</div>
+                  <div class="item-sub">36 页，文本提取不足，疑似扫描件</div>
+                </td>
+                <td><span class="tag blue">PDF</span></td>
+                <td class="status-cell"><span class="tag red">需要 OCR</span><span class="item-sub">未发起外部上传</span></td>
+                <td>进入 Review Queue</td>
+                <td><button class="btn">查看建议</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="item-title">All-In 中文笔记新条目</div>
+                  <div class="item-sub">固定信息源发现 4 条新内容</div>
+                </td>
+                <td><span class="tag green">网页源</span></td>
+                <td class="status-cell"><span class="tag green">已生成预览</span><span class="item-sub">2 条可能重复</span></td>
+                <td>批量选择导入</td>
+                <td><button class="btn primary">打开批处理</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <aside class="stack">
+          <section class="panel panel-pad">
+            <div class="panel-title">需要你处理</div>
+            <div class="diagnostic-list" style="margin-top:12px">
+              <div class="diagnostic-card error">
+                <div class="diagnostic-title"><span>知识星球未登录</span><span class="tag red">阻塞</span></div>
+                <div class="diagnostic-body">系统无法读取已订阅星球。请先在官方 CLI 完成登录，再刷新授权范围。</div>
+                <div class="diagnostic-action"><button class="btn primary">查看修复步骤</button></div>
+              </div>
+              <div class="diagnostic-card warning">
+                <div class="diagnostic-title"><span>PDF 需要 OCR</span><span class="tag amber">可稍后</span></div>
+                <div class="diagnostic-body">该文件不是文本型 PDF。系统已保留任务，不会自动上传到外部服务。</div>
+                <div class="diagnostic-action"><button class="btn">放入 Review</button><button class="btn">跳过</button></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel-pad">
+            <div class="panel-title">本周来源健康</div>
+            <div class="health-list" style="margin-top:12px">
+              <div class="health-item"><div><b>YouTube</b><div class="item-sub">最近刷新 23 小时前</div></div><span class="tag green">正常</span></div>
+              <div class="health-item"><div><b>PDF</b><div class="item-sub">1 个质量问题</div></div><span class="tag amber">注意</span></div>
+              <div class="health-item"><div><b>知识星球</b><div class="item-sub">授权状态过期</div></div><span class="tag red">修复</span></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <p class="prototype-note">Prototype only · 面向非技术用户的信息源工作台 · 静态 mock 数据</p>
+    </main>
+  </div>
+</body>
+</html>

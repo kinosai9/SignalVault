@@ -1,29 +1,27 @@
-# 投资播客研究助手 / Podcast Investment Research Assistant
+# SignalVault 多源投资研究助手
 
-将公开播客字幕中的投资观点、标的、风险提示、待验证信号和关键原文引用结构化沉淀，输出 Markdown 报告、SQLite 数据库和 Obsidian 知识库。
+将公开播客字幕、网页资料、文本/PDF 文件、知识星球只读主题中的投资观点、标的、风险提示、待验证信号和关键原文引用结构化沉淀，输出 Markdown 报告、SQLite 数据库和 Obsidian 知识库。
 
 > **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P6 已完成，P7 规划中
+## 当前阶段：P7 后端/CLI 已完成，前端体验改造准备中
 
-P0–P6 已完成，P7 规划中。1771 个测试，80+ Python 模块，12+ CLI 命令组，约 20 个 Web 页面。
+P0–P7 后端/CLI 能力已基本完成。当前 `python -m pytest --collect-only -q` 可收集 1908 tests，覆盖多源摄入、PDF 分析、ZSXQ 只读导入、统一搜索、轻量知识图谱、诊断中心与诊断包导出。
+
+前端当前阶段：依据 `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`，在保持后端数据契约不变的前提下，将 Web Console 改造成 SignalVault 的四条主用户动线：变化雷达、信息源工作台、导入向导、知识库搜索。
+
+**P7 用户可靠性 & 诊断**（后端/CLI 已交付，Web 体验待前端阶段承接，详见 `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md` 与 `CHANGELOG.md`）：
+- ✅ P7-A 统一错误分类体系（30+ error_code，11 大类）
+- ✅ P7-B 操作日志（operation_logs 表 + logs CLI）
+- ✅ P7-C 诊断中心（9 子系统健康聚合 + doctor/diagnostics summary）
+- ✅ P7-D 诊断包导出（脱敏 zip）
+- ✅ P7-E 恢复动作建议（RecoveryAction registry）
+- ✅ P7-F CLI 对接完成；Web/API 页面承接纳入前端体验改造
 
 **P6 知识星球只读导入**（已交付，详见 `docs/P6_ACCEPTANCE_REPORT.md`）：
 - ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
 - ✅ P6-A2 主题分析 pipeline — eligibility check → `_run_pipeline()` → report/views/signals
 - ✅ P6-S 收口封板 — 验收报告 + 文档一致性 + 使用路径整理
-
-**P7 用户可靠性 & 诊断**（规划中，详见 `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md`）：
-- 📋 P7-A 统一错误分类体系（11 大类，40+ error_code）
-- 📋 P7-B 操作日志（22+ operation types）
-- 📋 P7-C 诊断中心（9 子系统健康聚合）
-- 📋 P7-D 诊断包导出（脱敏 zip）
-- 📋 P7-E 恢复动作建议
-- 📋 P7-F CLI + Web/API 对接
-
-**P6-A 知识星球只读导入**（详见 `docs/P6_ZSXQ_CONNECTOR_PLAN.md`）：
-- ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
-- ✅ P6-A2 主题分析 pipeline — eligibility check → `_run_pipeline()` → report/views/signals
 
 **P3–P5 已交付**：
 - ✅ P3-A 持久化摄入队列 — SQLite `ingest_jobs`
@@ -683,15 +681,16 @@ src/podcast_research/
     watchlist.py          # Watchlist Brief 生成
     managed_block.py      # 托管块工具
   utils/                  # 工具函数
-  mcp_server/             # MCP Server（P3-D）：8 个只读 tool
-tests/                    # 1641 个 pytest 测试
+  diagnostics/            # 错误分类、操作日志、诊断中心、诊断包
+  mcp_server/             # MCP Server（P3/P5）：12 个只读 tool
+tests/                    # 当前可收集 1908 个 pytest 测试
 ```
 
 ## 核心原则
 
 1. 不输出买卖建议
 2. 不把 AI 归纳伪装成嘉宾原话
-3. 核心观点必须绑定原文引用和时间戳
+3. 核心观点必须绑定原文引用；视频保留时间戳，PDF 保留页码，ZSXQ 保留 group/topic/source_url 追溯
 4. 不确定信息必须显式标注
 5. 所有外部依赖通过 adapter 隔离
 
@@ -736,10 +735,11 @@ tests/                    # 1641 个 pytest 测试
 | P2-M | 频道筛选 + Source Pages + 视觉优化 | ✅ 已完成 |
 | P2-N | Research Brief 质量调优 + 内容积累 | ✅ 已完成 |
 | P3 | 知识库后端化（ingest_jobs + vault_lint + review_items + mcp_server） | ✅ 已完成 |
-| P4 | PDF 文档入库（P4-A ✅ P4-B ✅ | OCR/Web 计划中） | 进行中 |
-| P5 | 统一搜索 + 轻量知识图谱（✅ 1703 tests, 12 MCP tools） | 已完成 |
+| P4 | PDF 文档入库（文本提取 + 分析 + 页码证据；OCR/Web 为候选） | ✅ 已完成 |
+| P5 | 统一搜索 + 轻量知识图谱（12 MCP tools） | ✅ 已完成 |
 | P6 | ZSXQ 只读订阅导入（P6-A1 ✅ | P6-A2 ✅ | P6-S ✅） | ✅ 已完成 |
-| P7 | 用户可靠性 & 诊断（P7-A→F 规划中） | 📋 规划中 |
+| P7 | 用户可靠性 & 诊断（错误码、操作日志、诊断中心、诊断包、恢复动作、CLI） | ✅ 后端/CLI 已完成 |
+| UI-X | SignalVault 前端体验改造（变化雷达、信息源工作台、导入向导、知识库搜索） | 设计/执行中 |
 
 ## 许可证
 

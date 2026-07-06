@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导入中心 — SignalVault</title>
+    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="site-brand" href="/" aria-label="SignalVault 首页">
+                <img class="brand-mark" src="file:///D:/claude/xyz_analysis/src/podcast_research/web/static/signalvault-icon.svg" alt="">
+                <span class="brand-copy">
+                    <span class="brand-title">SignalVault</span>
+                    <span class="subtitle">多源投资研究助手</span>
+                </span>
+            </a>
+
+            
+            <div class="nav-label">研究工作台</div>
+            <nav class="side-nav" aria-label="主导航">
+                <a href="/dashboard">变化雷达</a>
+                <a href="/sources">信息源工作台</a>
+                <a href="/sources/import/new" class="active">导入中心</a>
+                <a href="/search">知识库搜索</a>
+                <a href="/reports">报告库</a>
+                <a href="/tasks">任务与诊断</a>
+            </nav>
+
+            <div class="nav-label">来源类型</div>
+            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
+                <a href="/sources/channels">YouTube 视频</a>
+                <a href="/sources/import">网页链接</a>
+                <a href="/sources/tracked">固定信息源</a>
+                <a href="/sources/files/import">文件 / PDF</a>
+                <a href="/sources/zsxq">知识星球</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/watchlist/settings">关注设置</a>
+                <a href="/docs">API</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <main class="container">
+                
+
+
+
+<section class="source-hero">
+    <div>
+        <p class="eyebrow">Guided Import</p>
+        <h1>导入中心</h1>
+        <p>先选择资料类型，系统做预检和预览；你确认后才写入知识库或进入分析。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources" class="btn-action btn-secondary">返回工作台</a>
+        <a href="/tasks" class="btn-action btn-secondary">查看诊断</a>
+    </div>
+</section>
+
+<section class="stepper">
+    <div class="step active"><span>Step 1</span><strong>选择来源</strong></div>
+    <div class="step"><span>Step 2</span><strong>系统预检</strong></div>
+    <div class="step"><span>Step 3</span><strong>确认动作</strong></div>
+    <div class="step"><span>Step 4</span><strong>入库或分析</strong></div>
+</section>
+
+<div class="import-center-layout">
+    <section class="source-lanes">
+        <div class="source-section-head">
+            <div>
+                <h2>选择要导入的资料类型</h2>
+                <p>YouTube、知识星球、网页、固定源、文本/PDF 都从这里进入。</p>
+            </div>
+        </div>
+
+        <div class="import-source-grid">
+            
+            <article id="youtube" class="import-source-card source-active">
+                <div class="import-source-top">
+                    <span class="lane-key">youtube</span>
+                    <span class="lane-state">Web 已支持</span>
+                </div>
+                <h3>YouTube 视频</h3>
+                <p class="source-subtitle">从频道候选池或视频字幕进入分析</p>
+                <p>适合公开投资长视频、播客字幕。系统会提取观点、标的、风险、信号和原文时间戳。</p>
+                <ol>
+                    
+                    <li>添加或刷新频道</li>
+                    
+                    <li>筛选新视频</li>
+                    
+                    <li>生成投资报告</li>
+                    
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="/sources/channels">管理 YouTube</a>
+                    <span>已有频道会显示新视频候选池。</span>
+                </div>
+            </article>
+            
+            <article id="zsxq" class="import-source-card source-active">
+                <div class="import-source-top">
+                    <span class="lane-key">zsxq</span>
+                    <span class="lane-state">Web 已接入</span>
+                </div>
+                <h3>知识星球</h3>
+                <p class="source-subtitle">只读导入已订阅星球主题</p>
+                <p>适合导入指定 group/topic 的长帖、讨论和附件元数据。不会发布、评论、点赞或修改星球内容。</p>
+                <ol>
+                    
+                    <li>检查登录状态</li>
+                    
+                    <li>选择 group/topic</li>
+                    
+                    <li>导入或进入分析</li>
+                    
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="/sources/zsxq">导入知识星球</a>
+                    <span>读取依赖本机 zsxq-cli 登录状态。</span>
+                </div>
+            </article>
+            
+            <article id="web" class="import-source-card source-active">
+                <div class="import-source-top">
+                    <span class="lane-key">web</span>
+                    <span class="lane-state">Web 已支持</span>
+                </div>
+                <h3>网页链接</h3>
+                <p class="source-subtitle">文章、播客笔记、研究页面</p>
+                <p>粘贴 URL 后先解析预览，系统检测重复并推荐归档、关联精读笔记或跳过。</p>
+                <ol>
+                    
+                    <li>粘贴 URL</li>
+                    
+                    <li>查看预览和冲突</li>
+                    
+                    <li>确认写入</li>
+                    
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="/sources/import">粘贴网页</a>
+                    <span>普通网页默认归档为资料，不自动生成投资报告。</span>
+                </div>
+            </article>
+            
+            <article id="tracked" class="import-source-card source-active">
+                <div class="import-source-top">
+                    <span class="lane-key">tracked</span>
+                    <span class="lane-state">Web 已支持</span>
+                </div>
+                <h3>固定信息源</h3>
+                <p class="source-subtitle">反复更新的外部网页源</p>
+                <p>适合 All-In 中文笔记等固定来源。刷新后发现新条目，支持批量预览和确认导入。</p>
+                <ol>
+                    
+                    <li>添加跟踪源</li>
+                    
+                    <li>刷新发现新条目</li>
+                    
+                    <li>批量确认导入</li>
+                    
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="/sources/tracked">管理固定源</a>
+                    <span>不支持的 URL 可改用单网页导入。</span>
+                </div>
+            </article>
+            
+            <article id="file" class="import-source-card source-warning">
+                <div class="import-source-top">
+                    <span class="lane-key">file</span>
+                    <span class="lane-state">文本 Web 支持，PDF 后端支持</span>
+                </div>
+                <h3>文件导入</h3>
+                <p class="source-subtitle">文本文件、HTML、PDF 研报</p>
+                <p>Web 已支持 .md/.txt/.html/.htm 预览归档；PDF 已具备预览、提取、分析和页码证据能力。</p>
+                <ol>
+                    
+                    <li>上传或选择文件</li>
+                    
+                    <li>预览提取质量</li>
+                    
+                    <li>归档或进入分析</li>
+                    
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="/sources/files/import">上传文本文件</a>
+                    <span>PDF Web 原生上传分析待接入；当前保留 CLI/PDF 专用工作流。</span>
+                </div>
+            </article>
+            
+        </div>
+    </section>
+
+    <aside class="source-side-stack">
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>当前待处理</h2>
+                    <p>已有预览或失败项会出现在这里。</p>
+                </div>
+            </div>
+            
+            <div class="attention-empty">没有等待确认的导入项。</div>
+            
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>安全边界</h2>
+                    <p>导入中心不会自动写入或自动外发。</p>
+                </div>
+            </div>
+            <div class="safety-list">
+                <div><strong>先预览</strong><span>所有资料先进入预检/预览。</span></div>
+                <div><strong>再确认</strong><span>用户确认后才写入 Vault 或 DB。</span></div>
+                <div><strong>保留证据</strong><span>YouTube 时间戳、PDF 页码、ZSXQ topic 引用。</span></div>
+                <div><strong>不做投资建议</strong><span>只整理观点和信号，不输出买卖建议。</span></div>
+            </div>
+        </section>
+    </aside>
+</div>
+
+
+            </main>
+
+            <footer class="site-footer">
+                <div class="container">
+                    SignalVault 多源投资研究助手 &mdash; 仅供研究参考，不构成投资建议
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

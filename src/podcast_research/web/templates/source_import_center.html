@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}导入中心 — SignalVault{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<section class="source-hero">
+    <div>
+        <p class="eyebrow">Guided Import</p>
+        <h1>导入中心</h1>
+        <p>先选择资料类型，系统做预检和预览；你确认后才写入知识库或进入分析。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources" class="btn-action btn-secondary">返回工作台</a>
+        <a href="/tasks" class="btn-action btn-secondary">查看诊断</a>
+    </div>
+</section>
+
+<section class="stepper">
+    <div class="step active"><span>Step 1</span><strong>选择来源</strong></div>
+    <div class="step"><span>Step 2</span><strong>系统预检</strong></div>
+    <div class="step"><span>Step 3</span><strong>确认动作</strong></div>
+    <div class="step"><span>Step 4</span><strong>入库或分析</strong></div>
+</section>
+
+<div class="import-center-layout">
+    <section class="source-lanes">
+        <div class="source-section-head">
+            <div>
+                <h2>选择要导入的资料类型</h2>
+                <p>YouTube、知识星球、网页、固定源、文本/PDF 都从这里进入。</p>
+            </div>
+        </div>
+
+        <div class="import-source-grid">
+            {% for source in import_sources %}
+            <article id="{{ source.key }}" class="import-source-card source-{{ source.tone }}">
+                <div class="import-source-top">
+                    <span class="lane-key">{{ source.key }}</span>
+                    <span class="lane-state">{{ source.status }}</span>
+                </div>
+                <h3>{{ source.title }}</h3>
+                <p class="source-subtitle">{{ source.subtitle }}</p>
+                <p>{{ source.body }}</p>
+                <ol>
+                    {% for step in source.steps %}
+                    <li>{{ step }}</li>
+                    {% endfor %}
+                </ol>
+                <div class="import-source-actions">
+                    <a class="btn-action" href="{{ source.primary_url }}">{{ source.primary_label }}</a>
+                    <span>{{ source.secondary }}</span>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <aside class="source-side-stack">
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>当前待处理</h2>
+                    <p>已有预览或失败项会出现在这里。</p>
+                </div>
+            </div>
+            {% if pending_items %}
+            <div class="attention-list">
+                {% for item in pending_items %}
+                <a class="attention-item {% if item.type == 'failed' %}attention-danger{% endif %}" href="{{ item.url }}">
+                    <strong>{{ item.label }}</strong>
+                    <span>{% if item.type == 'failed' %}查看失败原因{% else %}继续确认导入{% endif %}</span>
+                    <em>处理 →</em>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="attention-empty">没有等待确认的导入项。</div>
+            {% endif %}
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>安全边界</h2>
+                    <p>导入中心不会自动写入或自动外发。</p>
+                </div>
+            </div>
+            <div class="safety-list">
+                <div><strong>先预览</strong><span>所有资料先进入预检/预览。</span></div>
+                <div><strong>再确认</strong><span>用户确认后才写入 Vault 或 DB。</span></div>
+                <div><strong>保留证据</strong><span>YouTube 时间戳、PDF 页码、ZSXQ topic 引用。</span></div>
+                <div><strong>不做投资建议</strong><span>只整理观点和信号，不输出买卖建议。</span></div>
+            </div>
+        </section>
+    </aside>
+</div>
+
+{% endblock %}

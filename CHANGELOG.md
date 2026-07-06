@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Documentation Closeout — Current Project State Alignment (2026-07-06)
+
+**Updated:**
+- `AGENTS.md` / `CLAUDE.md`: current project state changed from P3 planning to P7 backend/CLI complete + SignalVault frontend experience work.
+- `README.md`: product name, current phase, P7 status, test collection count, project structure, core evidence rule, and roadmap table aligned to current implementation.
+- `docs/ROADMAP.md`: replaced stale P2-era roadmap with P0-P7 completed backend/CLI state and active UI-X frontend plan.
+- `docs/SOURCE_INGESTION.md`: updated source scope for PDF, ZSXQ, persistent ingest jobs, analysis-capable sources, and current Web/CLI boundaries.
+- `docs/DEV_GUIDE.md`: refreshed test commands and added ingest/review/diagnostics/search/graph/PDF/ZSXQ/MCP command references.
+- `docs/PROJECT_RULES.md`: updated architecture boundaries and P4-P7 rules for PDF, ZSXQ, diagnostics, graph/search, and frontend contract stability.
+- `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md`: clarified backend/CLI completion and moved Web/API page integration into the SignalVault frontend experience track.
+
+**Verification:**
+- `python -m pytest --collect-only -q` collected 1908 tests.
+- Documentation scan no longer reports stale current-state claims such as P3/P7 planning in entry docs.
+
 ### P7-D — Diagnostic Bundle Export (2026-07-03)
 
 **Implemented:**

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>导入向导 Prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/signalvault-icon.svg" alt="">
+        <div class="brand-text">
+          <div class="brand-title">SignalVault</div>
+          <div class="brand-subtitle">多源投资研究助手</div>
+        </div>
+      </div>
+
+      <div class="nav-label">研究工作台</div>
+      <nav class="nav-group">
+        <a class="nav-item" href="investment_radar.html">变化雷达 <span class="count">12</span></a>
+        <a class="nav-item" href="knowledge_search.html">知识库搜索</a>
+        <a class="nav-item" href="source_workbench.html">信息源工作台</a>
+        <a class="nav-item active" href="guided_import.html">导入向导</a>
+      </nav>
+
+      <div class="nav-label">最近导入</div>
+      <nav class="nav-group">
+        <a class="nav-item" href="#">PDF 研报 <span class="count">3</span></a>
+        <a class="nav-item" href="#">知识星球 <span class="count">2</span></a>
+        <a class="nav-item" href="#">网页资料 <span class="count">4</span></a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="page-kicker">Guided Import</div>
+          <h1 class="page-title">导入新资料</h1>
+        </div>
+        <div class="top-actions">
+          <a class="btn" href="source_workbench.html">返回工作台</a>
+          <button class="btn primary">继续分析</button>
+        </div>
+      </header>
+
+      <section class="stepper" aria-label="import steps">
+        <div class="step done"><div class="step-num">Step 1</div><div class="step-name">选择来源</div></div>
+        <div class="step active"><div class="step-num">Step 2</div><div class="step-name">系统预检</div></div>
+        <div class="step"><div class="step-num">Step 3</div><div class="step-name">确认动作</div></div>
+        <div class="step"><div class="step-num">Step 4</div><div class="step-name">进入分析</div></div>
+      </section>
+
+      <div class="import-layout">
+        <div class="stack">
+          <section class="panel panel-pad">
+            <div class="panel-title">选择要导入的资料类型</div>
+            <div class="source-choice-grid" style="margin-top:12px">
+              <div class="choice-card">
+                <div class="choice-title">YouTube 视频</div>
+                <div class="choice-desc">从频道候选池选择视频，系统读取字幕并生成报告。</div>
+              </div>
+              <div class="choice-card">
+                <div class="choice-title">网页链接</div>
+                <div class="choice-desc">粘贴文章、网页笔记或外部分析链接，先预览再归档。</div>
+              </div>
+              <div class="choice-card active">
+                <div class="choice-title">PDF / 文件</div>
+                <div class="choice-desc">上传研报、财报、会议纪要或本地文本文件。</div>
+              </div>
+              <div class="choice-card">
+                <div class="choice-title">知识星球主题</div>
+                <div class="choice-desc">导入已订阅星球中的指定主题，只读读取。</div>
+              </div>
+              <div class="choice-card">
+                <div class="choice-title">固定信息源</div>
+                <div class="choice-desc">刷新已跟踪网页源，批量处理新条目。</div>
+              </div>
+              <div class="choice-card">
+                <div class="choice-title">稍后从队列处理</div>
+                <div class="choice-desc">查看已有 pending preview、失败任务和可重试任务。</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel-pad">
+            <div class="dropzone">
+              <strong>2026_AI_Infrastructure_Outlook.pdf</strong>
+              <span>已完成预检，未写入知识库</span>
+            </div>
+            <div class="preview-grid">
+              <div class="preview-metric"><b>48</b><span>页</span></div>
+              <div class="preview-metric"><b>52k</b><span>提取字符</span></div>
+              <div class="preview-metric"><b>Good</b><span>提取质量</span></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">系统建议</h2>
+              <span class="panel-meta">按质量、重复、来源类型自动推荐</span>
+            </div>
+            <article class="lane">
+              <div class="lane-label">
+                <strong>推荐</strong>
+                <span>PDF 研报</span>
+              </div>
+              <div>
+                <div class="signal-title">导入并分析</div>
+                <div class="signal-body">该 PDF 是文本型文件，页码证据完整，适合直接生成投资观点、风险和信号。</div>
+                <div class="signal-evidence">
+                  <span class="tag green">可分析</span>
+                  <span class="tag blue">页码证据</span>
+                  <span class="pill">未发现重复</span>
+                </div>
+              </div>
+              <div class="lane-actions">
+                <button class="btn primary">确认分析</button>
+                <button class="btn">仅归档</button>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="panel panel-pad">
+            <div class="panel-title">预检结果</div>
+            <div class="diagnostic-list" style="margin-top:12px">
+              <div class="diagnostic-card">
+                <div class="diagnostic-title"><span>文本可读</span><span class="tag green">通过</span></div>
+                <div class="diagnostic-body">系统已逐页提取文本，后续观点会保留 PDF 页码。</div>
+              </div>
+              <div class="diagnostic-card">
+                <div class="diagnostic-title"><span>重复检测</span><span class="tag green">通过</span></div>
+                <div class="diagnostic-body">没有发现相同 content hash 或标题重复。</div>
+              </div>
+              <div class="diagnostic-card warning">
+                <div class="diagnostic-title"><span>表格较多</span><span class="tag amber">提示</span></div>
+                <div class="diagnostic-body">系统会读取表格中的文本，但不会结构化表格。关键数值需要看原文页码。</div>
+                <div class="diagnostic-action"><button class="btn">放入 Review</button></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel-pad">
+            <div class="panel-title">如果失败，系统会这样引导</div>
+            <div class="diagnostic-list" style="margin-top:12px">
+              <div class="diagnostic-card error">
+                <div class="diagnostic-title"><span>知识星球未登录</span><span class="tag red">需要处理</span></div>
+                <div class="diagnostic-body">先运行授权检查，登录官方 CLI 后再刷新星球列表。</div>
+                <div class="diagnostic-action"><button class="btn primary">查看登录步骤</button></div>
+              </div>
+              <div class="diagnostic-card warning">
+                <div class="diagnostic-title"><span>扫描件需要 OCR</span><span class="tag amber">不自动上传</span></div>
+                <div class="diagnostic-body">系统不会默认把文件发给外部服务。配置 OCR 后可重试，也可以先跳过。</div>
+                <div class="diagnostic-action"><button class="btn">配置 OCR</button><button class="btn">稍后处理</button></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="explain-box">当前阶段只确认“要不要进入知识库”，真正写入和分析发生在你点击确认之后。</div>
+        </aside>
+      </div>
+
+      <p class="prototype-note">Prototype only · 引导式导入流程 · 静态 mock 数据</p>
+    </main>
+  </div>
+</body>
+</html>

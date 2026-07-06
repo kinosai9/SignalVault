@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Knowledge Search — SignalVault</title>
+    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="site-brand" href="/" aria-label="SignalVault 首页">
+                <img class="brand-mark" src="file:///D:/claude/xyz_analysis/src/podcast_research/web/static/signalvault-icon.svg" alt="">
+                <span class="brand-copy">
+                    <span class="brand-title">SignalVault</span>
+                    <span class="subtitle">多源投资研究助手</span>
+                </span>
+            </a>
+
+            
+            <div class="nav-label">研究工作台</div>
+            <nav class="side-nav" aria-label="主导航">
+                <a href="/dashboard">变化雷达</a>
+                <a href="/sources">信息源工作台</a>
+                <a href="/sources/import/new">导入中心</a>
+                <a href="/search" class="active">知识库搜索</a>
+                <a href="/reports">报告库</a>
+                <a href="/tasks">任务与诊断</a>
+            </nav>
+
+            <div class="nav-label">来源类型</div>
+            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
+                <a href="/sources/channels">YouTube 视频</a>
+                <a href="/sources/import">网页链接</a>
+                <a href="/sources/tracked">固定信息源</a>
+                <a href="/sources/files/import">文件 / PDF</a>
+                <a href="/sources/zsxq">知识星球</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/watchlist/settings">关注设置</a>
+                <a href="/docs">API</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <main class="container">
+                
+<section class="knowledge-search">
+    <div class="search-hero">
+        <div>
+            <p class="eyebrow">Unified Knowledge Search</p>
+            <h2 class="page-title">统一知识搜索</h2>
+            <p class="page-desc">同时检索报告、观点、跟踪信号和实体，优先呈现可追溯证据与来源上下文。</p>
+        </div>
+        <div class="search-guide">
+            <span>建议搜索</span>
+            <strong>标的、主题、风险、观点变化或触发条件</strong>
+        </div>
+    </div>
+
+    <form class="search-form knowledge-search-form" method="get" action="/search">
+        <input type="text" name="q" value="AI" placeholder="例如：宁德时代、AI 算力、降本、现金流风险">
+        <input type="hidden" name="result_type" value="all">
+        <input type="hidden" name="source_type" value="all">
+        <input type="hidden" name="view_direction" value="all">
+        <input type="hidden" name="signal_status" value="all">
+        <button type="submit">搜索</button>
+    </form>
+
+    <div class="search-filter-bar" aria-label="搜索筛选">
+        <div class="filter-group">
+            
+            <a class="filter-chip active"
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=all">
+                全部
+                
+                <span>40</span>
+                
+            </a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=investment_view&source_type=all&view_direction=all&signal_status=all">
+                观点
+                
+                <span>9</span>
+                
+            </a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=tracking_signal&source_type=all&view_direction=all&signal_status=all">
+                信号
+                
+            </a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=report&source_type=all&view_direction=all&signal_status=all">
+                报告
+                
+                <span>28</span>
+                
+            </a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=entity&source_type=all&view_direction=all&signal_status=all">
+                实体
+                
+                <span>3</span>
+                
+            </a>
+            
+        </div>
+        <div class="filter-group compact">
+            
+            <a class="filter-chip active"
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=all">全部来源</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=youtube&view_direction=all&signal_status=all">YouTube</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=zsxq_topic&view_direction=all&signal_status=all">知识星球</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=pdf_upload&view_direction=all&signal_status=all">PDF</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=local&view_direction=all&signal_status=all">本地文本</a>
+            
+        </div>
+    </div>
+
+    <div class="search-filter-bar subtle" aria-label="观点和信号筛选">
+        <div class="filter-group compact">
+            
+            <a class="filter-chip active"
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=all">观点方向</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=bullish&signal_status=all">正向</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=bearish&signal_status=all">谨慎</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=neutral&signal_status=all">中性</a>
+            
+        </div>
+        <div class="filter-group compact">
+            
+            <a class="filter-chip active"
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=all">信号状态</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=open">待跟踪</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=triggered">已触发</a>
+            
+            <a class="filter-chip "
+               href="/search?q=AI&result_type=all&source_type=all&view_direction=all&signal_status=resolved">已收口</a>
+            
+        </div>
+    </div>
+
+    
+        <div class="search-summary-line">
+            <strong>40</strong> 条结果
+            <span>按相关度排序，点击报告可回到完整上下文。</span>
+        </div>
+
+        
+        <div class="knowledge-results">
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Enterprise - Databricks &amp; Glean | BG2 Guest Interview</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/18?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 提 供 的 JSON 抽 取 内 容 生 成 的 结 构 化 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 仅 基 于 指 定 的 单 一 播 客 节 目 内 容 （ 视 频 ID: `jA8ZQfq_Hzs`）， 通 过 <mark><mark>AI</mark></mark> 模 型 自 动 抽 取 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Anthropic&#39;s Digital God, Pope vs AI, Job Loss Narrative Flips, Open Source Crackdown Coming?</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/9?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 根 据 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 仅 为 基 于 公 开 播 客 内 容 的 信 息 整 理 与 分 析 ， 不 构 成 任 何 形 式 的 投 资 建 议 。 报</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ：Open<mark>AI</mark> 企 业 级 战 略 与 GPT-5 发 布 会 深 度 洞 察 ## 1. 免 责 声 明 本 报 告 由 <mark><mark>AI</mark></mark> 基 于 提 供</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Bill Ackman: Here&#39;s What the Market is MISSING</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/14?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- ### Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 **1. 免 责 声 明 ** 本 报 告 基 于 公 开 的 播 客 访 谈 内 容 生 成 ， 旨 在 整 理 和 呈 现 特 定 嘉 宾 的 观 点 与 逻 辑</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>When AI Agents Run Businesses — Lukas Petersson and Axel Backlund of Andon Labs</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/22?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ： 当 <mark><mark>AI</mark></mark> Agent 运 营 企 业 时 ## 1. 免 责 声 明 本 报 告 仅 为 基 于 指 定 来 源 （YouTube 视 频 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Palo Alto Networks CEO: &#34;AI Found 5 Years of Bugs in 6 Weeks&#34;</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/21?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 由 <mark><mark>AI</mark></mark> 基 于 特 定 播 客 节 目 的 事 实 抽 取 JSON 数 据 自 动 生 成 ， 旨 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>All things AI w @altcap @sama &amp; @satyanadella.  A Halloween Special.  🎃🔥BG2 w/ Brad Gerstner</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/31?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ** 视 频 标 题 :** All things <mark><mark>AI</mark></mark> w @altcap @sama & @satyanadella. A Hallowee</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Thomas Laffont: The $4T AI IPO Wave Is Coming… and We’ve Never Seen Anything Like It</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/13?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 仅 供 信 息 参 考 ， 不 构 成 任 何 形 式 的 投 资 建 议 、 推 荐 或 邀 约 。 报 告 内 容 均 基 于 公 开 可 得 的 第 三 方 音 视 频 资 料 及 自 动 抽 取 的 事 实 信 息 ， 不 包 含 任 何 对 未 来 的 预 测 、 担 保 或 承</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Senators John Fetterman and Dave McCormick: Bipartisanship, Money in DC, Datacenters, Graham Platner</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/25?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 基 于 公 开 的 访 谈 、 演 讲 及 会 议 记 录 生 成 ， 仅 供 信 息 参 考 与 内 部 研 究 之 用 。 报</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>ChatGPT – The Super Assistant Era | BG2 Guest Interview</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/27?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 **ChatGPT – The Super Assistant Era | BG2 Guest Interview 分 析 ** --- ## 1. 免 责 声 明 本 报 告 由 <mark><mark>AI</mark></mark> 基 于 访 谈 转 录 内 容 自 动 生 成 ， 仅 供 信 息 参 考 ， 不 应 被 视 为 任 何 形 式 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Satya Nadella on AI: @NoPriorsPodcast  x Latent Space Crossover Special at Microsoft Build 2026</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/12?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 基 于 公 开 的 播 客 访 谈 内 容 整 理 生 成 ， 仅 供 信 息 参 考 和 研 究 讨 论 之 用 ， 不 构 成</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Bill Maris: How Google Could Crush AI Competitors, Why Small Funds Win, and AI&#39;s Atari Stage</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/17?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 根 据 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 基 于 公 开 的 访 谈 内 容 （Bill Maris Section 32 Interview） 进 行 信 息 整 理 和</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>OpenAI CFO Sarah Friar on IPO, AI Rivalries, New Device, and Spending $100B+ on Compute</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/3?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ### 1. 免 责 声 明 本 报 告 内 容 仅 供 参 考 ， 不 构 成 任 何 投 资 建 议 。 报 告 中 的 观 点 、 预 测 和 分 析 均 基 于 已 提 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Devin’s 80% Moment: Background Agents, 7x PRs, &amp; End of Hand-Held Coding — Walden Yan &amp; Cole Murray</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/30?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ### 1. 免 责 声 明 本 报 告 仅 基 于 指 定 的 单 一 信 源 （ 播 客 访 谈 ） 生 成 ， 旨 在 整 理 和 呈 现 信 息 ， 不 构 成 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>All-In Podcast episode</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/4?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- ### 1. 免 责 声 明 本 报 告 仅 供 信 息 参 考 ， 不 构 成 任 何 形 式 的 投 资 、 法 律 或 税 务 建 议 。 报 告 内 容 基 于 人 工 智 能 模 型 对 单 一 来 源 信 息 的 分 析 和 整</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Scaling Past Informal AI - Carina Hong, Axiom Math</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/6?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 以 下 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ### 1. 免 责 声 明 本 报 告 仅 基 于 提 供 的 访 谈 内 容 进 行 整 理 ， 不 构 成 任 何 投 资 建 议 。 报 告 中 的 观 点 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>GitHub’s Agent Era: 14x Commits, 200M Developers, Copilot’s Next Act — Kyle Daigle</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/29?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ：GitHub 的 Agent 时 代 ### 1. 免 责 声 明 本 报 告 仅 为 基 于 公 开 信 息 整 理 的 研 究 内 容 整 理 ， 不 构 成 任 何 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>The IPO Comeback: Why Tech Giants Are Finally Going Public | All-In Liquidity IPO Panel</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/19?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 抽 取 数 据 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ## 1. 免 责 声 明 本 报 告 基 于 公 开 可 得 的 访 谈 内 容 进 行 整 理 和 分 析 ， 旨 在 提 供 信 息 摘 要 与 结 构 化 洞 察 ， 不 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>⚡️Making DeepSeek v4 outperform Opus 4.7 with Taste — @AhmadAwais , CommandCode.ai</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/24?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ### 1. 免 责 声 明 本 报 告 基 于 公 开 信 息 整 理 生 成 ， 仅 供 信 息 参 考 与 学 习 交 流 ， 不 构 成 任 何 投 资 建 议 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Dan Dreyfus: The Next AI Bottleneck is Copper</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/20?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 --- ### 1. 免 责 声 明 本 报 告 仅 基 于 指 定 的 单 一 播 客 节 目 （Dan Drifus on All-In Podcast） 的 内 容 进</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Dan Loeb: The Lost Art of Short Selling, and Why Stock Picking is Back</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/32?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ： 做 空 艺 术 回 归 与 选 股 新 范 式 --- ### 1. 免 责 声 明 本 报 告 仅 为 基 于 公 开 播 客 内 容 的 观 点 整 理 与 分 </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Why Secondary Markets Are Eating the IPO | All-In Liquidity Secondary Markets Panel</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/26?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ， 这 是 基 于 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 --- # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ： 二 级 市 场 如 何 吞 噬 IPO ## 1. 免 责 声 明 本 报 告 基 于 特 定 播 客 节 目 的 公 开 讨 论 内 容 生 成 ， 所 有 分 析</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Investment Talk</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/35?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># <mark><mark>AI</mark></mark> Report NVIDIA GPU demand is strong</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Investment Talk</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/38?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># <mark><mark>AI</mark></mark> Report NVIDIA GPU demand is strong</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Investment Talk</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/41?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># <mark><mark>AI</mark></mark> Report NVIDIA GPU demand is strong</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Investment Talk</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/44?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># <mark><mark>AI</mark></mark> Report NVIDIA GPU demand is strong</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI Investment Talk</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/47?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"># <mark><mark>AI</mark></mark> Report NVIDIA GPU demand is strong</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-report">
+                <div class="result-rail">
+                    <span>报告</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>Vanguard: The communist capitalist who saved investors a trillion dollars (Audio)</h3>
+                            
+                        </div>
+                        
+                        <a href="/reports/23?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">好 的 ，Tech/<mark><mark>AI</mark></mark> 投 资 研 究 内 容 整 理 助 手 已 就 绪 。 以 下 是 根 据 您 提 供 的 事 实 抽 取 JSON 生 成 的 Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 。 *** # Tech/<mark><mark>AI</mark></mark> 投 资 研 究 报 告 ** 主 题 ：** Vanguard: The communist </p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>报告正文</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-entity">
+                <div class="result-rail">
+                    <span>实体</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source local">本地文本</span>
+                                <span class="tag">industry_theme</span>
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI</h3>
+                            
+                        </div>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"><mark>AI</mark> (aka Artificial Intelligence)</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>实体名称</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-entity">
+                <div class="result-rail">
+                    <span>实体</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source local">本地文本</span>
+                                <span class="tag">技术</span>
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI</h3>
+                            
+                        </div>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"><mark>AI</mark> (aka <mark>AI</mark>)</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>实体名称</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-entity">
+                <div class="result-rail">
+                    <span>实体</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source local">本地文本</span>
+                                <span class="tag">技术</span>
+                                
+                                
+                                
+                                
+                            </div>
+                            <h3>AI</h3>
+                            
+                        </div>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"><mark>AI</mark> (aka <mark>AI</mark>, artificial intelligence)</p>
+                    
+
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>实体名称</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">industry_theme</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:10:48</span>
+                                
+                            </div>
+                            <h3>AI coding agents market (enterprise adoption)</h3>
+                            
+                            <p class="result-source-title">Devin’s 80% Moment: Background Agents, 7x PRs, &amp; End of Hand-Held Coding — Walden Yan &amp; Cole Murray</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/30?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">大型企业内部大量团队希望转向用<mark>AI</mark>处理日常工作，Cognition等公司通过提供咨询和上手支持帮助企业采用编码代理，显示市场需求强劲且处于扩张阶段，利好A...</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>I think for especially the largest enterprises in the world, you find that there is a lot of people who want to move over to using <mark>AI</mark> for their day-to-day workloads. ... having a team of engineers who</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>关注对象</span>
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">industry_theme</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:00:43.440</span>
+                                
+                            </div>
+                            <h3>Healthcare</h3>
+                            
+                            <p class="result-source-title">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">医疗行业因其海量数据和复杂流程，被认为将是<mark>AI</mark>受益最大的行业，可能推动收入和效率显著提升。</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>Healthcare is probably the industry that will benefit the most from <mark>AI</mark>.</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">product_or_model</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">01:02:40.640</span>
+                                
+                            </div>
+                            <h3>OpenAI GPT-5 部署</h3>
+                            
+                            <p class="result-source-title">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">GPT 5从研究到上线的过程中，Open<mark>AI</mark>展现了顶尖的研发、客户导向和基础设施能力，模型在极短时间内扩展到超大吞吐量且无宕机。强大的部署执行力巩固了Open<mark>AI</mark>在...</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>The sprint up to GPT-5, I think really showed the best of Open<mark>AI</mark>... The fact that we were able to ship such a big model and scale it to many, many, many tokens per minute almost immediately, I think s</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>关注对象</span>
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">industry_theme</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:22:19.840</span>
+                                
+                            </div>
+                            <h3>AI Agents</h3>
+                            
+                            <p class="result-source-title">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"><mark>AI</mark> agents仍处于发展初期，但受益于推理模型（如o系列）的突破，其能力增长斜率非常陡峭，长期有望在自主性上超越自动驾驶...</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>I think <mark>AI</mark> agents are like really in day one here. … the slope I think is incredibly steep, and we'll probably see a crossover at some point.</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>关注对象</span>
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">行业</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:48:25</span>
+                                
+                            </div>
+                            <h3>医疗保健AI应用</h3>
+                            
+                            <p class="result-source-title">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">...非结构化数据，同时存在繁重的文档和行政工作。大语言模型擅长处理此类任务，可大幅降低运营成本，加速药物研发等创新流程，行业<mark>AI</mark>应用将迎来爆发期。</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>I think healthcare is probably the industry that will benefit the most from <mark>AI</mark> in the next like year or two... A huge amount of like structure and structural data... the heart of like the pharma compa</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>关注对象</span>
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">行业</span>
+                                <span class="tag">谨慎/负向</span>
+                                
+                                <span class="muted">00:45:29</span>
+                                
+                            </div>
+                            <h3>AI工具初创公司</h3>
+                            
+                            <p class="result-source-title">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/28?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet"><mark>AI</mark>工具领域（包括评估框架、向量存储、RL环境等）竞争激烈，技术栈迭代极快，过去两年内许多当时的热门工具已被快速淘汰。创业公...</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>My short's a little spicy, which is I'm short on the entire category of like tooling around <mark>AI</mark> products... it's just a very competitive space. There's just a lot of people kind of operating it. And th</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>关注对象</span>
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">private_company</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:33:14</span>
+                                
+                            </div>
+                            <h3>Sierra</h3>
+                            
+                            <p class="result-source-title">Why Secondary Markets Are Eating the IPO | All-In Liquidity Secondary Markets Panel</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/26?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">Sierra 是 Brett Taylor 创办的 agent native CRM 公司，竞争对手可能来自 Open<mark>AI</mark>/Anthropic 直接进入该领域侵蚀收入，但 upside 是已构建先进的代理层，可能被 Meta、Google 等...</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>I'd say like Sierra Brett Taylor's company. ... they're building basically Salesforce agent native. ... downside open <mark>AI</mark> and anthropics say we're going to do this and all of a sudden it eviscerates th</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">industry_theme</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:29:33.600</span>
+                                
+                            </div>
+                            <h3>Data Center &amp; Energy Infrastructure Investment in Pennsylvania</h3>
+                            
+                            <p class="result-source-title">Senators John Fetterman and Dave McCormick: Bipartisanship, Money in DC, Datacenters, Graham Platner</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/25?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">...Dave McCormack 表示，宾夕法尼亚州举办的一次能源与创新峰会吸引了 920 亿美元的投资承诺，来自能源和 <mark>AI</mark> 领域的 CEO 及全球投资者。这笔巨额资本涌入表明数据中心和能源基础设施建设的强劲势头，直接受益于 <mark>AI</mark> 需求。</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>we had $92 billion of investment committed. We had the energy CEOs, the <mark>AI</mark> CEOs, big investors, global investors.</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+            <article class="knowledge-result result-investment_view">
+                <div class="result-rail">
+                    <span>观点</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source youtube">YouTube</span>
+                                <span class="tag">product_or_model</span>
+                                <span class="tag">正向观点</span>
+                                
+                                <span class="muted">00:37:04.200</span>
+                                
+                            </div>
+                            <h3>Command Code</h3>
+                            
+                            <p class="result-source-title">⚡️Making DeepSeek v4 outperform Opus 4.7 with Taste — @AhmadAwais , CommandCode.ai</p>
+                            
+                        </div>
+                        
+                        <a href="/reports/24?hl=AI" class="btn-sm">查看报告</a>
+                        
+                    </header>
+
+                    
+                    <p class="result-snippet">Command Code即将开源，允许开发者修改任何部分。这种开放策略有望大幅增加其用户基础和社区贡献，扩大在<mark>AI</mark>编码工具市场的份额，并对闭源竞品形成竞争压力。</p>
+                    
+
+                    
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>we are going to open source command code very very soon. I’m hoping we can announce that on the <mark>AI</mark> engineering conference in SF.</p>
+                    </blockquote>
+                    
+
+                    
+                    <div class="matched-fields">
+                        
+                        <span>逻辑链</span>
+                        
+                        <span>原文证据</span>
+                        
+                        <span>证据细节</span>
+                        
+                    </div>
+                    
+                </div>
+            </article>
+            
+        </div>
+        
+    
+</section>
+
+            </main>
+
+            <footer class="site-footer">
+                <div class="container">
+                    SignalVault 多源投资研究助手 &mdash; 仅供研究参考，不构成投资建议
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+INFO:     127.0.0.1:55470 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44220 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44220 - "GET /static/style.css?v=2d2ef5f5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39025 - "GET /static/signalvault-icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44220 - "GET /sources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44220 - "GET /search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44220 - "GET /reports HTTP/1.1" 200 OK

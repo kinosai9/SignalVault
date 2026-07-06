@@ -1,104 +1,115 @@
 {% extends "base.html" %}
-{% block title %}信息源 — 投资音视频研究助手{% endblock %}
+{% block title %}信息源工作台 — SignalVault{% endblock %}
 {% block content %}
 
 {% if flash_msg %}
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<div class="page-header">
-    <h1 style="font-size:1.3rem;font-weight:700;margin:0 0 4px">信息源工作台</h1>
-    <p class="page-desc" style="margin:0">统一管理所有外部信息摄入：YouTube 频道、网页导入、固定跟踪源、文件上传。</p>
-</div>
+<section class="source-hero">
+    <div>
+        <p class="eyebrow">信息进入知识库前的控制台</p>
+        <h1>信息源工作台</h1>
+        <p>把外部资料先变成可预览、可确认、可追溯的来源，再进入报告、观点和信号拆解。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/import/new" class="btn-action">导入新资料</a>
+        <a href="/tasks" class="btn-action btn-secondary">诊断来源</a>
+    </div>
+</section>
 
-<!-- ── Stats Bar ── -->
-<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;font-size:0.82rem">
-    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
-        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ channel_count }}</div>
-        <div style="color:var(--text-soft)">频道</div>
-    </div>
-    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
-        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ tracked_count }}</div>
-        <div style="color:var(--text-soft)">跟踪源</div>
-    </div>
-    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
-        <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">{{ archive_file_count }}</div>
-        <div style="color:var(--text-soft)">已归档</div>
-    </div>
-    <div style="background:var(--surface-soft);border-radius:8px;padding:10px 16px;min-width:100px;text-align:center">
-        <div style="font-size:1.3rem;font-weight:700;color:{% if pending_total > 0 %}var(--warning,#d97706){% else %}var(--accent){% endif %}">{{ pending_total }}</div>
-        <div style="color:var(--text-soft)">待处理</div>
-    </div>
-</div>
-
-<!-- ── Entry Cards ── -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px">
-    {% for card in entry_cards %}
-    <div style="background:var(--bg-card);border:1px solid
-        {% if card.status == 'warning' %}var(--warning,#d97706)
-        {% elif card.status == 'empty' %}var(--line-soft,#e5e5e5)
-        {% else %}var(--line-strong,#ddd){% endif %};
-        border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:1.4rem">{{ card.icon }}</span>
-            <h2 style="margin:0;font-size:1rem;font-weight:700">{{ card.title }}</h2>
+<section class="source-board" aria-label="来源概览">
+    {% for lane in source_lanes %}
+    <a class="source-tile lane-{{ lane.tone }}" href="{{ lane.href }}">
+        <div class="source-type">
+            <strong>{{ lane.label }}</strong>
+            <span class="tag">{{ lane.state }}</span>
         </div>
-        <p style="margin:0;font-size:0.8rem;color:var(--text-soft);line-height:1.4;min-height:2.8em">{{ card.description }}</p>
-        <div style="font-size:0.8rem;color:var(--text-soft)">
-            <span style="font-weight:600;color:var(--text)">{{ card.count_label }}</span>
-            {% if card.count_detail %}
-            <span style="margin-left:8px;color:var(--warning,#d97706)">{{ card.count_detail }}</span>
-            {% endif %}
+        <div>
+            <div class="source-primary">{{ lane.metric.split(' ')[0] }}</div>
+            <div class="source-summary">{{ lane.detail }}</div>
         </div>
-        <div style="font-size:0.75rem;color:var(--muted);min-height:1.2em">{{ card.status_text }}</div>
-        <a href="{{ card.action_url }}" style="display:inline-block;margin-top:auto;padding:8px 16px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-size:0.82rem;font-weight:600;text-align:center">
-            {{ card.action_label }}
-        </a>
-    </div>
+        <span class="btn-like">{{ lane.action }}</span>
+    </a>
     {% endfor %}
+</section>
+
+<div class="source-workbench-grid">
+    <section class="source-lanes">
+        <div class="source-section-head">
+            <div>
+                <h2>待处理队列</h2>
+                <p>系统已识别来源和建议动作，你只需要确认下一步。</p>
+            </div>
+            <a href="/sources/import/new">导入新资料 →</a>
+        </div>
+
+        {% if pending_items %}
+        <div class="queue-list">
+            {% for item in pending_items %}
+            <a class="queue-row {% if item.type == 'failed' %}queue-danger{% endif %}" href="{{ item.url }}">
+                <div>
+                    <strong>{{ item.label }}</strong>
+                    <span>{% if item.type == 'failed' %}解析失败或同步失败{% else %}等待确认导入动作{% endif %}</span>
+                </div>
+                <span class="queue-source">{{ item.type }}</span>
+                <em>处理 →</em>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-queue">
+            <strong>当前没有待处理导入项</strong>
+            <span>可以从导入中心添加 YouTube、知识星球、网页、固定源、文本或 PDF 资料。</span>
+            <a class="btn-action" href="/sources/import/new">打开导入中心</a>
+        </div>
+        {% endif %}
+    </section>
+
+    <aside class="source-side-stack">
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>需要你处理</h2>
+                    <p>优先处理阻塞项，再补充新资料。</p>
+                </div>
+            </div>
+            <div class="attention-list">
+                {% if pending_items %}
+                    {% for item in pending_items[:3] %}
+                    <a class="attention-item {% if item.type == 'failed' %}attention-danger{% endif %}" href="{{ item.url }}">
+                        <strong>{{ item.label }}</strong>
+                        <span>{% if item.type == 'failed' %}查看失败原因并重新处理{% else %}继续确认导入方式{% endif %}</span>
+                        <em>处理 →</em>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="attention-empty">来源队列正常，无需立即处理。</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>导入能力</h2>
+                    <p>当前前端承接的来源范围。</p>
+                </div>
+            </div>
+            <div class="capability-list">
+                <a href="/sources/channels">YouTube 视频 <span>Web</span></a>
+                <a href="/sources/zsxq">知识星球 <span>Web</span></a>
+                <a href="/sources/import">网页链接 <span>Web</span></a>
+                <a href="/sources/tracked">固定信息源 <span>Web</span></a>
+                <a href="/sources/files/import">文本 / PDF 文件 <span>混合</span></a>
+            </div>
+        </section>
+    </aside>
 </div>
 
-<!-- ── Pending Items ── -->
-{% if pending_items %}
-<div class="section-card" style="border-color:var(--warning,#d97706);border-width:2px;margin-bottom:24px">
-    <h2 style="margin:0 0 12px;color:var(--warning,#d97706);font-size:1rem">⚠️ 待处理 ({{ pending_total }})</h2>
-    <div style="display:flex;flex-direction:column;gap:6px">
-        {% for item in pending_items %}
-        <a href="{{ item.url }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-soft);border-radius:6px;text-decoration:none;color:var(--text);font-size:0.85rem">
-            <span>{% if item.type == 'failed' %}❌{% else %}📌{% endif %}</span>
-            <span>{{ item.label }}</span>
-            <span style="margin-left:auto;color:var(--muted)">→</span>
-        </a>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- ── Quick Add Section ── -->
-<div class="section-card">
-    <h2 style="margin:0 0 12px;font-size:1rem">快速添加</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
-        <a href="/sources/channels" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
-            <span style="font-size:1.1rem">📺</span>
-            <span>添加 YouTube 频道</span>
-            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
-        </a>
-        <a href="/sources/import" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
-            <span style="font-size:1.1rem">🌐</span>
-            <span>粘贴网页链接</span>
-            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
-        </a>
-        <a href="/sources/tracked/add" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
-            <span style="font-size:1.1rem">📡</span>
-            <span>添加固定跟踪源</span>
-            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
-        </a>
-        <a href="/sources/files/import" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-soft);border-radius:8px;text-decoration:none;color:var(--text);font-size:0.85rem;border:1px solid var(--line-soft,#eee)">
-            <span style="font-size:1.1rem">📄</span>
-            <span>上传文本文件</span>
-            <span style="margin-left:auto;color:var(--muted);font-size:0.75rem">→</span>
-        </a>
-    </div>
-</div>
+<section class="source-note">
+    <strong>当前边界</strong>
+    <span>普通网页和普通文本文件默认归档为资料，不自动生成投资报告；PDF 分析能力已在后端具备，知识星球现在可从 Web 发起只读导入、同步和分析。</span>
+</section>
 
 {% endblock %}

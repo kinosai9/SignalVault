@@ -10,7 +10,8 @@ cp .env.example .env   # edit if using real LLM
 ## Run Tests
 
 ```bash
-python -m pytest tests/ -v              # all 1385 tests (mock, no API calls)
+python -m pytest tests/ -v              # full suite (mock, no API calls)
+python -m pytest --collect-only -q      # currently collects 1908 tests
 python -m pytest tests/ -x              # stop on first failure
 python -m pytest tests/test_cli.py -v   # specific file
 ```
@@ -88,4 +89,24 @@ python -m podcast_research signals list|show|update-status|update-meta|find-simi
 
 # LLM-WIKI
 python -m podcast_research llm-wiki generate-patches|validate-patches|apply-patch|list-applied-patches|rollback-patch|reject-patch
+
+# Ingest / Review / Diagnostics
+python -m podcast_research ingest list|show|retry|resume
+python -m podcast_research review list|show|accept|skip|resolve
+python -m podcast_research doctor
+python -m podcast_research diagnostics summary|bundle
+python -m podcast_research logs list|show
+
+# Search / Graph
+python -m podcast_research search "NVIDIA" --type investment_view --source-type pdf_upload
+python -m podcast_research graph rebuild|neighborhood|evidence-trail|export
+
+# PDF
+python -m podcast_research pdf preview|extract|analyze
+
+# ZSXQ read-only import
+python -m podcast_research zsxq doctor|groups|import-topic|sync|analyze
+
+# MCP
+python -m podcast_research mcp-serve
 ```

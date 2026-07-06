@@ -1,81 +1,157 @@
 {% extends "base.html" %}
-{% block title %}整理任务 — 投资音视频研究助手{% endblock %}
+{% block title %}诊断中心与操作日志 — SignalVault{% endblock %}
 {% block content %}
 
-<h2 class="page-title">整理任务</h2>
-<p class="page-desc">查看所有正在进行和已完成的整理任务。服务重启后任务记录会被清空。</p>
+<section class="diagnostics-center">
+    <div class="diagnostics-hero status-{{ diagnostics.overall_status }}">
+        <div>
+            <p class="eyebrow">Diagnostics Center</p>
+            <h2 class="page-title">诊断中心与操作日志</h2>
+            <p class="page-desc">{{ diagnostics_headline }}。{{ diagnostics_subhead }}</p>
+        </div>
+        <div class="diagnostics-hero-actions">
+            <a href="/sources/import/new" class="btn-action">继续导入</a>
+            <a href="/dashboard" class="btn-action btn-secondary">返回变化雷达</a>
+        </div>
+    </div>
 
-{% if flash_msg %}
-<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
-{% endif %}
+    {% if flash_msg %}
+    <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+    {% endif %}
 
-{% if not jobs %}
-<div class="empty-state">
-    <p>暂无整理任务。</p>
-    <a href="/content/new" class="btn-action" style="margin-top:12px">添加新内容</a>
-</div>
-{% else %}
-<table class="dash-table" style="width:100%">
-    <thead>
-        <tr>
-            <th>标题</th>
-            <th>类型</th>
-            <th>状态</th>
-            <th>当前阶段</th>
-            <th>已耗时</th>
-            <th>操作</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for j in jobs %}
-        <tr>
-            <td class="name">
-                <a href="/tasks/{{ j.job_id }}">{{ j.title or j.job_id[:8] }}</a>
-            </td>
-            <td>
-                <span class="tag">{{ j.job_type_label }}</span>
-            </td>
-            <td>
-                {% if j.status == "success" %}
-                <span class="tag" style="background:var(--success);color:#fff">已完成</span>
-                {% elif j.status == "failed" %}
-                <span class="tag" style="background:var(--danger);color:#fff">失败</span>
-                {% elif j.status == "long_running" %}
-                <span class="tag" style="background:var(--accent);color:#fff">耗时较长</span>
-                {% elif j.status == "stale" %}
-                <span class="tag" style="background:var(--muted);color:#fff">无响应</span>
-                {% else %}
-                <span class="tag">整理中</span>
-                {% endif %}
-            </td>
-            <td style="font-size:0.82rem;color:var(--text-soft)">{{ j.stage_label }}</td>
-            <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap">{{ j.elapsed_display }}</td>
-            <td>
-                <a href="/tasks/{{ j.job_id }}" class="btn-action btn-secondary" style="font-size:0.78rem;padding:4px 8px">查看进度</a>
-                {% if j.status == "success" and j.job_type == "analysis" and j.result_links.get("report") %}
-                <a href="{{ j.result_links.report }}" style="font-size:0.78rem;margin-left:4px">查看报告</a>
-                {% elif j.status == "success" and j.job_type == "sync" and j.result_links.get("brief") %}
-                <a href="{{ j.result_links.brief }}" style="font-size:0.78rem;margin-left:4px">研究摘要</a>
-                {% elif j.status == "success" and j.job_type == "full_flow" and j.result_links.get("report") %}
-                <a href="{{ j.result_links.report }}" style="font-size:0.78rem;margin-left:4px">查看报告</a>
-                {% elif j.status == "success" and j.job_type == "channel_refresh" and j.result_links.get("videos") %}
-                <a href="{{ j.result_links.videos }}" style="font-size:0.78rem;margin-left:4px">查看视频</a>
-                {% endif %}
-                {% if j.status in ("success", "failed", "stale") %}
-                <form method="post" action="/tasks/{{ j.job_id }}/delete" style="display:inline;margin-left:4px" onsubmit="return confirm('删除这条任务记录？')">
-                    <button type="submit" style="font-size:0.72rem;padding:2px 6px;background:none;border:1px solid var(--muted);color:var(--muted);border-radius:3px;cursor:pointer" title="删除记录">✕</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
+    <div class="diagnostics-card-grid">
+        {% for card in diagnostics_cards %}
+        <div class="diagnostic-card status-{{ card.tone }}">
+            <span>{{ card.label }}</span>
+            <strong>{{ card.value }}</strong>
+            <p>{{ card.hint }}</p>
+        </div>
         {% endfor %}
-    </tbody>
-</table>
-{% endif %}
+    </div>
 
-<div style="margin-top:16px">
-    <a href="/content/new" class="btn-action">添加新内容</a>
-    <a href="/dashboard" class="btn-action btn-secondary">返回首页</a>
-</div>
+    {% if diagnostics.suggested_actions %}
+    <section class="section-card diagnostic-actions">
+        <div>
+            <h3>建议先处理</h3>
+            <p>这些动作来自系统诊断，不会自动执行，需要你确认后再操作。</p>
+        </div>
+        <div class="diagnostic-action-list">
+            {% for action in diagnostics.suggested_actions[:4] %}
+            <div class="diagnostic-action action-{{ action.severity }}">
+                <strong>{{ action.title }}</strong>
+                <span>{{ action.description }}</span>
+                {% if action.command %}<code>{{ action.command }}</code>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="diagnostics-layout">
+        <section class="section-card">
+            <div class="section-header-row">
+                <div>
+                    <h3>系统能力状态</h3>
+                    <p>把摄入、审核、搜索、知识库和配置问题汇总成可行动状态。</p>
+                </div>
+            </div>
+            <div class="subsystem-list">
+                {% for subsystem in subsystems %}
+                <div class="subsystem-row status-{{ subsystem.status }}">
+                    <div>
+                        <strong>{{ subsystem.label }}</strong>
+                        <p>{{ subsystem.summary }}</p>
+                        {% if subsystem.issues %}
+                        <small>{{ subsystem.issues|join('；') }}</small>
+                        {% endif %}
+                    </div>
+                    <span>{{ subsystem.status_label }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header-row">
+                <div>
+                    <h3>最近操作日志</h3>
+                    <p>记录导入、分析、诊断、审核等用户和系统动作。</p>
+                </div>
+            </div>
+            {% if operation_logs %}
+            <div class="operation-log-list">
+                {% for op in operation_logs[:8] %}
+                <div class="operation-row status-{{ op.status }}">
+                    <div>
+                        <strong>{{ op.operation_label }}</strong>
+                        <p>{{ op.summary or op.target_ref or op.operation_id }}</p>
+                        {% if op.error_code %}<small>{{ op.error_code }}</small>{% endif %}
+                    </div>
+                    <span>{{ op.status_label }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state compact">
+                <p>暂无操作日志。导入、分析或诊断执行后会出现在这里。</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="section-card task-board">
+        <div class="section-header-row">
+            <div>
+                <h3>任务队列</h3>
+                <p>查看正在运行、已完成或失败的导入和同步任务。</p>
+            </div>
+            <a href="/content/new" class="btn-action btn-secondary">添加新内容</a>
+        </div>
+
+        {% if not jobs %}
+        <div class="empty-state compact">
+            <p>暂无任务记录。</p>
+            <a href="/sources/import/new" class="btn-action" style="margin-top:12px">去导入中心</a>
+        </div>
+        {% else %}
+        <div class="task-list">
+            {% for j in jobs %}
+            <article class="task-row status-{{ j.status }}">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/{{ j.job_id }}">{{ j.title or j.job_id[:8] }}</a>
+                        <span class="tag">{{ j.job_type_label }}</span>
+                        {% if j.video_id %}<code>{{ j.video_id }}</code>{% endif %}
+                    </div>
+                    <p>{{ j.stage_label }} · 已耗时 {{ j.elapsed_display }}</p>
+                </div>
+                <div class="task-state">
+                    <span>{{ j.status|replace("success", "已完成")|replace("failed", "失败")|replace("running", "进行中")|replace("queued", "排队中")|replace("long_running", "耗时较长")|replace("stale", "无响应") }}</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/{{ j.job_id }}" class="btn-sm">查看进度</a>
+                    <a href="/tasks/{{ j.job_id }}/logs" class="btn-sm muted">日志</a>
+                    {% if j.status == "success" and j.job_type == "analysis" and j.result_links.get("report") %}
+                    <a href="{{ j.result_links.report }}" class="btn-sm muted">报告</a>
+                    {% elif j.status == "success" and j.job_type == "sync" and j.result_links.get("brief") %}
+                    <a href="{{ j.result_links.brief }}" class="btn-sm muted">摘要</a>
+                    {% elif j.status == "success" and j.job_type == "full_flow" and j.result_links.get("report") %}
+                    <a href="{{ j.result_links.report }}" class="btn-sm muted">报告</a>
+                    {% elif j.status == "success" and j.job_type == "channel_refresh" and j.result_links.get("videos") %}
+                    <a href="{{ j.result_links.videos }}" class="btn-sm muted">视频</a>
+                    {% endif %}
+                    {% if j.status in ("success", "failed", "stale") %}
+                    <form method="post" action="/tasks/{{ j.job_id }}/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+</section>
 
 {% endblock %}

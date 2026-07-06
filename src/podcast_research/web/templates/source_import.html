@@ -1,44 +1,63 @@
 {% extends "base.html" %}
-{% block title %}导入网页 — 投资音视频研究助手{% endblock %}
+{% block title %}导入网页 — SignalVault{% endblock %}
 {% block content %}
 
 {% if flash_msg %}
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/dashboard" class="back-link">&larr; 返回首页</a>
+<a href="/sources/import/new" class="back-link">&larr; 返回导入中心</a>
 
-<h2 class="page-title">导入外部网页</h2>
-<p class="page-desc">粘贴任意网页 URL（文章、播客笔记、研究页面），系统会解析内容并生成预览，由你决定导入方式。</p>
-
-<div class="section-card">
-    <form method="post" action="/sources/import/preview" class="content-form">
-        <div class="form-group">
-            <label class="form-label" for="url">网页 URL</label>
-            <input type="url" id="url" name="url"
-                   placeholder="https://..."
-                   class="form-input" required autofocus>
-            <p class="form-help">支持任意网页。All-In Podcast 中文笔记等已结构化资源会自动识别并导入为 Deep Notes。</p>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn-action">生成预览</button>
-            <a href="/dashboard" class="btn-action btn-secondary">取消</a>
-        </div>
-    </form>
-</div>
-
-<div class="section-card" style="margin-top:20px">
-    <h2>支持的导入类型</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:0.85rem">
-        <div>
-            <h3 style="margin:0 0 8px;color:var(--accent)">结构化笔记</h3>
-            <p class="form-help">All-In Podcast 中文可视化笔记等已结构化的外部资源，导入为 Deep Notes（深度精读笔记），自动关联原始 YouTube 视频。</p>
-        </div>
-        <div>
-            <h3 style="margin:0 0 8px;color:var(--accent)">通用网页</h3>
-            <p class="form-help">任意文章、博客、研究页面，保存为来源归档（Source Archive），按需关联到已有报告。</p>
-        </div>
+<section class="import-hero">
+    <div>
+        <p class="eyebrow">网页来源</p>
+        <h1>粘贴一个网页链接</h1>
+        <p>系统先解析内容并检测重复，你确认后才会写入知识库。</p>
     </div>
+</section>
+
+<div class="import-layout">
+    <section class="section-card import-form-card">
+        <h2>生成导入预览</h2>
+        <form method="post" action="/sources/import/preview" class="content-form">
+            <div class="form-group">
+                <label class="form-label" for="url">网页 URL</label>
+                <input type="url" id="url" name="url"
+                       placeholder="https://example.com/research-note"
+                       class="form-input" required autofocus>
+                <p class="form-help">适合文章、播客笔记、研究页面、公司公告。YouTube 视频页会自动识别视频 ID。</p>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-action">生成预览</button>
+                <a href="/sources" class="btn-action btn-secondary">取消</a>
+            </div>
+        </form>
+    </section>
+
+    <aside class="import-guide">
+        <h2>接下来会发生什么</h2>
+        <ol>
+            <li><strong>解析内容</strong><span>读取标题、正文、来源类型和摘要。</span></li>
+            <li><strong>检测重复</strong><span>检查 URL、标题和内容哈希是否已存在。</span></li>
+            <li><strong>推荐动作</strong><span>给出归档、关联精读笔记、跳过等建议。</span></li>
+            <li><strong>确认写入</strong><span>你确认后才会写入 SourceArchive 或 Deep Notes。</span></li>
+        </ol>
+    </aside>
 </div>
+
+<section class="source-capability-strip">
+    <div>
+        <strong>结构化笔记</strong>
+        <span>All-In Podcast 中文笔记等来源可导入为 Deep Notes，并关联原始视频。</span>
+    </div>
+    <div>
+        <strong>通用网页</strong>
+        <span>普通文章和研究页面默认归档为 SourceArchive，不自动生成投资报告。</span>
+    </div>
+    <div>
+        <strong>已有报告</strong>
+        <span>如果检测到相关视频或报告，预览页会提示可关联的导入方式。</span>
+    </div>
+</section>
 
 {% endblock %}

@@ -288,6 +288,10 @@ def get_report_detail(session: Session, report_id: int) -> dict | None:
     return {
         "id": report.id,
         "episode_title": episode.video_id or episode.title,
+        "title": episode.title,
+        "subtitle_path": episode.subtitle_path,
+        "subtitle_format": episode.subtitle_format,
+        "subtitle_hash": episode.subtitle_hash,
         "source_type": _infer_source_type(episode),
         "source_url": episode.source_url,
         "video_id": episode.video_id,
@@ -330,6 +334,7 @@ def get_report_detail(session: Session, report_id: int) -> dict | None:
                 "trigger_condition": s.trigger_condition,
                 "source_quote": s.source_quote or "",
                 "timestamp": s.timestamp or "",
+                "status": s.status or "open",
             }
             for s in signals
         ],

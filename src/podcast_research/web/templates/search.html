@@ -1,38 +1,140 @@
 {% extends "base.html" %}
-{% block title %}搜索 — 投资音视频研究助手{% endblock %}
+{% block title %}Unified Knowledge Search — SignalVault{% endblock %}
 
 {% block content %}
-<h2 class="page-title">搜索报告</h2>
-<p class="page-desc">全文搜索已入库的音视频报告内容、观点、信号和实体。</p>
-
-<form class="search-form" method="get" action="/search">
-    <input type="text" name="q" value="{{ q or '' }}" placeholder="输入关键词搜索标的、逻辑链、报告内容...">
-    <button type="submit">搜索</button>
-</form>
-
-{% if q %}
-    {% if results %}
-    <p style="margin-bottom:16px;color:var(--muted);font-size:0.84rem">找到 {{ count }} 条结果</p>
-    {% for r in results %}
-    <div class="search-result">
-        <div class="search-result-header">
-            <span class="match-type">{{ r.match_type }}</span>
-            <span class="tag tag-source {{ r.source_type }}">{{ r.source_type }}</span>
-            {% if r.video_id %}<code style="font-size:0.75rem">{{ r.video_id }}</code>{% endif %}
-            {% if r.created_at %}<span style="font-size:0.75rem;color:var(--muted)">{{ r.created_at.strftime("%Y-%m-%d") }}</span>{% endif %}
-            <a href="/reports/{{ r.report_id }}?hl={{ q | urlencode }}" class="btn-sm" style="margin-left:auto">查看完整报告 →</a>
+<section class="knowledge-search">
+    <div class="search-hero">
+        <div>
+            <p class="eyebrow">Unified Knowledge Search</p>
+            <h2 class="page-title">统一知识搜索</h2>
+            <p class="page-desc">同时检索报告、观点、跟踪信号和实体，优先呈现可追溯证据与来源上下文。</p>
         </div>
-        <div class="search-excerpt">{{ r.match_excerpt | safe }}</div>
+        <div class="search-guide">
+            <span>建议搜索</span>
+            <strong>标的、主题、风险、观点变化或触发条件</strong>
+        </div>
     </div>
-    {% endfor %}
+
+    <form class="search-form knowledge-search-form" method="get" action="/search">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="例如：宁德时代、AI 算力、降本、现金流风险">
+        <input type="hidden" name="result_type" value="{{ result_type }}">
+        <input type="hidden" name="source_type" value="{{ source_type }}">
+        <input type="hidden" name="view_direction" value="{{ view_direction }}">
+        <input type="hidden" name="signal_status" value="{{ signal_status }}">
+        <button type="submit">搜索</button>
+    </form>
+
+    <div class="search-filter-bar" aria-label="搜索筛选">
+        <div class="filter-group">
+            {% for item in type_filters %}
+            <a class="filter-chip {% if result_type == item.value %}active{% endif %}"
+               href="/search?q={{ q | urlencode }}&result_type={{ item.value }}&source_type={{ source_type }}&view_direction={{ view_direction }}&signal_status={{ signal_status }}">
+                {{ item.label }}
+                {% if q and type_counts.get(item.value) is not none %}
+                <span>{{ type_counts.get(item.value) }}</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        <div class="filter-group compact">
+            {% for item in source_filters %}
+            <a class="filter-chip {% if source_type == item.value %}active{% endif %}"
+               href="/search?q={{ q | urlencode }}&result_type={{ result_type }}&source_type={{ item.value }}&view_direction={{ view_direction }}&signal_status={{ signal_status }}">{{ item.label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="search-filter-bar subtle" aria-label="观点和信号筛选">
+        <div class="filter-group compact">
+            {% for item in direction_filters %}
+            <a class="filter-chip {% if view_direction == item.value %}active{% endif %}"
+               href="/search?q={{ q | urlencode }}&result_type={{ result_type }}&source_type={{ source_type }}&view_direction={{ item.value }}&signal_status={{ signal_status }}">{{ item.label }}</a>
+            {% endfor %}
+        </div>
+        <div class="filter-group compact">
+            {% for item in signal_filters %}
+            <a class="filter-chip {% if signal_status == item.value %}active{% endif %}"
+               href="/search?q={{ q | urlencode }}&result_type={{ result_type }}&source_type={{ source_type }}&view_direction={{ view_direction }}&signal_status={{ item.value }}">{{ item.label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if q %}
+        <div class="search-summary-line">
+            <strong>{{ count }}</strong> 条结果
+            <span>按相关度排序，点击报告可回到完整上下文。</span>
+        </div>
+
+        {% if results %}
+        <div class="knowledge-results">
+            {% for r in results %}
+            <article class="knowledge-result result-{{ r.result_type }}">
+                <div class="result-rail">
+                    <span>{{ r.type_label }}</span>
+                </div>
+                <div class="result-main">
+                    <header class="result-header">
+                        <div>
+                            <div class="result-meta">
+                                <span class="tag tag-source {{ r.source_type }}">{{ r.source_label }}</span>
+                                {% if r.entity_type_label %}<span class="tag">{{ r.entity_type_label }}</span>{% endif %}
+                                {% if r.view_direction %}<span class="tag">{{ r.view_direction_label }}</span>{% endif %}
+                                {% if r.signal_status %}<span class="tag">{{ r.signal_status_label }}</span>{% endif %}
+                                {% if r.timestamp %}<span class="muted">{{ r.timestamp }}</span>{% endif %}
+                                {% if r.page_number %}<span class="muted">p.{{ r.page_number }}</span>{% endif %}
+                            </div>
+                            <h3>{{ r.title }}</h3>
+                            {% if r.source_title and r.source_title != r.title %}
+                            <p class="result-source-title">{{ r.source_title }}</p>
+                            {% endif %}
+                        </div>
+                        {% if r.report_id %}
+                        <a href="/reports/{{ r.report_id }}?hl={{ q | urlencode }}" class="btn-sm">查看报告</a>
+                        {% endif %}
+                    </header>
+
+                    {% if r.snippet %}
+                    <p class="result-snippet">{{ r.snippet | safe }}</p>
+                    {% endif %}
+
+                    {% if r.source_quote %}
+                    <blockquote class="result-evidence">
+                        <span>原文证据</span>
+                        <p>{{ r.source_quote | safe }}</p>
+                    </blockquote>
+                    {% endif %}
+
+                    {% if r.matched_fields %}
+                    <div class="matched-fields">
+                        {% for field in r.matched_fields %}
+                        <span>{{ field.label }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>没有找到可用结果</h2>
+            <p>可以换成更具体的标的、主题或风险词，也可以放宽来源和类型筛选。</p>
+        </div>
+        {% endif %}
     {% else %}
-    <div class="empty-state">
-        <p>未找到与 "<strong>{{ q }}</strong>" 相关的结果</p>
+    <div class="search-empty-grid">
+        <div class="empty-state">
+            <h2>从一个问题开始</h2>
+            <p>搜索投资知识库中的观点、信号、报告证据和关联实体。</p>
+        </div>
+        <div class="search-suggestions">
+            <span>可搜索内容</span>
+            <em>标的观点</em>
+            <em>新出现信号</em>
+            <em>风险变化</em>
+            <em>信息源证据</em>
+        </div>
     </div>
     {% endif %}
-{% else %}
-<div class="empty-state">
-    <p>输入关键词搜索已入库的报告</p>
-</div>
-{% endif %}
+</section>
 {% endblock %}

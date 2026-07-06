@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>变化雷达 — SignalVault</title>
+    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="site-brand" href="/" aria-label="SignalVault 首页">
+                <img class="brand-mark" src="file:///D:/claude/xyz_analysis/src/podcast_research/web/static/signalvault-icon.svg" alt="">
+                <span class="brand-copy">
+                    <span class="brand-title">SignalVault</span>
+                    <span class="subtitle">多源投资研究助手</span>
+                </span>
+            </a>
+
+            
+            <div class="nav-label">研究工作台</div>
+            <nav class="side-nav" aria-label="主导航">
+                <a href="/dashboard" class="active">变化雷达</a>
+                <a href="/sources">信息源工作台</a>
+                <a href="/sources/import/new">导入中心</a>
+                <a href="/search">知识库搜索</a>
+                <a href="/reports">报告库</a>
+                <a href="/tasks">任务与诊断</a>
+            </nav>
+
+            <div class="nav-label">来源类型</div>
+            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
+                <a href="/sources/channels">YouTube 视频</a>
+                <a href="/sources/import">网页链接</a>
+                <a href="/sources/tracked">固定信息源</a>
+                <a href="/sources/files/import">文件 / PDF</a>
+                <a href="/sources/zsxq">知识星球</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/watchlist/settings">关注设置</a>
+                <a href="/docs">API</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <main class="container">
+                
+
+
+
+
+
+<div class="dashboard">
+
+    <!-- ── Action Bar ── -->
+    <div class="dashboard-hero">
+        <div>
+            <p class="eyebrow">今日研究入口</p>
+            <h1>变化雷达</h1>
+            <p>先看关注点有什么变化，再处理需要确认的信息源和诊断项。</p>
+        </div>
+        <div class="hero-actions">
+            <a href="/sources" class="btn-action">导入信息源</a>
+            <a href="/search" class="btn-action btn-secondary">搜索知识库</a>
+        </div>
+    </div>
+
+    <div class="radar-grid">
+        
+        <a class="radar-card radar-info" href="#new-signals">
+            <span class="radar-label">新增信号</span>
+            <strong class="radar-value">5</strong>
+            <span class="radar-text">新出现的观察点，适合先扫一遍。</span>
+            <span class="radar-action">查看新增 →</span>
+        </a>
+        
+        <a class="radar-card radar-success" href="#reinforced-claims">
+            <span class="radar-label">信号增强</span>
+            <strong class="radar-value">5</strong>
+            <span class="radar-text">被多份报告交叉验证的判断。</span>
+            <span class="radar-action">查看判断 →</span>
+        </a>
+        
+        <a class="radar-card radar-warning" href="#recommendations">
+            <span class="radar-label">需要判断</span>
+            <strong class="radar-value">40</strong>
+            <span class="radar-text">需要你采纳、忽略或继续观察的内容。</span>
+            <span class="radar-action">处理建议 →</span>
+        </a>
+        
+        <a class="radar-card radar-warning" href="/tasks">
+            <span class="radar-label">导入/系统</span>
+            <strong class="radar-value">3</strong>
+            <span class="radar-text">信息源、审核队列和诊断状态。</span>
+            <span class="radar-action">查看任务 →</span>
+        </a>
+        
+    </div>
+
+    
+    <section class="today-panel">
+        <div class="today-panel-head">
+            <div>
+                <h2>今天先处理</h2>
+                <p>按影响顺序排列，处理完再进入深度阅读。</p>
+            </div>
+            <a href="/tasks">任务与诊断 →</a>
+        </div>
+
+        
+
+        
+
+        
+        <a class="today-action action-warning" href="/tasks">
+            <strong>系统诊断需要关注</strong>
+            <span>系统基本正常，但有一些需要关注的事项。请查看上方建议，逐步处理。</span>
+            <em>查看诊断</em>
+        </a>
+        
+    </section>
+    
+
+    <div class="action-bar compact-actions">
+        <form method="post" action="/dashboard/actions/refresh-workspace">
+            <button type="submit" class="btn-action">更新知识库</button>
+        </form>
+        <a href="/sources" class="btn-action">添加信息源</a>
+        <a href="/content/new" class="btn-action btn-secondary">手动添加内容</a>
+        <a href="/tasks" class="btn-action btn-secondary">
+            整理任务
+            
+        </a>
+        <a href="/reports" class="btn-action btn-secondary">浏览报告</a>
+        <a href="/sources" class="btn-action btn-secondary">信息源</a>
+        
+        <a href="/briefs/latest" class="btn-action btn-secondary">研究简报</a>
+        
+    </div>
+
+    <!-- ── 研究摘要 ── -->
+    
+    <section class="section-card highlight-section">
+        <h2>研究摘要</h2>
+        <div class="brief-summary">
+            
+            <p class="brief-bullet">Agent 方面，讨论聚焦模型能力演进和竞争格局。涉及 40 条判断。</p>
+            
+            <p class="brief-bullet">OpenAI 在近期报告中讨论集中，主要涉及 AI Models、Agent、Anthropic。</p>
+            
+            <p class="brief-bullet">知识库共 23 份报告（Acquired, All-In Podcast, BG2Pod 等），210 条判断，122 个观察点。</p>
+            
+            <p class="brief-bullet">5 条判断被多份报告交叉验证，可信度较高。如：1960年代go-go时代, 投资者从保守的平衡基金转向快速交易,...</p>
+            
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:10px">生成时间: 2026-07-06 13:50 &middot; 基于 23 份报告、210 条判断、122 个观察点</p>
+    </section>
+    
+
+    <div class="dash-columns">
+        <div class="dash-col">
+
+            <!-- ── 我的关注 ── -->
+            
+            <section class="section-card">
+                <h2>我的关注<a href="/watchlist" style="font-size:0.78rem;font-weight:400;margin-left:8px">查看全部 →</a><a href="/watchlist/settings" style="font-size:0.78rem;font-weight:400;margin-left:12px">管理</a></h2>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                
+                <div class="wl-item">
+                    <span class="wl-status wl-direct">
+                        ●
+                    </span>
+                    <div class="wl-body">
+                        <strong>OpenAI</strong>
+                        <span class="tag" style="font-size:0.68rem">公司</span>
+                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">围绕 Agent、Anthropic、Cerebras 等方向，本轮有 20 条相关更新，8 个观察点需继续跟踪。</p>
+                    </div>
+                </div>
+                
+                <div class="wl-item">
+                    <span class="wl-status wl-direct">
+                        ●
+                    </span>
+                    <div class="wl-body">
+                        <strong>NVIDIA</strong>
+                        <span class="tag" style="font-size:0.68rem">公司</span>
+                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">围绕 Cerebras、Microsoft、Openai 等方向，本轮有 2 条相关更新。</p>
+                    </div>
+                </div>
+                
+                <div class="wl-item">
+                    <span class="wl-status wl-direct">
+                        ●
+                    </span>
+                    <div class="wl-body">
+                        <strong>Anthropic</strong>
+                        <span class="tag" style="font-size:0.68rem">公司</span>
+                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">围绕 Amazon、Anthropic、Antitrust 等方向，本轮有 10 条相关更新，4 个观察点需继续跟踪。</p>
+                    </div>
+                </div>
+                
+                <div class="wl-item">
+                    <span class="wl-status wl-no_new_evidence">
+                        ○
+                    </span>
+                    <div class="wl-body">
+                        <strong>Alphabet</strong>
+                        <span class="tag" style="font-size:0.68rem">公司</span>
+                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">本轮暂无新证据。当前判断仍主要依赖既有报告，建议等待新的相关信息后再更新判断。</p>
+                    </div>
+                </div>
+                
+                <div class="wl-item">
+                    <span class="wl-status wl-no_new_evidence">
+                        ○
+                    </span>
+                    <div class="wl-body">
+                        <strong>Cursor</strong>
+                        <span class="tag" style="font-size:0.68rem">公司</span>
+                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">本轮暂无新证据。当前判断仍主要依赖既有报告，建议等待新的相关信息后再更新判断。</p>
+                    </div>
+                </div>
+                
+                </div>
+            </section>
+            
+
+            <!-- ── 升温主题 ── -->
+            
+            <section class="section-card">
+                <h2>升温主题</h2>
+                <table class="dash-table">
+                    <thead><tr><th>主题</th><th class="num">报告</th><th class="num">判断</th><th class="num">观察</th></tr></thead>
+                    <tbody>
+                    
+                    <tr>
+                        <td class="name">Ai</td>
+                        <td class="num">5</td>
+                        <td class="num">139</td>
+                        <td class="num">63</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Agent</td>
+                        <td class="num">7</td>
+                        <td class="num">40</td>
+                        <td class="num">10</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Model</td>
+                        <td class="num">11</td>
+                        <td class="num">33</td>
+                        <td class="num">15</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Openai</td>
+                        <td class="num">2</td>
+                        <td class="num">22</td>
+                        <td class="num">30</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Enterprise</td>
+                        <td class="num">8</td>
+                        <td class="num">24</td>
+                        <td class="num">5</td>
+                    </tr>
+                    
+                    </tbody>
+                </table>
+            </section>
+            
+
+            <!-- ── 强化判断 ── -->
+            
+            <section id="reinforced-claims" class="section-card">
+                <h2>被多份报告交叉验证的判断</h2>
+                <ul class="brief-list">
+                    
+                    <li>1960年代go-go时代, 投资者从保守的平衡基金转向快速交易, 追求短期高利润的积极风格.平衡基金（股债混合）市场份额从1955年的40%骤降至1975年不足1%, 显示风格轮动对资产规模的毁灭性影响.</li>
+                    
+                    <li>ai代理层正在取代传统saas应用中的业务逻辑层, 应用架构从数据-逻辑-ui紧耦合转变为解耦, 数据库和代理协同.高arpu低使用率的saas将面临挑战, 而低arpu高使用率且拥有数据图的平台（如微软365）受益.</li>
+                    
+                    <li>ai对就业的影响存在分歧:cloudflare和meta将裁员归因于ai, 而高盛ceo则认为ai就业冲击被夸大, 市场理解仍混沌.</li>
+                    
+                    <li>ai并未导致大规模净失业.美国失业率仅4.3%（接近充分就业）, 软件工程师招聘量同比增长15%;耶鲁budget lab研究发现过去三年内劳动力市场未出现与ai相关的显著扰动.</li>
+                    
+                    <li>ai时代时间价值大幅提升, 延迟数月可能造成重大损失.对spacex等需要快速迭代的企业尤为重要, 其低轨道发射垄断地位降低了时间成本. &gt; time has b</li>
+                    
+                </ul>
+            </section>
+            
+
+            <!-- ── 最近内容 ── -->
+            <section class="section-card">
+                <h2>最近内容</h2>
+                
+                <table class="dash-table">
+                    <thead><tr><th>日期</th><th>频道</th><th>标题</th></tr></thead>
+                    <tbody>
+                    
+                    <tr>
+                        <td style="white-space:nowrap">2026-06-12</td>
+                        <td>All-In Podcast</td>
+                        <td class="wrap" title="Dan Loeb: The Lost Art of Short Selling, and Why Stock Picking is Back">Dan Loeb: The Lost Art of Short Selling, and Why Stock Picking is Back</td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="white-space:nowrap">2026-06-12</td>
+                        <td>BG2Pod</td>
+                        <td class="wrap" title="All things AI w @altcap @sama &amp; @satyanadella.  A Halloween Special.  🎃🔥BG2 w/ Brad Gerstner">All things AI w @altcap @sama &amp; @satyanadella.  A Halloween Special.  🎃🔥BG2 w/ Brad Gerstner</td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="white-space:nowrap">2026-06-12</td>
+                        <td>Latent Space</td>
+                        <td class="wrap" title="Devin’s 80% Moment: Background Agents, 7x PRs, &amp; End of Hand-Held Coding — Walden Yan &amp; Cole Murray">Devin’s 80% Moment: Background Agents, 7x PRs, &amp; End of Hand-Held Coding — Walden Yan &amp; Cole Murray</td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="white-space:nowrap">2026-06-12</td>
+                        <td>Latent Space</td>
+                        <td class="wrap" title="GitHub’s Agent Era: 14x Commits, 200M Developers, Copilot’s Next Act — Kyle Daigle">GitHub’s Agent Era: 14x Commits, 200M Developers, Copilot’s Next Act — Kyle Daigle</td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="white-space:nowrap">2026-06-12</td>
+                        <td>BG2Pod</td>
+                        <td class="wrap" title="Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview">Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview</td>
+                    </tr>
+                    
+                    </tbody>
+                </table>
+                
+            </section>
+        </div>
+
+        <div class="dash-col">
+
+            <!-- ── 值得关注的公司 ── -->
+            
+            <section class="section-card">
+                <h2>值得关注的公司</h2>
+                <table class="dash-table">
+                    <thead><tr><th>公司</th><th class="num">报告</th><th class="num">判断</th><th class="num">观察</th></tr></thead>
+                    <tbody>
+                    
+                    <tr>
+                        <td class="name">OpenAI</td>
+                        <td class="num">20</td>
+                        <td class="num">22</td>
+                        <td class="num">8</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Anthropic</td>
+                        <td class="num">13</td>
+                        <td class="num">6</td>
+                        <td class="num">17</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Microsoft</td>
+                        <td class="num">11</td>
+                        <td class="num">4</td>
+                        <td class="num">12</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Meta</td>
+                        <td class="num">12</td>
+                        <td class="num">11</td>
+                        <td class="num">0</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="name">Amazon</td>
+                        <td class="num">7</td>
+                        <td class="num">6</td>
+                        <td class="num">6</td>
+                    </tr>
+                    
+                    </tbody>
+                </table>
+            </section>
+            
+
+            <!-- ── 新增观察点 ── -->
+            
+            <section id="new-signals" class="section-card">
+                <h2>新增观察点</h2>
+                <ul class="brief-list">
+                    
+                    <li>**企业若缺乏为AI agents准备的系统集成、数据接口和标准化基础设施，将导致部署失败，抑制AI agents的市场增长。**</li>
+                    
+                    <li>**Anthropic vs OpenAI 季度收入或使用量数据公布**</li>
+                    
+                    <li>**Anthropic 已机密提交 S-1，IPO 进入 SEC 审查阶段**</li>
+                    
+                    <li>**Amgen公布利用GPT-5加速药物研发管线或缩短监管文件准备时间的成果**</li>
+                    
+                    <li>**Azure下一季度营收增长率能否维持39%以上，并观察供给缺口是否收窄、增长能否加速至41-42%区间。**</li>
+                    
+                </ul>
+            </section>
+            
+
+            <!-- ── 推荐阅读 ── -->
+            
+            <section class="section-card">
+                <h2>推荐阅读</h2>
+                <ul class="brief-list">
+                    
+                    <li>
+                        All-In Podcast — Dan Loeb: The Lost Art of Short Selling, and Why Stock Picking is Back
+                        
+                        <a href="/reports/32" class="btn-sm" style="margin-left:8px">查看</a>
+                        
+                    </li>
+                    
+                    <li>
+                        BG2Pod — All things AI w @altcap @sama &amp; @satyanadella.  A Halloween Special.  🎃🔥BG2 w/ Brad Gerstner
+                        
+                        <a href="/reports/31" class="btn-sm" style="margin-left:8px">查看</a>
+                        
+                    </li>
+                    
+                    <li>
+                        Latent Space — Devin’s 80% Moment: Background Agents, 7x PRs, &amp; End of Hand-Held Coding — Walden Yan &amp; Cole Murray
+                        
+                        <a href="/reports/30" class="btn-sm" style="margin-left:8px">查看</a>
+                        
+                    </li>
+                    
+                    <li>
+                        Latent Space — GitHub’s Agent Era: 14x Commits, 200M Developers, Copilot’s Next Act — Kyle Daigle
+                        
+                        <a href="/reports/29" class="btn-sm" style="margin-left:8px">查看</a>
+                        
+                    </li>
+                    
+                    <li>
+                        BG2Pod — Inside OpenAI Enterprise: Forward Deployed Engineering, GPT-5, and More | BG2 Guest Interview
+                        
+                        <a href="/reports/28" class="btn-sm" style="margin-left:8px">查看</a>
+                        
+                    </li>
+                    
+                </ul>
+            </section>
+            
+
+            <!-- ── 今日建议 ── -->
+            
+            <section id="recommendations" class="section-card">
+                <h2>今日建议</h2>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                
+                <div class="rec-item">
+                    <span class="rec-icon">🟠</span>
+                    <div class="rec-body">
+                        <p class="rec-text">OpenAI经历了2023年底董事会政变危机，但组织展现出反脆弱性，文化凝聚力反而增强，公司变得更具韧性。 openai governance organizational-resilience &gt; the blip was ...</p>
+                        <p class="rec-reason">高优先级核心观点，建议确认或归档
+                        <span class="tag" style="font-size:0.7rem;margin-left:6px">需确认</span></p>
+                    </div>
+                    <div class="rec-action">
+                        
+                        <form method="post" action="/claims/claim_OpenAI经历了2023年底董事会政变危机_但组织展现出反脆弱性_文化凝聚力反而增强_公司变得更具韧性_openai_governance_organ/status" class="inline-form">
+                            <input type="hidden" name="return_to" value="dashboard">
+                            <input type="hidden" name="note" value="">
+                            <button name="status" value="verified" class="btn-sm btn-sm-ok">采纳</button>
+                            <button name="status" value="archived" class="btn-sm btn-sm-no">忽略</button>
+                        </form>
+                        
+                    </div>
+                </div>
+                
+                <div class="rec-item">
+                    <span class="rec-icon">🟠</span>
+                    <div class="rec-body">
+                        <p class="rec-text">T-Mobile案例表明，OpenAI实时API已可用于大规模客户支持自动化，包括文本和语音，且该部署经验反哺了模型改进（如全球可用的新快照）。 telecom customer-support voice-ai healthcar</p>
+                        <p class="rec-reason">高优先级核心观点，建议确认或归档
+                        <span class="tag" style="font-size:0.7rem;margin-left:6px">需确认</span></p>
+                    </div>
+                    <div class="rec-action">
+                        
+                        <form method="post" action="/claims/claim_T_Mobile案例表明_OpenAI实时API已可用于大规模客户支持自动化_包括文本和语音_且该部署经验反哺了模型改进_如全球可用的新快照_teleco/status" class="inline-form">
+                            <input type="hidden" name="return_to" value="dashboard">
+                            <input type="hidden" name="note" value="">
+                            <button name="status" value="verified" class="btn-sm btn-sm-ok">采纳</button>
+                            <button name="status" value="archived" class="btn-sm btn-sm-no">忽略</button>
+                        </form>
+                        
+                    </div>
+                </div>
+                
+                <div class="rec-item">
+                    <span class="rec-icon">🟠</span>
+                    <div class="rec-body">
+                        <p class="rec-text">教皇利奥十四世发表重要通谕《Magnificent Humanity》，警告AI可能导致权力集中，呼吁对AI公司进行监管，亚马逊、谷歌和Meta曾游说梵蒂冈软化措辞但未被采纳，这加剧了AI行业面临的全球监管压力。 `ai-regu</p>
+                        <p class="rec-reason">高优先级核心观点，建议确认或归档
+                        <span class="tag" style="font-size:0.7rem;margin-left:6px">需确认</span></p>
+                    </div>
+                    <div class="rec-action">
+                        
+                        <form method="post" action="/claims/claim_教皇利奥十四世发表重要通谕_Magnificent_Humanity_警告AI可能导致权力集中_呼吁对AI公司进行监管_亚马逊_谷歌和Meta曾游说梵蒂冈/status" class="inline-form">
+                            <input type="hidden" name="return_to" value="dashboard">
+                            <input type="hidden" name="note" value="">
+                            <button name="status" value="verified" class="btn-sm btn-sm-ok">采纳</button>
+                            <button name="status" value="archived" class="btn-sm btn-sm-no">忽略</button>
+                        </form>
+                        
+                    </div>
+                </div>
+                
+                </div>
+            </section>
+            
+        </div>
+    </div>
+
+</div>
+
+
+
+            </main>
+
+            <footer class="site-footer">
+                <div class="container">
+                    SignalVault 多源投资研究助手 &mdash; 仅供研究参考，不构成投资建议
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

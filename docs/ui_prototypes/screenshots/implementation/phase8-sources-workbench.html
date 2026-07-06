@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信息源工作台 — SignalVault</title>
+    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="site-brand" href="/" aria-label="SignalVault 首页">
+                <img class="brand-mark" src="file:///D:/claude/xyz_analysis/src/podcast_research/web/static/signalvault-icon.svg" alt="">
+                <span class="brand-copy">
+                    <span class="brand-title">SignalVault</span>
+                    <span class="subtitle">多源投资研究助手</span>
+                </span>
+            </a>
+
+            
+            <div class="nav-label">研究工作台</div>
+            <nav class="side-nav" aria-label="主导航">
+                <a href="/dashboard">变化雷达</a>
+                <a href="/sources" class="active">信息源工作台</a>
+                <a href="/sources/import/new">导入中心</a>
+                <a href="/search">知识库搜索</a>
+                <a href="/reports">报告库</a>
+                <a href="/tasks">任务与诊断</a>
+            </nav>
+
+            <div class="nav-label">来源类型</div>
+            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
+                <a href="/sources/channels">YouTube 视频</a>
+                <a href="/sources/import">网页链接</a>
+                <a href="/sources/tracked">固定信息源</a>
+                <a href="/sources/files/import">文件 / PDF</a>
+                <a href="/sources/zsxq">知识星球</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/watchlist/settings">关注设置</a>
+                <a href="/docs">API</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <main class="container">
+                
+
+
+
+<section class="source-hero">
+    <div>
+        <p class="eyebrow">信息进入知识库前的控制台</p>
+        <h1>信息源工作台</h1>
+        <p>把外部资料先变成可预览、可确认、可追溯的来源，再进入报告、观点和信号拆解。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/import/new" class="btn-action">导入新资料</a>
+        <a href="/tasks" class="btn-action btn-secondary">诊断来源</a>
+    </div>
+</section>
+
+<section class="source-board" aria-label="来源概览">
+    
+    <a class="source-tile lane-warning" href="/sources/channels">
+        <div class="source-type">
+            <strong>YouTube / 播客视频</strong>
+            <span class="tag">有新视频</span>
+        </div>
+        <div>
+            <div class="source-primary">4</div>
+            <div class="source-summary">61 个新视频待处理</div>
+        </div>
+        <span class="btn-like">管理频道</span>
+    </a>
+    
+    <a class="source-tile lane-idle" href="/sources/import">
+        <div class="source-type">
+            <strong>网页 / 研究文章</strong>
+            <span class="tag">可导入</span>
+        </div>
+        <div>
+            <div class="source-primary">0</div>
+            <div class="source-summary">普通网页默认归档为资料，不自动生成投资报告。</div>
+        </div>
+        <span class="btn-like">粘贴网页</span>
+    </a>
+    
+    <a class="source-tile lane-active" href="/sources/tracked">
+        <div class="source-type">
+            <strong>固定跟踪源</strong>
+            <span class="tag">已跟踪</span>
+        </div>
+        <div>
+            <div class="source-primary">1</div>
+            <div class="source-summary">没有跟踪源待处理</div>
+        </div>
+        <span class="btn-like">管理跟踪源</span>
+    </a>
+    
+    <a class="source-tile lane-idle" href="/sources/files/import">
+        <div class="source-type">
+            <strong>本地文件 / PDF</strong>
+            <span class="tag">可上传</span>
+        </div>
+        <div>
+            <div class="source-primary">0</div>
+            <div class="source-summary">Web 支持 .md/.txt/.html/.htm 上传</div>
+        </div>
+        <span class="btn-like">上传文件</span>
+    </a>
+    
+    <a class="source-tile lane-idle" href="/sources/zsxq">
+        <div class="source-type">
+            <strong>知识星球</strong>
+            <span class="tag">CLI 可用</span>
+        </div>
+        <div>
+            <div class="source-primary">0</div>
+            <div class="source-summary">不会发布、评论、点赞或修改知识星球内容。</div>
+        </div>
+        <span class="btn-like">导入知识星球</span>
+    </a>
+    
+</section>
+
+<div class="source-workbench-grid">
+    <section class="source-lanes">
+        <div class="source-section-head">
+            <div>
+                <h2>待处理队列</h2>
+                <p>系统已识别来源和建议动作，你只需要确认下一步。</p>
+            </div>
+            <a href="/sources/import/new">导入新资料 →</a>
+        </div>
+
+        
+        <div class="empty-queue">
+            <strong>当前没有待处理导入项</strong>
+            <span>可以从导入中心添加 YouTube、知识星球、网页、固定源、文本或 PDF 资料。</span>
+            <a class="btn-action" href="/sources/import/new">打开导入中心</a>
+        </div>
+        
+    </section>
+
+    <aside class="source-side-stack">
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>需要你处理</h2>
+                    <p>优先处理阻塞项，再补充新资料。</p>
+                </div>
+            </div>
+            <div class="attention-list">
+                
+                    <div class="attention-empty">来源队列正常，无需立即处理。</div>
+                
+            </div>
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>导入能力</h2>
+                    <p>当前前端承接的来源范围。</p>
+                </div>
+            </div>
+            <div class="capability-list">
+                <a href="/sources/channels">YouTube 视频 <span>Web</span></a>
+                <a href="/sources/zsxq">知识星球 <span>Web</span></a>
+                <a href="/sources/import">网页链接 <span>Web</span></a>
+                <a href="/sources/tracked">固定信息源 <span>Web</span></a>
+                <a href="/sources/files/import">文本 / PDF 文件 <span>混合</span></a>
+            </div>
+        </section>
+    </aside>
+</div>
+
+<section class="source-note">
+    <strong>当前边界</strong>
+    <span>普通网页和普通文本文件默认归档为资料，不自动生成投资报告；PDF 分析能力已在后端具备，知识星球现在可从 Web 发起只读导入、同步和分析。</span>
+</section>
+
+
+            </main>
+
+            <footer class="site-footer">
+                <div class="container">
+                    SignalVault 多源投资研究助手 &mdash; 仅供研究参考，不构成投资建议
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

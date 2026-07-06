@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诊断中心与操作日志 — SignalVault</title>
+    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="site-brand" href="/" aria-label="SignalVault 首页">
+                <img class="brand-mark" src="file:///D:/claude/xyz_analysis/src/podcast_research/web/static/signalvault-icon.svg" alt="">
+                <span class="brand-copy">
+                    <span class="brand-title">SignalVault</span>
+                    <span class="subtitle">多源投资研究助手</span>
+                </span>
+            </a>
+
+            
+            <div class="nav-label">研究工作台</div>
+            <nav class="side-nav" aria-label="主导航">
+                <a href="/dashboard">变化雷达</a>
+                <a href="/sources">信息源工作台</a>
+                <a href="/sources/import/new">导入中心</a>
+                <a href="/search">知识库搜索</a>
+                <a href="/reports">报告库</a>
+                <a href="/tasks" class="active">任务与诊断</a>
+            </nav>
+
+            <div class="nav-label">来源类型</div>
+            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
+                <a href="/sources/channels">YouTube 视频</a>
+                <a href="/sources/import">网页链接</a>
+                <a href="/sources/tracked">固定信息源</a>
+                <a href="/sources/files/import">文件 / PDF</a>
+                <a href="/sources/zsxq">知识星球</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/watchlist/settings">关注设置</a>
+                <a href="/docs">API</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <main class="container">
+                
+
+<section class="diagnostics-center">
+    <div class="diagnostics-hero status-attention">
+        <div>
+            <p class="eyebrow">Diagnostics Center</p>
+            <h2 class="page-title">诊断中心与操作日志</h2>
+            <p class="page-desc">有事项需要关注。系统可继续使用，但建议先处理失败、待审核或配置问题。</p>
+        </div>
+        <div class="diagnostics-hero-actions">
+            <a href="/sources/import/new" class="btn-action">继续导入</a>
+            <a href="/dashboard" class="btn-action btn-secondary">返回变化雷达</a>
+        </div>
+    </div>
+
+    
+
+    <div class="diagnostics-card-grid">
+        
+        <div class="diagnostic-card status-attention">
+            <span>系统状态</span>
+            <strong>需关注</strong>
+            <p>系统基本正常，但有一些需要关注的事项。请查看上方建议，逐步处理。</p>
+        </div>
+        
+        <div class="diagnostic-card status-attention">
+            <span>待处理任务</span>
+            <strong>6</strong>
+            <p>正在运行、排队或无响应的任务。</p>
+        </div>
+        
+        <div class="diagnostic-card status-blocked">
+            <span>失败/无响应</span>
+            <strong>5</strong>
+            <p>优先查看日志或按建议重试。</p>
+        </div>
+        
+        <div class="diagnostic-card status-ok">
+            <span>审核事项</span>
+            <strong>0</strong>
+            <p>来自导入、PDF、知识星球或知识库检查。</p>
+        </div>
+        
+    </div>
+
+    
+    <section class="section-card diagnostic-actions">
+        <div>
+            <h3>建议先处理</h3>
+            <p>这些动作来自系统诊断，不会自动执行，需要你确认后再操作。</p>
+        </div>
+        <div class="diagnostic-action-list">
+            
+            <div class="diagnostic-action action-error">
+                <strong>安装 zsxq-cli</strong>
+                <span>知识星球命令行工具未安装。安装后可导入已订阅的星球内容。</span>
+                <code>pip install zsxq-cli</code>
+            </div>
+            
+            <div class="diagnostic-action action-info">
+                <strong>导出诊断包</strong>
+                <span>导出系统诊断信息（已自动脱敏），发送给技术支持进行远程排查。</span>
+                <code>podcast-research diagnostics bundle --output ./diagnostics</code>
+            </div>
+            
+        </div>
+    </section>
+    
+
+    <div class="diagnostics-layout">
+        <section class="section-card">
+            <div class="section-header-row">
+                <div>
+                    <h3>系统能力状态</h3>
+                    <p>把摄入、审核、搜索、知识库和配置问题汇总成可行动状态。</p>
+                </div>
+            </div>
+            <div class="subsystem-list">
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>摄入队列</strong>
+                        <p>待处理 0，失败 0，过期 0</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>审核队列</strong>
+                        <p>待审核 0 项（严重 0，警告 0）</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-attention">
+                    <div>
+                        <strong>操作日志</strong>
+                        <p>共 5 条操作记录，失败 4</p>
+                        
+                        <small>最近 4 个操作失败；错误类型: CONFIG_DEP_001</small>
+                        
+                    </div>
+                    <span>需关注</span>
+                </div>
+                
+                <div class="subsystem-row status-attention">
+                    <div>
+                        <strong>知识星球</strong>
+                        <p>CLI 不可用，0 个星球（0 活跃）</p>
+                        
+                        <small>zsxq-cli 未安装</small>
+                        
+                    </div>
+                    <span>需关注</span>
+                </div>
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>PDF 处理</strong>
+                        <p>需 OCR: 0，质量问题: 0，提取失败: 0</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>Obsidian 知识库</strong>
+                        <p>已配置</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>统一搜索</strong>
+                        <p>搜索功能正常</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-ok">
+                    <div>
+                        <strong>知识图谱</strong>
+                        <p>0 节点，0 边</p>
+                        
+                    </div>
+                    <span>正常</span>
+                </div>
+                
+                <div class="subsystem-row status-attention">
+                    <div>
+                        <strong>系统配置</strong>
+                        <p>LLM: openai_compatible，缺失: OBSIDIAN_VAULT_PATH, zsxq-cli</p>
+                        
+                    </div>
+                    <span>需关注</span>
+                </div>
+                
+            </div>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header-row">
+                <div>
+                    <h3>最近操作日志</h3>
+                    <p>记录导入、分析、诊断、审核等用户和系统动作。</p>
+                </div>
+            </div>
+            
+            <div class="operation-log-list">
+                
+                <div class="operation-row status-failed">
+                    <div>
+                        <strong>zsxq.doctor</strong>
+                        <p>zsxq-cli 未安装</p>
+                        <small>CONFIG_DEP_001</small>
+                    </div>
+                    <span>失败</span>
+                </div>
+                
+                <div class="operation-row status-failed">
+                    <div>
+                        <strong>zsxq.doctor</strong>
+                        <p>zsxq-cli 未安装</p>
+                        <small>CONFIG_DEP_001</small>
+                    </div>
+                    <span>失败</span>
+                </div>
+                
+                <div class="operation-row status-failed">
+                    <div>
+                        <strong>zsxq.doctor</strong>
+                        <p>zsxq-cli 未安装</p>
+                        <small>CONFIG_DEP_001</small>
+                    </div>
+                    <span>失败</span>
+                </div>
+                
+                <div class="operation-row status-succeeded">
+                    <div>
+                        <strong>系统诊断</strong>
+                        <p>诊断完成: attention</p>
+                        
+                    </div>
+                    <span>成功</span>
+                </div>
+                
+                <div class="operation-row status-failed">
+                    <div>
+                        <strong>zsxq.doctor</strong>
+                        <p>zsxq-cli 未安装</p>
+                        <small>CONFIG_DEP_001</small>
+                    </div>
+                    <span>失败</span>
+                </div>
+                
+            </div>
+            
+        </section>
+    </div>
+
+    <section class="section-card task-board">
+        <div class="section-header-row">
+            <div>
+                <h3>任务队列</h3>
+                <p>查看正在运行、已完成或失败的导入和同步任务。</p>
+            </div>
+            <a href="/content/new" class="btn-action btn-secondary">添加新内容</a>
+        </div>
+
+        
+        <div class="task-list">
+            
+            <article class="task-row status-queued">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/b0e8ae388f59">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>已收到请求 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>排队中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/b0e8ae388f59" class="btn-sm">查看进度</a>
+                    <a href="/tasks/b0e8ae388f59/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-queued">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/e72af042ad97">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>已收到请求 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>排队中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/e72af042ad97" class="btn-sm">查看进度</a>
+                    <a href="/tasks/e72af042ad97/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-failed">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/3a92fcc70d4e">Import Test</a>
+                        <span class="tag">整理进知识库</span>
+                        <code>importTest1</code>
+                    </div>
+                    <p>任务失败 · 已耗时 75 时 0 分</p>
+                </div>
+                <div class="task-state">
+                    <span>失败</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/3a92fcc70d4e" class="btn-sm">查看进度</a>
+                    <a href="/tasks/3a92fcc70d4e/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/3a92fcc70d4e/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-running">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/9c10be544729">Guard Test Video</a>
+                        <span class="tag">整理进知识库</span>
+                        
+                    </div>
+                    <p>正在获取视频字幕 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>进行中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/9c10be544729" class="btn-sm">查看进度</a>
+                    <a href="/tasks/9c10be544729/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-queued">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/885ba333273f">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>已收到请求 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>排队中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/885ba333273f" class="btn-sm">查看进度</a>
+                    <a href="/tasks/885ba333273f/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-queued">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/1ef258c16cec">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>已收到请求 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>排队中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/1ef258c16cec" class="btn-sm">查看进度</a>
+                    <a href="/tasks/1ef258c16cec/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/39e6a74f0f29">刷新频道: All-In Podcast</a>
+                        <span class="tag">刷新频道</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/39e6a74f0f29" class="btn-sm">查看进度</a>
+                    <a href="/tasks/39e6a74f0f29/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/39e6a74f0f29/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-queued">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/5a538d32d8d6">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>已收到请求 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>排队中</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/5a538d32d8d6" class="btn-sm">查看进度</a>
+                    <a href="/tasks/5a538d32d8d6/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/0e8dd31e3434">正在同步到知识库</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/0e8dd31e3434" class="btn-sm">查看进度</a>
+                    <a href="/tasks/0e8dd31e3434/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/0e8dd31e3434/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/91c6a9ae9dd0">刷新频道: Test Channel</a>
+                        <span class="tag">刷新频道</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/91c6a9ae9dd0" class="btn-sm">查看进度</a>
+                    <a href="/tasks/91c6a9ae9dd0/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/91c6a9ae9dd0/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/9d50e5df175b">同步报告 #32 (i8OI8CNdZgU)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/9d50e5df175b" class="btn-sm">查看进度</a>
+                    <a href="/tasks/9d50e5df175b/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/9d50e5df175b/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/2bd8ca9c5113">同步报告 #25 (0y28p0jqPro)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/2bd8ca9c5113" class="btn-sm">查看进度</a>
+                    <a href="/tasks/2bd8ca9c5113/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/2bd8ca9c5113/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/eb7d7836922e">同步报告 #30 (0fgJPhYcbVk)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/eb7d7836922e" class="btn-sm">查看进度</a>
+                    <a href="/tasks/eb7d7836922e/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/eb7d7836922e/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/27379458e6e6">同步报告 #29 (LEwlSyR0cXA)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/27379458e6e6" class="btn-sm">查看进度</a>
+                    <a href="/tasks/27379458e6e6/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/27379458e6e6/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/aaff521b6223">同步报告 #22 (T8u7wOXhDb0)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/aaff521b6223" class="btn-sm">查看进度</a>
+                    <a href="/tasks/aaff521b6223/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/aaff521b6223/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/d5cb5f4ba4e9">同步报告 #24 (-rIAVuaRjOg)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/d5cb5f4ba4e9" class="btn-sm">查看进度</a>
+                    <a href="/tasks/d5cb5f4ba4e9/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/d5cb5f4ba4e9/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/303799c16fdc">同步报告 #23 (ipiKIgdynZE)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/303799c16fdc" class="btn-sm">查看进度</a>
+                    <a href="/tasks/303799c16fdc/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/303799c16fdc/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/24b2b90ca6e3">同步报告 #21 (hObRMv6qCi0)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/24b2b90ca6e3" class="btn-sm">查看进度</a>
+                    <a href="/tasks/24b2b90ca6e3/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/24b2b90ca6e3/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/fe6f8793b09f">同步报告 #22 (T8u7wOXhDb0)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/fe6f8793b09f" class="btn-sm">查看进度</a>
+                    <a href="/tasks/fe6f8793b09f/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/fe6f8793b09f/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/46735f012afd">同步报告 #20 (xTO1aQ_m44I)</a>
+                        <span class="tag">同步知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/46735f012afd" class="btn-sm">查看进度</a>
+                    <a href="/tasks/46735f012afd/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/46735f012afd/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/0887667ce265">The IPO Comeback: Why Tech Giants Are Finally Going Public | All-In Liquidity IPO Panel</a>
+                        <span class="tag">整理进知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/0887667ce265" class="btn-sm">查看进度</a>
+                    <a href="/tasks/0887667ce265/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/0887667ce265/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/f58838a03308">刷新频道: Latent Space</a>
+                        <span class="tag">刷新频道</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/f58838a03308" class="btn-sm">查看进度</a>
+                    <a href="/tasks/f58838a03308/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/f58838a03308/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/4d052eebe053">刷新频道: BG2Pod</a>
+                        <span class="tag">刷新频道</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/4d052eebe053" class="btn-sm">查看进度</a>
+                    <a href="/tasks/4d052eebe053/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/4d052eebe053/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/23ccbceb8441">Bill Maris: How Google Could Crush AI Competitors, Why Small Funds Win, and AI&#39;s Atari Stage</a>
+                        <span class="tag">整理进知识库</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/23ccbceb8441" class="btn-sm">查看进度</a>
+                    <a href="/tasks/23ccbceb8441/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/23ccbceb8441/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+            <article class="task-row status-success">
+                <div class="task-status-mark"></div>
+                <div class="task-main">
+                    <div class="task-title-line">
+                        <a href="/tasks/dde143aefdbb">刷新频道: All-In Podcast</a>
+                        <span class="tag">刷新频道</span>
+                        
+                    </div>
+                    <p>任务已完成 · 已耗时 0 秒</p>
+                </div>
+                <div class="task-state">
+                    <span>已完成</span>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/dde143aefdbb" class="btn-sm">查看进度</a>
+                    <a href="/tasks/dde143aefdbb/logs" class="btn-sm muted">日志</a>
+                    
+                    
+                    <form method="post" action="/tasks/dde143aefdbb/delete" onsubmit="return confirm('删除这条任务记录？')">
+                        <button type="submit" class="icon-delete" title="删除记录">×</button>
+                    </form>
+                    
+                </div>
+            </article>
+            
+        </div>
+        
+    </section>
+</section>
+
+
+            </main>
+
+            <footer class="site-footer">
+                <div class="container">
+                    SignalVault 多源投资研究助手 &mdash; 仅供研究参考，不构成投资建议
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

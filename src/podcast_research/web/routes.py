@@ -2,6 +2,7 @@
 
 import re
 import tempfile
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, Form, Request, UploadFile
@@ -11,9 +12,9 @@ from jinja2 import Environment, FileSystemLoader
 from podcast_research.db.repository import (
     get_report_detail,
     list_reports,
-    search_reports,
 )
 from podcast_research.db.session import get_session, init_db
+from podcast_research.db.unified_search import unified_search
 
 router = APIRouter(tags=["web"])
 
@@ -244,6 +245,177 @@ def _enrich_recommended_with_report_ids(recs: list[dict]) -> None:
         vid = r.get("video_id", "")
         if vid and vid in vid_to_rid:
             r["report_id"] = vid_to_rid[vid]
+
+
+def _build_dashboard_operational_context(vault_path: Path) -> dict:
+    """Build lightweight operational context for the daily radar UI."""
+    ingest_counts: dict[str, int] = {}
+    review_counts: dict[str, int] = {}
+    diagnostics_summary: dict = {}
+    recent_ingest_jobs: list[dict] = []
+    open_review_items: list[dict] = []
+
+    session = _get_session()
+    try:
+        try:
+            from podcast_research.sources.ingest_jobs import IngestJobManager
+            ingest_counts = IngestJobManager.count_by_status(session=session)
+            recent_ingest_jobs = IngestJobManager.list_jobs(limit=5, session=session)
+        except Exception:
+            ingest_counts = {}
+            recent_ingest_jobs = []
+
+        try:
+            from podcast_research.sources.review_items import ReviewItemManager
+            review_counts = ReviewItemManager.count_by_status(session=session)
+            open_review_items = ReviewItemManager.list_items(
+                status="open", limit=5, session=session,
+            )
+        except Exception:
+            review_counts = {}
+            open_review_items = []
+
+        try:
+            from podcast_research.diagnostics.summary import DiagnosticsCenter
+            diagnostics_summary = DiagnosticsCenter.get_summary(
+                session=session, vault_path=str(vault_path),
+            ).to_dict()
+        except Exception:
+            diagnostics_summary = {}
+    finally:
+        session.close()
+
+    return {
+        "ingest_counts": ingest_counts,
+        "review_counts": review_counts,
+        "diagnostics_summary": diagnostics_summary,
+        "recent_ingest_jobs": recent_ingest_jobs,
+        "open_review_items": open_review_items,
+    }
+
+
+def _build_daily_radar_cards(
+    summary: dict,
+    research_brief: object,
+    diagnostics_summary: dict,
+    ingest_counts: dict,
+    review_counts: dict,
+    pending_patches: list[dict],
+) -> list[dict]:
+    """Create first-screen cards for non-technical dashboard scanning."""
+    new_signal_count = len(getattr(research_brief, "new_signals", []) or [])
+    reinforced_count = len(getattr(research_brief, "reinforced_claims", []) or [])
+    needs_review_count = summary.get("needs_review", 0) or 0
+    pending_ingest = ingest_counts.get("pending_preview", 0) or 0
+    failed_ingest = ingest_counts.get("preview_failed", 0) or 0
+    open_reviews = review_counts.get("open", 0) or 0
+    attention = (diagnostics_summary or {}).get("attention_count", 0) or 0
+    blocked = (diagnostics_summary or {}).get("blocked_count", 0) or 0
+
+    return [
+        {
+            "label": "新增信号",
+            "value": new_signal_count,
+            "tone": "info" if new_signal_count else "quiet",
+            "text": "新出现的观察点，适合先扫一遍。",
+            "href": "#new-signals" if new_signal_count else "/sources",
+            "action": "查看新增" if new_signal_count else "补充信息源",
+        },
+        {
+            "label": "信号增强",
+            "value": reinforced_count,
+            "tone": "success" if reinforced_count else "quiet",
+            "text": "被多份报告交叉验证的判断。",
+            "href": "#reinforced-claims" if reinforced_count else "/reports",
+            "action": "查看判断" if reinforced_count else "浏览报告",
+        },
+        {
+            "label": "需要判断",
+            "value": needs_review_count + len(pending_patches),
+            "tone": "warning" if needs_review_count or pending_patches else "quiet",
+            "text": "需要你采纳、忽略或继续观察的内容。",
+            "href": "#recommendations" if needs_review_count or pending_patches else "/watchlist",
+            "action": "处理建议" if needs_review_count or pending_patches else "设置关注",
+        },
+        {
+            "label": "导入/系统",
+            "value": pending_ingest + failed_ingest + open_reviews + attention + blocked,
+            "tone": "danger" if failed_ingest or blocked else (
+                "warning" if pending_ingest or open_reviews or attention else "quiet"
+            ),
+            "text": "信息源、审核队列和诊断状态。",
+            "href": "/sources" if pending_ingest or failed_ingest else "/tasks",
+            "action": "处理信息源" if pending_ingest or failed_ingest else "查看任务",
+        },
+    ]
+
+
+def _build_today_actions(
+    diagnostics_summary: dict,
+    ingest_counts: dict,
+    review_counts: dict,
+    pending_patches: list[dict],
+    recent_ingest_jobs: list[dict],
+    open_review_items: list[dict],
+) -> list[dict]:
+    """Build action-oriented dashboard notices from existing status data."""
+    actions: list[dict] = []
+    pending_ingest = ingest_counts.get("pending_preview", 0) or 0
+    failed_ingest = ingest_counts.get("preview_failed", 0) or 0
+    open_reviews = review_counts.get("open", 0) or 0
+
+    if failed_ingest:
+        failed = [j for j in recent_ingest_jobs if j.get("status") == "preview_failed"]
+        name = failed[0].get("source_name") if failed else ""
+        actions.append({
+            "tone": "danger",
+            "title": f"{failed_ingest} 个导入预览失败",
+            "body": f"先处理失败的来源{f'：{name}' if name else ''}，避免重要信息漏进知识库。",
+            "href": "/sources",
+            "label": "去信息源工作台",
+        })
+
+    if pending_ingest:
+        actions.append({
+            "tone": "warning",
+            "title": f"{pending_ingest} 个导入待确认",
+            "body": "这些内容已经生成预览，还需要你确认归档、跳过或改用其他方式。",
+            "href": "/sources",
+            "label": "继续导入",
+        })
+
+    if open_reviews:
+        first = open_review_items[0] if open_review_items else {}
+        actions.append({
+            "tone": "warning",
+            "title": f"{open_reviews} 个审核项待处理",
+            "body": first.get("title") or "包含 PDF、Vault Lint、知识星球等需要人工判断的项目。",
+            "href": "/tasks",
+            "label": "查看任务与诊断",
+        })
+
+    if pending_patches:
+        p = pending_patches[0]
+        actions.append({
+            "tone": "info",
+            "title": f"{len(pending_patches)} 个知识补丁待确认",
+            "body": f"最新建议涉及「{p.get('target', '关注对象')}」，确认后再写入知识库。",
+            "href": f"/patches/{p.get('patch_id')}" if p.get("patch_id") else "/patches",
+            "label": "查看补丁",
+        })
+
+    overall = (diagnostics_summary or {}).get("overall_status", "ok")
+    if overall in ("attention", "blocked"):
+        guidance = (diagnostics_summary.get("metadata") or {}).get("user_guidance", "")
+        actions.append({
+            "tone": "danger" if overall == "blocked" else "warning",
+            "title": "系统诊断需要关注" if overall == "attention" else "核心能力可能不可用",
+            "body": guidance or "有子系统提示异常，建议先查看诊断信息再继续导入。",
+            "href": "/tasks",
+            "label": "查看诊断",
+        })
+
+    return actions[:4]
 
 
 def _build_dashboard_context(vault_path: Path) -> dict:
@@ -483,6 +655,24 @@ def _build_dashboard_context(vault_path: Path) -> dict:
         watchlist_items = []
         watchlist_configured = False
 
+    operational = _build_dashboard_operational_context(vault_path)
+    daily_radar_cards = _build_daily_radar_cards(
+        summary,
+        research_brief,
+        operational["diagnostics_summary"],
+        operational["ingest_counts"],
+        operational["review_counts"],
+        pending_patches,
+    )
+    today_actions = _build_today_actions(
+        operational["diagnostics_summary"],
+        operational["ingest_counts"],
+        operational["review_counts"],
+        pending_patches,
+        operational["recent_ingest_jobs"],
+        operational["open_review_items"],
+    )
+
     return {
         "vault_configured": True,
         "summary": summary,
@@ -496,6 +686,9 @@ def _build_dashboard_context(vault_path: Path) -> dict:
         "review_claims": review_claims,
         "review_signals": review_signals,
         "recent_reports": recent_reports,
+        "daily_radar_cards": daily_radar_cards,
+        "today_actions": today_actions,
+        **operational,
         "error": None,
     }
 
@@ -720,6 +913,7 @@ def page_report_detail(request: Request, report_id: int, hl: str = ""):
         report["report_markdown_highlighted"] = _highlight_text(report["report_markdown"], hl)
     else:
         report["report_markdown_highlighted"] = report.get("report_markdown", "")
+    report["evidence_context"] = _build_report_evidence_context(report)
     ctx = {"request": request, "report": report, "hl": hl}
     ctx.update(_flash(request))
     return _render("report_detail.html", ctx)
@@ -1095,6 +1289,7 @@ def page_tasks(request: Request):
         })
 
     ctx = {"request": request, "jobs": jobs}
+    ctx.update(_build_diagnostics_center_context(jobs))
     ctx.update(_flash(request))
     return _render("task_list.html", ctx)
 
@@ -1181,17 +1376,448 @@ def _format_elapsed(seconds: int) -> str:
     return f"{h} 时 {m} 分"
 
 
+def _status_label(status: str) -> str:
+    return {
+        "ok": "正常",
+        "attention": "需关注",
+        "blocked": "受阻",
+        "unknown": "未知",
+        "queued": "排队中",
+        "running": "进行中",
+        "long_running": "耗时较长",
+        "stale": "无响应",
+        "success": "已完成",
+        "failed": "失败",
+        "succeeded": "成功",
+        "started": "进行中",
+        "cancelled": "已取消",
+    }.get(status or "", status or "未知")
+
+
+def _operation_type_label(operation_type: str) -> str:
+    return {
+        "zsxq.groups.refresh": "刷新知识星球",
+        "zsxq.topic.import": "导入星球主题",
+        "zsxq.topic.analyze": "分析星球主题",
+        "zsxq.sync": "同步知识星球",
+        "pdf.preview": "PDF 预览",
+        "pdf.extract": "PDF 解析",
+        "pdf.analyze": "PDF 分析",
+        "ingest.confirm": "确认导入",
+        "ingest.retry": "重试导入",
+        "ingest.resume": "恢复导入",
+        "vault.lint": "知识库检查",
+        "vault.export": "导出知识库",
+        "review.accept": "采纳审核",
+        "review.skip": "跳过审核",
+        "review.resolve": "完成审核",
+        "search.unified": "统一搜索",
+        "graph.rebuild": "重建图谱",
+        "system.doctor": "系统检查",
+        "system.diagnostics": "系统诊断",
+        "system.unknown": "系统操作",
+    }.get(operation_type or "", operation_type or "系统操作")
+
+
+def _diagnostics_headline(overall_status: str) -> tuple[str, str]:
+    if overall_status == "blocked":
+        return "有核心能力需要处理", "先处理受阻项目，再继续导入或分析。"
+    if overall_status == "attention":
+        return "有事项需要关注", "系统可继续使用，但建议先处理失败、待审核或配置问题。"
+    return "系统运行正常", "导入、搜索、知识库和任务队列没有发现阻塞问题。"
+
+
+def _build_diagnostics_center_context(jobs: list[dict]) -> dict:
+    session = _get_session()
+    try:
+        try:
+            from podcast_research.diagnostics.summary import DiagnosticsCenter
+            diagnostics = DiagnosticsCenter.get_summary(
+                session=session,
+                check_zsxq=False,
+                vault_path=_get_vault_path(),
+            ).to_dict()
+        except Exception:
+            diagnostics = {
+                "overall_status": "unknown",
+                "subsystems": [],
+                "recent_failures": [],
+                "open_review_count": 0,
+                "blocked_count": 0,
+                "attention_count": 0,
+                "suggested_actions": [],
+                "metadata": {"user_guidance": "暂时无法生成诊断摘要。"},
+            }
+
+        try:
+            from podcast_research.diagnostics.operation_log import OperationLogManager
+            operation_logs = OperationLogManager.list_operations(limit=12, session=session)
+        except Exception:
+            operation_logs = []
+    finally:
+        session.close()
+
+    status_counts: dict[str, int] = {}
+    for job in jobs:
+        status_counts[job["status"]] = status_counts.get(job["status"], 0) + 1
+
+    active_jobs = [
+        j for j in jobs
+        if j["status"] in ("queued", "running", "long_running", "stale")
+    ]
+    failed_jobs = [j for j in jobs if j["status"] in ("failed", "stale")]
+
+    cards = [
+        {
+            "label": "系统状态",
+            "value": _status_label(diagnostics.get("overall_status", "unknown")),
+            "tone": diagnostics.get("overall_status", "unknown"),
+            "hint": diagnostics.get("metadata", {}).get("user_guidance", ""),
+        },
+        {
+            "label": "待处理任务",
+            "value": len(active_jobs),
+            "tone": "attention" if active_jobs else "ok",
+            "hint": "正在运行、排队或无响应的任务。",
+        },
+        {
+            "label": "失败/无响应",
+            "value": len(failed_jobs) + len(diagnostics.get("recent_failures", []) or []),
+            "tone": "blocked" if failed_jobs else (
+                "attention" if diagnostics.get("recent_failures") else "ok"
+            ),
+            "hint": "优先查看日志或按建议重试。",
+        },
+        {
+            "label": "审核事项",
+            "value": diagnostics.get("open_review_count", 0),
+            "tone": "attention" if diagnostics.get("open_review_count", 0) else "ok",
+            "hint": "来自导入、PDF、知识星球或知识库检查。",
+        },
+    ]
+
+    subsystems = diagnostics.get("subsystems", []) or []
+    for subsystem in subsystems:
+        subsystem["status_label"] = _status_label(subsystem.get("status", "unknown"))
+
+    for op in operation_logs:
+        op["status_label"] = _status_label(op.get("status", ""))
+        op["operation_label"] = _operation_type_label(op.get("operation_type", ""))
+
+    headline, subhead = _diagnostics_headline(diagnostics.get("overall_status", "unknown"))
+    return {
+        "diagnostics": diagnostics,
+        "diagnostics_headline": headline,
+        "diagnostics_subhead": subhead,
+        "diagnostics_cards": cards,
+        "subsystems": subsystems,
+        "operation_logs": operation_logs,
+        "job_status_counts": status_counts,
+        "active_jobs": active_jobs[:5],
+        "failed_jobs": failed_jobs[:5],
+    }
+
+
+def _parse_json_object(raw: str) -> dict:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+def _build_report_evidence_context(report: dict) -> dict:
+    """Build reader-facing evidence chain context from existing report records."""
+    extraction = _parse_json_object(report.get("extraction_json", ""))
+    source_info = extraction.get("source_info") if isinstance(extraction.get("source_info"), dict) else {}
+    source_type = report.get("source_type", "local")
+    source_label = _source_type_label(source_type)
+
+    views = report.get("views", []) or []
+    signals = report.get("signals", []) or []
+    evidence_items: list[dict] = []
+
+    for index, view in enumerate(views, start=1):
+        quote = view.get("source_quote", "") or ""
+        evidence_items.append({
+            "kind": "观点",
+            "index": index,
+            "target": view.get("target_name", ""),
+            "type_label": _entity_type_label(view.get("target_type", "")),
+            "tone": view.get("view_direction", ""),
+            "tone_label": _direction_label(view.get("view_direction", "")),
+            "summary": view.get("logic_chain", ""),
+            "evidence_detail": view.get("evidence_detail", ""),
+            "risk_warning": view.get("risk_warning", ""),
+            "source_quote": quote,
+            "timestamp": view.get("timestamp_start", ""),
+            "page_number": view.get("evidence_page"),
+            "evidence_strength": view.get("evidence_strength", ""),
+            "quote_support_strength": view.get("quote_support_strength", ""),
+            "speaker": view.get("speaker_label", ""),
+            "report_anchor": f"view-{index}",
+        })
+
+    for index, signal in enumerate(signals, start=1):
+        quote = signal.get("source_quote", "") or ""
+        evidence_items.append({
+            "kind": "信号",
+            "index": index,
+            "target": signal.get("target_name", ""),
+            "type_label": "",
+            "tone": "signal",
+            "tone_label": _signal_status_label(signal.get("status", "open")),
+            "summary": signal.get("signal", ""),
+            "evidence_detail": signal.get("trigger_condition", ""),
+            "risk_warning": "",
+            "source_quote": quote,
+            "timestamp": signal.get("timestamp", ""),
+            "page_number": None,
+            "evidence_strength": "",
+            "quote_support_strength": "",
+            "speaker": "",
+            "report_anchor": f"signal-{index}",
+        })
+
+    quote_count = sum(1 for item in evidence_items if item.get("source_quote"))
+    location_count = sum(
+        1 for item in evidence_items
+        if item.get("timestamp") or item.get("page_number")
+    )
+    entity_count = len(extraction.get("mentioned_entities", []) or [])
+
+    if source_type == "youtube":
+        retention_note = "已保留视频链接、视频 ID、报告正文、结构化观点/信号、原文引用和时间戳；完整逐字稿未作为独立数据库条目保存。"
+        location_label = "时间戳"
+        source_action = "打开原视频"
+    elif source_type == "pdf_upload":
+        retention_note = "已保留 PDF 文件路径、报告正文、结构化观点/信号、原文引用和页码；PDF 全文本身保留在原文件，数据库不单独保存逐页全文。"
+        location_label = "页码"
+        source_action = "查看 PDF 路径"
+    elif source_type == "zsxq_topic":
+        retention_note = "已保留知识星球 topic 来源、报告正文、结构化观点/信号和原文引用；topic 正文目前通过分析结果保留关键证据，不作为全文条目单独入库。"
+        location_label = "Topic"
+        source_action = "打开来源"
+    else:
+        retention_note = "已保留来源路径、报告正文、结构化观点/信号和原文引用；完整原文是否可回看取决于本地文件或 SourceArchive 是否仍可访问。"
+        location_label = "来源位置"
+        source_action = "查看来源"
+
+    source_facts = [
+        {"label": "来源类型", "value": source_label},
+        {"label": "原始来源", "value": report.get("source_url") or report.get("subtitle_path") or "未记录"},
+        {"label": "证据定位", "value": f"{location_count} 条带{location_label}"},
+        {"label": "原文引用", "value": f"{quote_count} 条可读引用"},
+        {"label": "拆解条目", "value": f"{len(views)} 个观点 / {len(signals)} 个信号 / {entity_count} 个实体"},
+    ]
+
+    if report.get("subtitle_hash"):
+        source_facts.append({"label": "内容指纹", "value": report.get("subtitle_hash")})
+
+    if source_info.get("pdf_quality"):
+        source_facts.append({"label": "PDF 解析质量", "value": source_info.get("pdf_quality")})
+    if source_info.get("zsxq_group_name"):
+        source_facts.append({"label": "星球", "value": source_info.get("zsxq_group_name")})
+
+    return {
+        "source_label": source_label,
+        "source_facts": source_facts,
+        "source_action": source_action,
+        "retention_note": retention_note,
+        "evidence_items": evidence_items,
+        "quote_count": quote_count,
+        "location_count": location_count,
+        "entity_count": entity_count,
+        "has_full_transcript": False,
+        "source_info": source_info,
+    }
+
+
+def _search_type_label(result_type: str) -> str:
+    return {
+        "report": "报告",
+        "investment_view": "观点",
+        "tracking_signal": "信号",
+        "entity": "实体",
+    }.get(result_type, "结果")
+
+
+def _source_type_label(source_type: str) -> str:
+    return {
+        "youtube": "YouTube",
+        "zsxq_topic": "知识星球",
+        "pdf_upload": "PDF",
+        "local": "本地文本",
+        "web": "网页",
+        "all": "全部来源",
+    }.get(source_type or "local", source_type or "本地文本")
+
+
+def _direction_label(direction: str) -> str:
+    return {
+        "bullish": "正向观点",
+        "bearish": "谨慎/负向",
+        "neutral": "中性观察",
+        "all": "全部方向",
+    }.get(direction or "all", direction or "全部方向")
+
+
+def _signal_status_label(status: str) -> str:
+    return {
+        "open": "待跟踪",
+        "triggered": "已触发",
+        "resolved": "已收口",
+        "all": "全部状态",
+    }.get(status or "all", status or "全部状态")
+
+
+def _entity_type_label(entity_type: str) -> str:
+    return {
+        "stock": "股票",
+        "company": "公司",
+        "topic": "主题",
+        "technology": "技术",
+        "person": "人物",
+        "industry": "行业",
+    }.get(entity_type or "", entity_type or "")
+
+
+def _prepare_unified_result(result, query: str) -> dict:
+    snippet = _highlight_text(result.snippet or result.source_quote or "", query)
+    source_quote = _highlight_text(result.source_quote or "", query)
+    matched_fields = [
+        {
+            "name": field,
+            "label": {
+                "report_markdown": "报告正文",
+                "executive_summary": "摘要",
+                "target_name": "关注对象",
+                "logic_chain": "逻辑链",
+                "source_quote": "原文证据",
+                "evidence_detail": "证据细节",
+                "signal": "跟踪信号",
+                "trigger_condition": "触发条件",
+                "name": "实体名称",
+            }.get(field, field),
+        }
+        for field in result.matched_fields
+    ]
+    return {
+        "result_type": result.result_type,
+        "type_label": _search_type_label(result.result_type),
+        "title": result.title,
+        "snippet": snippet,
+        "relevance_score": result.relevance_score,
+        "matched_fields": matched_fields,
+        "report_id": result.report_id,
+        "source_type": result.source_type or "local",
+        "source_label": _source_type_label(result.source_type or "local"),
+        "source_path": result.source_path,
+        "source_title": result.source_title,
+        "timestamp": result.timestamp,
+        "page_number": result.page_number,
+        "source_quote": source_quote,
+        "entity_name": result.entity_name,
+        "entity_type": result.entity_type,
+        "entity_type_label": _entity_type_label(result.entity_type),
+        "view_direction": result.view_direction,
+        "view_direction_label": _direction_label(result.view_direction),
+        "signal_status": result.signal_status,
+        "signal_status_label": _signal_status_label(result.signal_status),
+    }
+
+
 @router.get("/search")
-def page_search(request: Request, q: str = ""):
-    ctx = {"request": request, "q": "", "results": [], "count": 0}
+def page_search(
+    request: Request,
+    q: str = "",
+    result_type: str = "all",
+    source_type: str = "all",
+    view_direction: str = "all",
+    signal_status: str = "all",
+):
+    allowed_types = {"all", "report", "investment_view", "tracking_signal", "entity"}
+    allowed_sources = {"all", "youtube", "zsxq_topic", "pdf_upload", "local"}
+    allowed_directions = {"all", "bullish", "bearish", "neutral"}
+    allowed_signal_statuses = {"all", "open", "triggered", "resolved"}
+
+    if result_type not in allowed_types:
+        result_type = "all"
+    if source_type not in allowed_sources:
+        source_type = "all"
+    if view_direction not in allowed_directions:
+        view_direction = "all"
+    if signal_status not in allowed_signal_statuses:
+        signal_status = "all"
+
+    ctx = {
+        "request": request,
+        "q": "",
+        "results": [],
+        "count": 0,
+        "result_type": result_type,
+        "source_type": source_type,
+        "view_direction": view_direction,
+        "signal_status": signal_status,
+        "type_filters": [
+            {"value": "all", "label": "全部"},
+            {"value": "investment_view", "label": "观点"},
+            {"value": "tracking_signal", "label": "信号"},
+            {"value": "report", "label": "报告"},
+            {"value": "entity", "label": "实体"},
+        ],
+        "source_filters": [
+            {"value": "all", "label": "全部来源"},
+            {"value": "youtube", "label": "YouTube"},
+            {"value": "zsxq_topic", "label": "知识星球"},
+            {"value": "pdf_upload", "label": "PDF"},
+            {"value": "local", "label": "本地文本"},
+        ],
+        "direction_filters": [
+            {"value": "all", "label": "观点方向"},
+            {"value": "bullish", "label": "正向"},
+            {"value": "bearish", "label": "谨慎"},
+            {"value": "neutral", "label": "中性"},
+        ],
+        "signal_filters": [
+            {"value": "all", "label": "信号状态"},
+            {"value": "open", "label": "待跟踪"},
+            {"value": "triggered", "label": "已触发"},
+            {"value": "resolved", "label": "已收口"},
+        ],
+        "type_counts": {},
+    }
     ctx.update(_flash(request))
     if not q.strip():
         return _render("search.html", ctx)
     ctx["q"] = q.strip()
     session = _get_session()
     try:
-        ctx["results"] = search_reports(session, q.strip(), limit=20)
-        ctx["count"] = len(ctx["results"])
+        result_types = None if result_type == "all" else [result_type]
+        if result_type == "all" and view_direction != "all" and signal_status != "all":
+            result_types = ["investment_view", "tracking_signal"]
+        elif result_type == "all" and view_direction != "all":
+            result_types = ["investment_view"]
+        elif result_type == "all" and signal_status != "all":
+            result_types = ["tracking_signal"]
+        raw_results = unified_search(
+            session,
+            q.strip(),
+            result_types=result_types,
+            source_type=source_type,
+            view_direction=view_direction,
+            signal_status=signal_status,
+            limit=40,
+        )
+        prepared = [_prepare_unified_result(r, q.strip()) for r in raw_results]
+        counts = {"all": len(prepared)}
+        for item in prepared:
+            counts[item["result_type"]] = counts.get(item["result_type"], 0) + 1
+        ctx["results"] = prepared
+        ctx["count"] = len(prepared)
+        ctx["type_counts"] = counts
     finally:
         session.close()
     return _render("search.html", ctx)
@@ -1533,7 +2159,7 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         {
             "key": "youtube",
             "title": "YouTube 频道",
-            "icon": "📺",
+            "icon": "TV",
             "description": "长期跟踪 YouTube 频道，自动发现新视频并分析导入。",
             "count_label": f"{channel_count} 个频道",
             "count_detail": (
@@ -1551,7 +2177,7 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         {
             "key": "url_import",
             "title": "网页导入",
-            "icon": "🌐",
+            "icon": "URL",
             "description": "粘贴任意网页 URL，解析内容后由你决定导入方式。",
             "count_label": (
                 f"{url_preview_count} 个待确认预览" if url_preview_count > 0
@@ -1568,7 +2194,7 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         {
             "key": "tracked",
             "title": "固定信息源",
-            "icon": "📡",
+            "icon": "PIN",
             "description": "跟踪固定外部网页源（如 All-In Podcast 笔记），自动发现新条目。",
             "count_label": f"{tracked_count} 个信息源",
             "count_detail": (
@@ -1591,7 +2217,7 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         {
             "key": "file_upload",
             "title": "上传文件",
-            "icon": "📄",
+            "icon": "FILE",
             "description": "上传 .md / .txt / .html / .htm 文本文件，提取内容后归档。",
             "count_label": (
                 f"{file_preview_count} 个待确认预览" if file_preview_count > 0
@@ -1604,6 +2230,134 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
             ),
             "action_url": "/sources/files/import",
             "action_label": "上传文件",
+        },
+    ]
+
+    pdf_review_count = 0
+    zsxq_review_count = 0
+    try:
+        from podcast_research.sources.review_items import ReviewItemManager
+        review_items = ReviewItemManager.list_items(status="open", limit=200)
+        pdf_review_count = sum(
+            1 for i in review_items
+            if str(i.get("item_type", "")).startswith("pdf_")
+        )
+        zsxq_review_count = sum(
+            1 for i in review_items
+            if str(i.get("item_type", "")).startswith("zsxq_")
+        )
+    except Exception:
+        pass
+
+    source_lanes = [
+        {
+            "key": "youtube",
+            "label": "YouTube / 播客视频",
+            "summary": "适合长期跟踪公开频道，从字幕中提取投资观点、标的、风险和信号。",
+            "state": "有新视频" if channel_new_count else (
+                "已连接" if channel_count else "未添加"
+            ),
+            "metric": f"{channel_count} 个频道",
+            "detail": (
+                f"{channel_new_count} 个新视频待处理"
+                if channel_new_count else "没有新视频等待处理"
+            ),
+            "href": "/sources/channels",
+            "action": "管理频道",
+            "tone": "warning" if channel_new_count else (
+                "active" if channel_count else "empty"
+            ),
+        },
+        {
+            "key": "web",
+            "label": "网页 / 研究文章",
+            "summary": "适合单篇文章、播客笔记、研究页面；先生成预览，再决定归档方式。",
+            "state": "待确认" if url_preview_count else "可导入",
+            "metric": f"{url_preview_count} 个预览",
+            "detail": "普通网页默认归档为资料，不自动生成投资报告。",
+            "href": "/sources/import",
+            "action": "粘贴网页",
+            "tone": "warning" if url_preview_count else "idle",
+        },
+        {
+            "key": "tracked",
+            "label": "固定跟踪源",
+            "summary": "适合反复更新的外部页面；刷新后批量确认新条目。",
+            "state": "有失败" if tracked_failed_entries else (
+                "待确认" if tracked_pending_entries else (
+                    "已跟踪" if tracked_count else "未添加"
+                )
+            ),
+            "metric": f"{tracked_count} 个来源",
+            "detail": (
+                f"{tracked_pending_entries} 条待确认，{tracked_failed_entries} 条失败"
+                if tracked_pending_entries or tracked_failed_entries
+                else "没有跟踪源待处理"
+            ),
+            "href": "/sources/tracked",
+            "action": "管理跟踪源",
+            "tone": "danger" if tracked_failed_entries else (
+                "warning" if tracked_pending_entries else (
+                    "active" if tracked_count else "empty"
+                )
+            ),
+        },
+        {
+            "key": "file",
+            "label": "本地文件 / PDF",
+            "summary": "文本文件可在 Web 归档；PDF 已具备分析能力，当前主要通过 CLI 保留页码证据。",
+            "state": "需审核" if pdf_review_count else (
+                "待确认" if file_preview_count else "可上传"
+            ),
+            "metric": f"{archive_file_count} 份已归档",
+            "detail": (
+                f"{file_preview_count} 个文件预览待确认"
+                if file_preview_count else (
+                    f"{pdf_review_count} 个 PDF 审核项"
+                    if pdf_review_count else "Web 支持 .md/.txt/.html/.htm 上传"
+                )
+            ),
+            "href": "/sources/files/import",
+            "action": "上传文件",
+            "tone": "warning" if file_preview_count or pdf_review_count else "idle",
+        },
+        {
+            "key": "zsxq",
+            "label": "知识星球",
+            "summary": "只读导入已订阅星球主题，可进入分析 pipeline；当前 Web 提供能力说明和状态提示。",
+            "state": "需审核" if zsxq_review_count else "CLI 可用",
+            "metric": f"{zsxq_review_count} 个审核项",
+            "detail": "不会发布、评论、点赞或修改知识星球内容。",
+            "href": "/sources/zsxq",
+            "action": "导入知识星球",
+            "tone": "warning" if zsxq_review_count else "idle",
+        },
+    ]
+
+    import_choices = [
+        {
+            "label": "我有一个网页链接",
+            "description": "文章、播客笔记、研报网页、公司公告页面。",
+            "href": "/sources/import",
+            "cta": "粘贴 URL",
+        },
+        {
+            "label": "我有本地文本文件",
+            "description": ".md / .txt / .html / .htm，先预览再归档。",
+            "href": "/sources/files/import",
+            "cta": "上传文件",
+        },
+        {
+            "label": "我要长期跟踪来源",
+            "description": "YouTube 频道或固定网页源，适合反复更新的信息。",
+            "href": "/sources/channels",
+            "cta": "设置跟踪",
+        },
+        {
+            "label": "我要处理待确认项",
+            "description": "继续上次生成的预览、失败条目或审核项。",
+            "href": "/sources",
+            "cta": "查看待处理",
         },
     ]
 
@@ -1638,6 +2392,8 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         "vault_configured": True,
         "vault_path": vault_path_str,
         "entry_cards": entry_cards,
+        "source_lanes": source_lanes,
+        "import_choices": import_choices,
         "pending_items": pending_items,
         "pending_total": len(pending_items),
         "archive_file_count": archive_file_count,
@@ -1646,6 +2402,169 @@ def _build_sources_dashboard_context(vault_path_str: str) -> dict:
         "url_preview_count": url_preview_count,
         "file_preview_count": file_preview_count,
     }
+
+
+def _build_import_center_context(vault_path_str: str) -> dict:
+    """Build import center choices without changing ingestion behavior."""
+    ctx = _build_sources_dashboard_context(vault_path_str)
+    ctx["import_sources"] = [
+        {
+            "key": "youtube",
+            "title": "YouTube 视频",
+            "subtitle": "从频道候选池或视频字幕进入分析",
+            "status": "Web 已支持",
+            "body": "适合公开投资长视频、播客字幕。系统会提取观点、标的、风险、信号和原文时间戳。",
+            "steps": ["添加或刷新频道", "筛选新视频", "生成投资报告"],
+            "primary_url": "/sources/channels",
+            "primary_label": "管理 YouTube",
+            "secondary": "已有频道会显示新视频候选池。",
+            "tone": "active",
+        },
+        {
+            "key": "zsxq",
+            "title": "知识星球",
+            "subtitle": "只读导入已订阅星球主题",
+            "status": "Web 已接入",
+            "body": "适合导入指定 group/topic 的长帖、讨论和附件元数据。不会发布、评论、点赞或修改星球内容。",
+            "steps": ["检查登录状态", "选择 group/topic", "导入或进入分析"],
+            "primary_url": "/sources/zsxq",
+            "primary_label": "导入知识星球",
+            "secondary": "读取依赖本机 zsxq-cli 登录状态。",
+            "tone": "active",
+        },
+        {
+            "key": "web",
+            "title": "网页链接",
+            "subtitle": "文章、播客笔记、研究页面",
+            "status": "Web 已支持",
+            "body": "粘贴 URL 后先解析预览，系统检测重复并推荐归档、关联精读笔记或跳过。",
+            "steps": ["粘贴 URL", "查看预览和冲突", "确认写入"],
+            "primary_url": "/sources/import",
+            "primary_label": "粘贴网页",
+            "secondary": "普通网页默认归档为资料，不自动生成投资报告。",
+            "tone": "active",
+        },
+        {
+            "key": "tracked",
+            "title": "固定信息源",
+            "subtitle": "反复更新的外部网页源",
+            "status": "Web 已支持",
+            "body": "适合 All-In 中文笔记等固定来源。刷新后发现新条目，支持批量预览和确认导入。",
+            "steps": ["添加跟踪源", "刷新发现新条目", "批量确认导入"],
+            "primary_url": "/sources/tracked",
+            "primary_label": "管理固定源",
+            "secondary": "不支持的 URL 可改用单网页导入。",
+            "tone": "active",
+        },
+        {
+            "key": "file",
+            "title": "文件导入",
+            "subtitle": "文本文件、HTML、PDF 研报",
+            "status": "文本 Web 支持，PDF 后端支持",
+            "body": "Web 已支持 .md/.txt/.html/.htm 预览归档；PDF 已具备预览、提取、分析和页码证据能力。",
+            "steps": ["上传或选择文件", "预览提取质量", "归档或进入分析"],
+            "primary_url": "/sources/files/import",
+            "primary_label": "上传文本文件",
+            "secondary": "PDF Web 原生上传分析待接入；当前保留 CLI/PDF 专用工作流。",
+            "tone": "warning",
+        },
+    ]
+    return ctx
+
+
+def _build_zsxq_context(vault_path_str: str) -> dict:
+    """Build ZSXQ Web import context from existing registry/diagnostics."""
+    groups = []
+    cli_status = {
+        "available": False,
+        "version": "",
+        "logged_in": False,
+        "error": "未检查",
+    }
+    diagnostics = {}
+    recent_jobs: list[dict] = []
+    open_reviews: list[dict] = []
+
+    try:
+        from podcast_research.sources.zsxq_cli import check_cli
+        cli_status = check_cli()
+    except Exception as e:
+        cli_status = {
+            "available": False,
+            "version": "",
+            "logged_in": False,
+            "error": str(e)[:200],
+        }
+
+    try:
+        from podcast_research.sources.zsxq_registry import list_registry
+        groups = [
+            {
+                "group_id": g.group_id,
+                "group_name": g.group_name,
+                "access_status": g.access_status,
+                "topic_count": g.topic_count,
+                "last_refreshed_at": g.last_refreshed_at[:19] if g.last_refreshed_at else "",
+            }
+            for g in list_registry()
+        ]
+    except Exception:
+        groups = []
+
+    session = _get_session()
+    try:
+        try:
+            from podcast_research.diagnostics.summary import DiagnosticsCenter
+            summary = DiagnosticsCenter.get_summary(
+                session=session, check_zsxq=False, vault_path=vault_path_str,
+            ).to_dict()
+            diagnostics = next(
+                (s for s in summary.get("subsystems", []) if s.get("name") == "zsxq"),
+                {},
+            )
+        except Exception:
+            diagnostics = {}
+
+        try:
+            from podcast_research.sources.ingest_jobs import IngestJobManager
+            recent_jobs = IngestJobManager.list_jobs(
+                source_type="zsxq_topic", limit=8, session=session,
+            )
+        except Exception:
+            recent_jobs = []
+
+        try:
+            from podcast_research.sources.review_items import ReviewItemManager
+            open_reviews = [
+                item for item in ReviewItemManager.list_items(
+                    status="open", limit=20, session=session,
+                )
+                if str(item.get("item_type", "")).startswith("zsxq_")
+            ][:6]
+        except Exception:
+            open_reviews = []
+    finally:
+        session.close()
+
+    return {
+        "vault_configured": True,
+        "vault_path": vault_path_str,
+        "cli_status": cli_status,
+        "groups": groups,
+        "diagnostics": diagnostics,
+        "recent_jobs": recent_jobs,
+        "open_reviews": open_reviews,
+    }
+
+
+def _write_review_findings(findings: list[dict]) -> int:
+    if not findings:
+        return 0
+    try:
+        from podcast_research.sources.review_items import ReviewItemManager
+        return ReviewItemManager.create_from_lint_findings(findings)
+    except Exception:
+        return 0
 
 
 def _format_relative_time(dt, now) -> str:
@@ -1678,6 +2597,249 @@ def page_sources_dashboard(request: Request):
     ctx["request"] = request
     ctx.update(_flash(request))
     return _render("sources_dashboard.html", ctx)
+
+
+@router.get("/sources/import/new")
+def page_import_center(request: Request):
+    """Guided import center for all source types."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    ctx = _build_import_center_context(vault_path_str)
+    ctx["request"] = request
+    ctx.update(_flash(request))
+    return _render("source_import_center.html", ctx)
+
+
+@router.get("/sources/zsxq")
+def page_sources_zsxq(request: Request):
+    """ZSXQ read-only import and analysis workspace."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    ctx = _build_zsxq_context(vault_path_str)
+    ctx["request"] = request
+    ctx.update(_flash(request))
+    return _render("sources_zsxq.html", ctx)
+
+
+@router.post("/sources/zsxq/refresh-groups")
+def action_zsxq_refresh_groups(request: Request):
+    """Refresh local ZSXQ group registry via zsxq-cli."""
+    if not _get_vault_path():
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    try:
+        from podcast_research.sources.zsxq_cli import list_groups
+        from podcast_research.sources.zsxq_registry import refresh_registry
+
+        result = list_groups()
+        if not result.success:
+            return RedirectResponse(
+                url=f"/sources/zsxq?msg=error:刷新失败 — {result.error[:120]}",
+                status_code=303,
+            )
+
+        cli_data = result.data or []
+        groups_raw = cli_data if isinstance(cli_data, list) else (
+            cli_data.get("groups", []) if isinstance(cli_data, dict) else []
+        )
+        cli_groups = [
+            {
+                "group_id": g.get("group_id", g.get("id", "")),
+                "name": g.get("name", g.get("group_name", "")),
+                "topic_count": g.get("topic_count", 0),
+            }
+            for g in groups_raw if isinstance(g, dict)
+        ]
+        changes = refresh_registry(cli_groups)
+        msg = (
+            f"星球列表已刷新：新增 {changes['added']}，恢复 {changes['reactivated']}，"
+            f"失效 {changes['deactivated']}，不变 {changes['unchanged']}"
+        )
+        return RedirectResponse(url=f"/sources/zsxq?msg=success:{msg}", status_code=303)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/sources/zsxq?msg=error:刷新失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+
+@router.post("/sources/zsxq/import-topic")
+def action_zsxq_import_topic(
+    request: Request,
+    group_id: str = Form(""),
+    topic_id: str = Form(""),
+):
+    """Import one ZSXQ topic into ingest_jobs without LLM analysis."""
+    if not _get_vault_path():
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    group_id = group_id.strip()
+    topic_id = topic_id.strip()
+    if not group_id or not topic_id:
+        return RedirectResponse(
+            url="/sources/zsxq?msg=error:请输入 group_id 和 topic_id",
+            status_code=303,
+        )
+
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.zsxq_import import import_topic_to_ingest
+
+    init_db()
+    result = import_topic_to_ingest(group_id, topic_id)
+    created = _write_review_findings(result.get("review_findings", []))
+    if result.get("success"):
+        profile = result.get("profile")
+        title = getattr(profile, "topic_title", topic_id) if profile else topic_id
+        job = result.get("job") or {}
+        return RedirectResponse(
+            url=f"/sources/zsxq?msg=success:已导入主题《{title[:40]}》，任务 #{job.get('id', '-')}",
+            status_code=303,
+        )
+
+    suffix = f"，已写入 {created} 个审核项" if created else ""
+    return RedirectResponse(
+        url=f"/sources/zsxq?msg=error:导入失败 — {result.get('error', 'unknown')[:120]}{suffix}",
+        status_code=303,
+    )
+
+
+@router.post("/sources/zsxq/sync")
+def action_zsxq_sync(
+    request: Request,
+    group_id: str = Form(""),
+    limit: int = Form(20),
+):
+    """Sync recent topics from a ZSXQ group into ingest_jobs."""
+    if not _get_vault_path():
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    group_id = group_id.strip()
+    if not group_id:
+        return RedirectResponse(
+            url="/sources/zsxq?msg=error:请输入 group_id",
+            status_code=303,
+        )
+    limit = max(1, min(int(limit or 20), 100))
+
+    from podcast_research.db.session import init_db
+    from podcast_research.sources.zsxq_import import sync_group_to_ingest
+
+    init_db()
+    result = sync_group_to_ingest(group_id, limit=limit)
+    created = _write_review_findings(result.get("review_findings", []))
+    if result.get("success"):
+        msg = (
+            f"同步完成：导入 {result.get('imported', 0)}，"
+            f"跳过 {result.get('skipped', 0)}，错误 {result.get('errors', 0)}"
+        )
+        return RedirectResponse(url=f"/sources/zsxq?msg=success:{msg}", status_code=303)
+
+    suffix = f"，已写入 {created} 个审核项" if created else ""
+    return RedirectResponse(
+        url=f"/sources/zsxq?msg=error:同步失败 — {result.get('review_findings', [{}])[0].get('message', 'unknown')[:120]}{suffix}",
+        status_code=303,
+    )
+
+
+@router.post("/sources/zsxq/analyze")
+def action_zsxq_analyze(
+    request: Request,
+    group_id: str = Form(""),
+    topic_id: str = Form(""),
+    focus: str = Form(""),
+    depth: str = Form("standard"),
+    provider_mode: str = Form("configured"),
+):
+    """Import and analyze one ZSXQ topic via the existing analysis pipeline."""
+    if not _get_vault_path():
+        return RedirectResponse(
+            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
+        )
+    group_id = group_id.strip()
+    topic_id = topic_id.strip()
+    if not group_id or not topic_id:
+        return RedirectResponse(
+            url="/sources/zsxq?msg=error:请输入 group_id 和 topic_id",
+            status_code=303,
+        )
+
+    from podcast_research.config import LLM_PROVIDER
+    from podcast_research.db.session import init_db
+    from podcast_research.diagnostics.operation_log import OperationLogManager
+    from podcast_research.sources.zsxq_analysis import import_and_analyze
+
+    init_db()
+    focus_areas = [f.strip() for f in focus.split(",") if f.strip()] if focus else None
+    provider = "mock" if provider_mode == "mock" else LLM_PROVIDER
+    depth = "deep" if depth == "deep" else "standard"
+
+    op = OperationLogManager.start(
+        operation_type="zsxq.topic.analyze",
+        source_type="zsxq_topic",
+        target_ref=f"group:{group_id}/topic:{topic_id}",
+        summary=f"Web 分析 ZSXQ 主题: {topic_id}",
+    )
+    try:
+        result = import_and_analyze(
+            group_id=group_id,
+            topic_id=topic_id,
+            provider_name=provider,
+            focus_areas=focus_areas,
+            analysis_depth=depth,
+        )
+        _write_review_findings(result.get("review_findings", []))
+        if result.get("success") and result.get("analysis"):
+            analysis = result["analysis"]
+            OperationLogManager.succeed(
+                op,
+                summary=f"分析完成，report_id={analysis.get('report_id', 0)}",
+                metadata={
+                    "report_id": analysis.get("report_id", 0),
+                    "view_count": analysis.get("view_count", 0),
+                },
+            )
+            rid = analysis.get("report_id", 0)
+            if rid:
+                return RedirectResponse(
+                    url=f"/reports/{rid}?msg=success:知识星球主题分析完成",
+                    status_code=303,
+                )
+            return RedirectResponse(
+                url="/sources/zsxq?msg=success:知识星球主题分析完成",
+                status_code=303,
+            )
+
+        error = result.get("error", "unknown")
+        OperationLogManager.fail(
+            op,
+            error_code="ANALYSIS_ELIGIBILITY_001",
+            error_detail=error[:500],
+            summary=f"分析失败: {error[:120]}",
+        )
+        return RedirectResponse(
+            url=f"/sources/zsxq?msg=error:分析失败 — {error[:120]}",
+            status_code=303,
+        )
+    except Exception as e:
+        OperationLogManager.fail(
+            op,
+            error_code="ANALYSIS_PIPELINE_001",
+            error_detail=str(e)[:500],
+            summary=f"分析异常: {topic_id}",
+        )
+        return RedirectResponse(
+            url=f"/sources/zsxq?msg=error:分析异常 — {str(e)[:120]}",
+            status_code=303,
+        )
 
 
 # ═════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>投资知识库搜索 Prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/signalvault-icon.svg" alt="">
+        <div class="brand-text">
+          <div class="brand-title">SignalVault</div>
+          <div class="brand-subtitle">多源投资研究助手</div>
+        </div>
+      </div>
+
+      <div class="nav-label">研究工作台</div>
+      <nav class="nav-group">
+        <a class="nav-item" href="investment_radar.html">变化雷达 <span class="count">12</span></a>
+        <a class="nav-item active" href="knowledge_search.html">知识库搜索</a>
+        <a class="nav-item" href="#">报告库</a>
+        <a class="nav-item" href="#">证据链</a>
+      </nav>
+
+      <div class="nav-label">搜索范围</div>
+      <nav class="nav-group">
+        <a class="nav-item active" href="#">全部知识</a>
+        <a class="nav-item" href="#">观点</a>
+        <a class="nav-item" href="#">信号</a>
+        <a class="nav-item" href="#">证据</a>
+        <a class="nav-item" href="#">实体</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="page-kicker">Unified Knowledge Search</div>
+          <h1 class="page-title">搜索投资知识库</h1>
+        </div>
+        <div class="top-actions">
+          <button class="btn">保存查询</button>
+          <button class="btn primary">打开图谱</button>
+        </div>
+      </header>
+
+      <section class="panel panel-pad">
+        <form class="search-hero">
+          <input class="search-input" value="OpenAI 企业 AI" aria-label="search query">
+          <button class="btn primary" type="button">搜索</button>
+        </form>
+        <div class="result-tabs">
+          <button class="result-tab active" type="button">全部 17</button>
+          <button class="result-tab" type="button">观点 6</button>
+          <button class="result-tab" type="button">信号 4</button>
+          <button class="result-tab" type="button">证据 5</button>
+          <button class="result-tab" type="button">实体 2</button>
+        </div>
+      </section>
+
+      <div class="search-layout">
+        <aside class="panel panel-pad">
+          <div class="panel-title">过滤</div>
+          <div class="filter-list" style="margin-top:12px">
+            <div class="filter-row"><span>来源: YouTube</span><span>12</span></div>
+            <div class="filter-row"><span>来源: PDF</span><span>3</span></div>
+            <div class="filter-row"><span>方向: bullish</span><span>5</span></div>
+            <div class="filter-row"><span>方向: neutral</span><span>4</span></div>
+            <div class="filter-row"><span>近 30 天</span><span>11</span></div>
+          </div>
+        </aside>
+
+        <section class="result-list" aria-label="search results">
+          <article class="result-card">
+            <div class="result-head">
+              <span class="tag green">观点</span>
+              <span class="pill">OpenAI</span>
+              <span class="pill">Enterprise AI</span>
+              <span class="score">0.94</span>
+            </div>
+            <div class="result-title">OpenAI 的企业化路径正在从模型能力转向交付体系</div>
+            <div class="result-snippet">多份报告把 <mark>OpenAI 企业 AI</mark> 叙事连接到 Forward Deployed Engineering、微软渠道和 GPT-5 发布时间线，说明市场关注点从模型发布转向可规模化交付。</div>
+            <div class="trail">
+              <span class="tag blue">3 份报告</span>
+              <span class="tag green">2 条证据</span>
+              <span class="pill">BG2Pod</span>
+              <span class="pill">00:18:42</span>
+              <button class="btn">查看证据链</button>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <div class="result-head">
+              <span class="tag amber">信号</span>
+              <span class="pill">OpenAI</span>
+              <span class="pill">Microsoft</span>
+              <span class="score">0.88</span>
+            </div>
+            <div class="result-title">企业客户与云渠道绑定频率上升</div>
+            <div class="result-snippet">近期访谈反复出现企业部署、Azure、模型选择和数据边界，可能意味着 <mark>企业 AI</mark> 采购判断正在从“模型最好”转向“谁能落地”。</div>
+            <div class="trail">
+              <span class="tag amber">新信号</span>
+              <span class="pill">触发条件: 连续 3 期出现</span>
+              <button class="btn">加入跟踪</button>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <div class="result-head">
+              <span class="tag blue">证据</span>
+              <span class="pill">source_quote</span>
+              <span class="score">0.83</span>
+            </div>
+            <div class="result-title">原文引用命中: OpenAI Enterprise</div>
+            <div class="result-snippet">“...inside <mark>OpenAI Enterprise</mark>, forward deployed engineering, GPT-5, and how customers move from pilots into production...”</div>
+            <div class="trail">
+              <span class="pill">YouTube</span>
+              <span class="pill">00:32:10</span>
+              <span class="pill">report #41</span>
+              <button class="btn">打开报告</button>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <div class="result-head">
+              <span class="tag green">实体</span>
+              <span class="pill">company</span>
+              <span class="score">0.77</span>
+            </div>
+            <div class="result-title">OpenAI</div>
+            <div class="result-snippet">关联 20 份报告、40 条判断、8 个观察点。主要共现实体包括 Microsoft、Anthropic、NVIDIA、Agent。</div>
+            <div class="trail">
+              <span class="tag blue">图谱邻域</span>
+              <button class="btn">查看实体页</button>
+            </div>
+          </article>
+        </section>
+
+        <aside class="panel panel-pad">
+          <div class="panel-title">OpenAI 邻域</div>
+          <div class="entity-card" style="margin-top:12px">
+            <div class="neighbor">
+              <div class="neighbor-title"><span>Microsoft</span><span class="tag green">强</span></div>
+              <div class="neighbor-note">共同出现在 11 份报告，主要围绕 Azure 和企业渠道。</div>
+            </div>
+            <div class="neighbor">
+              <div class="neighbor-title"><span>Anthropic</span><span class="tag amber">竞争</span></div>
+              <div class="neighbor-note">模型能力、企业安全、开发者工具叙事持续对比。</div>
+            </div>
+            <div class="neighbor">
+              <div class="neighbor-title"><span>NVIDIA</span><span class="tag blue">基础设施</span></div>
+              <div class="neighbor-note">训练与推理成本、GPU 供给、数据中心 CapEx。</div>
+            </div>
+          </div>
+
+          <div class="panel-title" style="margin-top:18px">证据覆盖</div>
+          <div class="mini-chart">
+            <div class="bar-row"><span>观点</span><div class="bar"><span style="width:78%"></span></div><b>6</b></div>
+            <div class="bar-row"><span>信号</span><div class="bar"><span style="width:52%"></span></div><b>4</b></div>
+            <div class="bar-row"><span>证据</span><div class="bar"><span style="width:66%"></span></div><b>5</b></div>
+          </div>
+        </aside>
+      </div>
+
+      <p class="prototype-note">Prototype only · 对齐 P5 unified_search / graph schema 的展示方向</p>
+    </main>
+  </div>
+</body>
+</html>

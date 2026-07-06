@@ -33,6 +33,11 @@ def test_report_detail_ok(api_client, seeded_db):
     resp = api_client.get("/reports/1")
     assert resp.status_code == 200
     html = resp.text
+    assert "Evidence Chain Report" in html
+    assert "来源与保留状态" in html
+    assert "证据链" in html
+    assert "原文引用" in html
+    assert "拆解条目" in html
     assert "核心观点矩阵" in html
     assert "宁德时代" in html
 
@@ -51,7 +56,23 @@ def test_search_with_query(api_client, seeded_db):
     resp = api_client.get("/search?q=宁德")
     assert resp.status_code == 200
     html = resp.text
+    assert "Unified Knowledge Search" in html
+    assert "统一知识搜索" in html
+    assert "观点" in html
+    assert "信号" in html
+    assert "报告" in html
     assert "宁德" in html
+
+
+def test_search_supports_unified_result_type_filter(api_client, seeded_db):
+    """GET /search 支持统一知识搜索的结果类型筛选"""
+    resp = api_client.get("/search?q=宁德&result_type=investment_view")
+    assert resp.status_code == 200
+    html = resp.text
+    assert "Unified Knowledge Search" in html
+    assert "原文证据" in html
+    assert "查看报告" in html
+    assert "宁德时代" in html
 
 
 def test_search_empty_query(api_client):
@@ -60,6 +81,8 @@ def test_search_empty_query(api_client):
     assert resp.status_code == 200
     html = resp.text
     assert "搜索" in html
+    assert "统一知识搜索" in html
+    assert "报告、观点、跟踪信号和实体" in html
 
 
 def test_api_endpoints_still_work(api_client, seeded_db):
@@ -151,13 +174,13 @@ source_reports: []
         assert resp.status_code == 200
         html = resp.text
         # Should show vault path
-        assert str(vault) in html or "AI 研究助理" in html
+        assert str(vault) in html or "SignalVault" in html
         # Should show AI Agents
         assert "AI Agents" in html
         # Should show AI Agents in topic or brief
         assert "AI Agents" in html or "研究摘要" in html
         # Should show research brief summary
-        assert "研究摘要" in html or "AI 研究助理" in html
+        assert "研究摘要" in html or "SignalVault" in html
     finally:
         os.environ["OBSIDIAN_VAULT_PATH"] = old_vault
 
@@ -1165,7 +1188,10 @@ class TestUnifiedTasks:
         try:
             resp = api_client.get("/tasks")
             assert resp.status_code == 200
-            assert "整理任务" in resp.text
+            assert "诊断中心与操作日志" in resp.text
+            assert "系统能力状态" in resp.text
+            assert "最近操作日志" in resp.text
+            assert "任务队列" in resp.text
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
@@ -1840,6 +1866,8 @@ class TestFailureUX:
         resp = api_client.get(f"/tasks/{job.job_id}/logs")
         assert resp.status_code == 200
         assert "任务日志" in resp.text
+        assert "Operation Timeline" in resp.text
+        assert "事件时间线" in resp.text
 
     def test_job_events_recorded_on_progress(self):
         """Stage change in update_job records a JobEvent."""
@@ -2327,4 +2355,3 @@ class TestWatchlistBriefSections:
         )
         md = render_watchlist_markdown([item])
         assert "暂无新证据" in md
-

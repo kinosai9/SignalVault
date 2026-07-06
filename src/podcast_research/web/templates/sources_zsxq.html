@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}知识星球导入 — SignalVault{% endblock %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<section class="source-hero">
+    <div>
+        <p class="eyebrow">ZSXQ Read-only Import</p>
+        <h1>知识星球导入</h1>
+        <p>只读取已订阅星球内容。不会发布、评论、点赞、删除或修改知识星球数据。</p>
+    </div>
+    <div class="source-hero-actions">
+        <form method="post" action="/sources/zsxq/refresh-groups">
+            <button type="submit" class="btn-action">刷新星球列表</button>
+        </form>
+        <a href="/sources/import/new" class="btn-action btn-secondary">返回导入中心</a>
+    </div>
+</section>
+
+<section class="zsxq-status-grid">
+    <div class="zsxq-status-card {% if not cli_status.available %}status-danger{% elif not cli_status.logged_in %}status-warning{% endif %}">
+        <span>CLI 状态</span>
+        <strong>{% if cli_status.available %}已安装{% else %}未安装{% endif %}</strong>
+        <p>{{ cli_status.version or cli_status.error or "zsxq-cli" }}</p>
+    </div>
+    <div class="zsxq-status-card {% if not cli_status.logged_in %}status-warning{% endif %}">
+        <span>登录状态</span>
+        <strong>{% if cli_status.logged_in %}已登录{% else %}需要登录{% endif %}</strong>
+        <p>{% if cli_status.logged_in %}可以读取已授权星球{% else %}运行 zsxq-cli auth login 后刷新{% endif %}</p>
+    </div>
+    <div class="zsxq-status-card">
+        <span>本地星球</span>
+        <strong>{{ groups|length }}</strong>
+        <p>来自本地 group registry</p>
+    </div>
+    <div class="zsxq-status-card {% if open_reviews %}status-warning{% endif %}">
+        <span>审核项</span>
+        <strong>{{ open_reviews|length }}</strong>
+        <p>ZSXQ 相关待处理问题</p>
+    </div>
+</section>
+
+<div class="zsxq-layout">
+    <section class="source-lanes">
+        <div class="source-section-head">
+            <div>
+                <h2>导入或分析主题</h2>
+                <p>输入已订阅星球的 group_id 和 topic_id。导入只创建摄入任务；分析会进入报告生成流程。</p>
+            </div>
+        </div>
+
+        <div class="zsxq-action-grid">
+            <form method="post" action="/sources/zsxq/import-topic" class="zsxq-action-card">
+                <h3>导入单个主题</h3>
+                <p>读取主题内容并创建 ingest job，不触发 LLM 分析。</p>
+                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
+                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
+                <button type="submit" class="btn-action">导入为待确认项</button>
+            </form>
+
+            <form method="post" action="/sources/zsxq/analyze" class="zsxq-action-card">
+                <h3>导入并分析</h3>
+                <p>读取主题后进入现有分析 pipeline，保留 group/topic 证据来源。</p>
+                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
+                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
+                <label>关注点<input name="focus" placeholder="AI芯片, 新能源, 港股"></label>
+                <div class="form-inline">
+                    <label>深度
+                        <select name="depth">
+                            <option value="standard">standard</option>
+                            <option value="deep">deep</option>
+                        </select>
+                    </label>
+                    <label>模型
+                        <select name="provider_mode">
+                            <option value="configured">使用项目配置</option>
+                            <option value="mock">mock 验证</option>
+                        </select>
+                    </label>
+                </div>
+                <button type="submit" class="btn-action">导入并分析</button>
+            </form>
+
+            <form method="post" action="/sources/zsxq/sync" class="zsxq-action-card">
+                <h3>同步星球最新主题</h3>
+                <p>批量读取指定星球近期主题，创建多个 ingest jobs。</p>
+                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
+                <label>数量上限<input name="limit" type="number" min="1" max="100" value="20"></label>
+                <button type="submit" class="btn-action">同步最新主题</button>
+            </form>
+        </div>
+    </section>
+
+    <aside class="source-side-stack">
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>已授权星球</h2>
+                    <p>刷新后会写入本地 registry。</p>
+                </div>
+            </div>
+            {% if groups %}
+            <div class="zsxq-group-list">
+                {% for group in groups[:8] %}
+                <div>
+                    <strong>{{ group.group_name or group.group_id }}</strong>
+                    <span>{{ group.group_id }} · {{ group.access_status }} · {{ group.topic_count }} topics</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="attention-empty">还没有本地星球列表。先刷新星球列表。</div>
+            {% endif %}
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>最近 ZSXQ 摄入</h2>
+                    <p>从 ingest_jobs 读取。</p>
+                </div>
+            </div>
+            {% if recent_jobs %}
+            <div class="zsxq-job-list">
+                {% for job in recent_jobs %}
+                <div>
+                    <strong>{{ job.source_name or job.source_url or ("Job #" ~ job.id) }}</strong>
+                    <span>{{ job.status }} · {{ job.created_at }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="attention-empty">暂无知识星球摄入记录。</div>
+            {% endif %}
+        </section>
+
+        <section class="source-attention">
+            <div class="source-section-head">
+                <div>
+                    <h2>问题与修复</h2>
+                    <p>登录、权限、解析失败会进入这里。</p>
+                </div>
+            </div>
+            {% if open_reviews %}
+            <div class="zsxq-review-list">
+                {% for item in open_reviews %}
+                <div>
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.item_type }} · {{ item.severity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="attention-empty">暂无 ZSXQ 审核项。</div>
+            {% endif %}
+        </section>
+    </aside>
+</div>
+
+<section class="source-note">
+    <strong>安全边界</strong>
+    <span>Web 只调用只读导入和分析能力；如果未安装或未登录 zsxq-cli，系统会写入审核项并提示修复步骤，不会尝试绕过授权。</span>
+</section>
+
+{% endblock %}

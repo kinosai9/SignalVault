@@ -111,8 +111,8 @@ def test_channels_page_css_loaded(page, server):
     assert "v=" in href  # cache bust parameter present
 
     # Verify a styled element renders with non-zero dimensions
-    header = page.locator("header.site-header")
-    assert header.is_visible()
+    shell = page.locator("aside.app-sidebar")
+    assert shell.is_visible()
 
     # Check that the main content area has computed styles
     main_el = page.locator("main.container")
@@ -139,8 +139,8 @@ def test_channels_videos_page_loads(page, server):
             resp = page.goto(f"{server}{first_link}")
             assert resp.status == 200
 
-            # Header visible
-            assert page.locator("header.site-header").is_visible()
+            # App shell visible
+            assert page.locator("aside.app-sidebar").is_visible()
 
             # CSS loaded on videos page too
             css_link = page.locator('link[rel="stylesheet"]')
@@ -169,18 +169,18 @@ def test_dashboard_loads(page, server):
     """Verify dashboard page loads."""
     resp = page.goto(f"{server}/dashboard")
     assert resp.status == 200
-    assert page.locator("header.site-header").is_visible()
+    assert page.locator("aside.app-sidebar").is_visible()
 
 
 def test_reports_page_loads(page, server):
     """Verify reports list page loads."""
     resp = page.goto(f"{server}/reports")
     assert resp.status == 200
-    assert page.locator("header.site-header").is_visible()
+    assert page.locator("aside.app-sidebar").is_visible()
 
 
 def test_search_page_loads(page, server):
     """Verify search page loads."""
     resp = page.goto(f"{server}/search")
     assert resp.status == 200
-    assert page.locator("header.site-header").is_visible()
+    assert page.locator("aside.app-sidebar").is_visible()

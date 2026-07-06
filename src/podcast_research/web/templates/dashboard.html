@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}AI 研究助理 — 投资音视频研究助手{% endblock %}
+{% block title %}变化雷达 — SignalVault{% endblock %}
 {% block content %}
 
 {% if flash_msg %}
@@ -21,11 +21,76 @@
 <div class="dashboard">
 
     <!-- ── Action Bar ── -->
-    <div class="action-bar">
+    <div class="dashboard-hero">
+        <div>
+            <p class="eyebrow">今日研究入口</p>
+            <h1>变化雷达</h1>
+            <p>先看关注点有什么变化，再处理需要确认的信息源和诊断项。</p>
+        </div>
+        <div class="hero-actions">
+            <a href="/sources" class="btn-action">导入信息源</a>
+            <a href="/search" class="btn-action btn-secondary">搜索知识库</a>
+        </div>
+    </div>
+
+    <div class="radar-grid">
+        {% for card in daily_radar_cards %}
+        <a class="radar-card radar-{{ card.tone }}" href="{{ card.href }}">
+            <span class="radar-label">{{ card.label }}</span>
+            <strong class="radar-value">{{ card.value }}</strong>
+            <span class="radar-text">{{ card.text }}</span>
+            <span class="radar-action">{{ card.action }} →</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if today_actions or active_task_count > 0 or needs_repair %}
+    <section class="today-panel">
+        <div class="today-panel-head">
+            <div>
+                <h2>今天先处理</h2>
+                <p>按影响顺序排列，处理完再进入深度阅读。</p>
+            </div>
+            <a href="/tasks">任务与诊断 →</a>
+        </div>
+
+        {% if active_task_count > 0 %}
+        <a class="today-action action-info" href="/tasks">
+            <strong>{{ active_task_count }} 个整理任务正在进行</strong>
+            <span>后台还在处理内容，可以先查看进度，或等待完成后再刷新雷达。</span>
+            <em>查看进度</em>
+        </a>
+        {% endif %}
+
+        {% if needs_repair %}
+        <div class="today-action action-danger">
+            <strong>知识库结构不完整</strong>
+            <span>
+                {% if missing_dirs %}缺失目录: {{ missing_dirs[:3]|join(', ') }}{% if missing_dirs|length > 3 %} 等 {{ missing_dirs|length }} 个{% endif %}{% endif %}
+                {% if missing_files %}{% if missing_dirs %}；{% endif %}缺失文件: {{ missing_files[:3]|join(', ') }}{% if missing_files|length > 3 %} 等 {{ missing_files|length }} 个{% endif %}{% endif %}
+            </span>
+            <form method="post" action="/setup/vault/repair">
+                <button type="submit" class="btn-sm btn-sm-ok">一键修复</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% for action in today_actions %}
+        <a class="today-action action-{{ action.tone }}" href="{{ action.href }}">
+            <strong>{{ action.title }}</strong>
+            <span>{{ action.body }}</span>
+            <em>{{ action.label }}</em>
+        </a>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <div class="action-bar compact-actions">
         <form method="post" action="/dashboard/actions/refresh-workspace">
             <button type="submit" class="btn-action">更新知识库</button>
         </form>
-        <a href="/content/new" class="btn-action">添加新内容</a>
+        <a href="/sources" class="btn-action">添加信息源</a>
+        <a href="/content/new" class="btn-action btn-secondary">手动添加内容</a>
         <a href="/tasks" class="btn-action btn-secondary">
             整理任务
             {% if active_task_count > 0 %}
@@ -38,29 +103,6 @@
         <a href="/briefs/latest" class="btn-action btn-secondary">研究简报</a>
         {% endif %}
     </div>
-
-    {% if active_task_count > 0 %}
-    <div class="alert" style="background:var(--bg-soft);border-left:3px solid var(--accent);margin-bottom:16px">
-        <p style="margin:0;font-size:0.84rem">
-            📋 有 <strong>{{ active_task_count }}</strong> 个整理任务正在进行 — <a href="/tasks">查看进度</a>
-        </p>
-    </div>
-    {% endif %}
-
-    {% if needs_repair %}
-    <div class="alert alert-error" style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div>
-                <strong>知识库结构不完整</strong>
-                {% if missing_dirs %}<br>缺失目录: {{ missing_dirs[:3]|join(', ') }}{% if missing_dirs|length > 3 %} 等 {{ missing_dirs|length }} 个{% endif %}{% endif %}
-                {% if missing_files %}<br>缺失文件: {{ missing_files[:3]|join(', ') }}{% if missing_files|length > 3 %} 等 {{ missing_files|length }} 个{% endif %}{% endif %}
-            </div>
-            <form method="post" action="/setup/vault/repair" style="display:inline">
-                <button type="submit" class="btn-action" style="white-space:nowrap">一键修复</button>
-            </form>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- ── 研究摘要 ── -->
     {% if research_brief and research_brief.summary %}
@@ -126,7 +168,7 @@
 
             <!-- ── 强化判断 ── -->
             {% if research_brief and research_brief.reinforced_claims %}
-            <section class="section-card">
+            <section id="reinforced-claims" class="section-card">
                 <h2>被多份报告交叉验证的判断</h2>
                 <ul class="brief-list">
                     {% for c in research_brief.reinforced_claims %}
@@ -182,7 +224,7 @@
 
             <!-- ── 新增观察点 ── -->
             {% if research_brief and research_brief.new_signals %}
-            <section class="section-card">
+            <section id="new-signals" class="section-card">
                 <h2>新增观察点</h2>
                 <ul class="brief-list">
                     {% for s in research_brief.new_signals %}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SignalVault icon">
+  <defs>
+    <linearGradient id="pulseFill" x1="18" y1="18" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6df9d"/>
+      <stop offset="1" stop-color="#b36a2e"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="48" height="48" rx="14" fill="#e2eee9"/>
+  <path d="M19 22h26M19 32h26M19 42h26M22 19v26M32 19v26M42 19v26" fill="none" stroke="#7fb2ab" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+  <g fill="#2f6f68">
+    <circle cx="22" cy="22" r="4"/>
+    <circle cx="42" cy="22" r="4"/>
+    <circle cx="22" cy="42" r="4"/>
+    <circle cx="42" cy="42" r="4"/>
+    <circle cx="32" cy="32" r="4.5"/>
+  </g>
+  <path d="M15 35h9l4-10 7 20 5-12h9" fill="none" stroke="url(#pulseFill)" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
