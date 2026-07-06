@@ -283,8 +283,8 @@ class TestBundleCLI:
         import re as _re
         _plain = _re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
         assert "--output" in _plain
-        assert "--limit-logs" in result.stdout
-        assert "--json" in result.stdout
+        assert "--limit-logs" in _plain
+        assert "--json" in _plain
 
     def test_bundle_creates_zip(self, db_session, tmp_path):
         cli_mod = self._reload_cli()
