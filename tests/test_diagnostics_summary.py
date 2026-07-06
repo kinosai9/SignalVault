@@ -448,7 +448,9 @@ class TestDiagnosticsCLI:
         runner = CliRunner()
         result = runner.invoke(cli_mod.app, ["diagnostics", "summary", "--help"])
         assert result.exit_code == 0
-        assert "--json" in result.stdout
+        import re as _re
+        _plain = _re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+        assert "--json" in _plain
 
     def test_doctor_help(self):
         cli_mod = self._reload_cli()

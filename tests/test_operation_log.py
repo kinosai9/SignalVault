@@ -284,10 +284,12 @@ class TestLogsCLI:
         runner = CliRunner()
         result = runner.invoke(cli_mod.app, ["logs", "list", "--help"])
         assert result.exit_code == 0
-        assert "--status" in result.stdout
-        assert "--type" in result.stdout
-        assert "--limit" in result.stdout
-        assert "--json" in result.stdout
+        import re as _re
+        _plain = _re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+        assert "--status" in _plain
+        assert "--type" in _plain
+        assert "--limit" in _plain
+        assert "--json" in _plain
 
     def test_logs_show_help(self):
         cli_mod = self._reload_cli()

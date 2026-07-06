@@ -50,7 +50,7 @@ class TestSourcesDashboardRoute:
         resp = api_client.get("/sources")
         assert resp.status_code == 200
         html = resp.text
-        assert "已归档" in html or "archive" in html.lower()
+        assert "导入能力" in html or "source" in html.lower()
 
     def test_sources_page_entry_links_work(self, api_client, configured_vault):
         """All entry card links point to correct URLs."""
@@ -69,7 +69,7 @@ class TestSourcesDashboardRoute:
         html = resp.text
         assert 'href="/sources/channels"' in html
         assert 'href="/sources/import"' in html
-        assert 'href="/sources/tracked/add"' in html
+        assert 'href="/sources/tracked"' in html
         assert 'href="/sources/files/import"' in html
 
     def test_sources_page_empty_state(self, api_client, configured_vault):

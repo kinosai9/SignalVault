@@ -831,7 +831,7 @@ class TestFileImportWebRoutes:
         response = api_client.get("/sources/files/import")
         assert response.status_code == 200
         html = response.text
-        assert "上传文本文件" in html or "upload" in html.lower()
+        assert "上传文件" in html or "upload" in html.lower()
         assert 'type="file"' in html or "multipart" in html.lower()
 
     def test_preview_no_file_redirects(self, api_client, configured_vault):

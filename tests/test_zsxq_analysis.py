@@ -524,10 +524,12 @@ class TestCliAnalyze:
         runner = CliRunner()
         result = runner.invoke(cli_mod.app, ["zsxq", "analyze", "--help"])
         assert result.exit_code == 0
-        assert "--group-id" in result.stdout
-        assert "--topic-id" in result.stdout
-        assert "--mock" in result.stdout
-        assert "--focus" in result.stdout
+        import re as _re
+        _plain = _re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+        assert "--group-id" in _plain
+        assert "--topic-id" in _plain
+        assert "--mock" in _plain
+        assert "--focus" in _plain
 
     @patch("podcast_research.analysis.pipeline._run_pipeline")
     @patch("podcast_research.sources.zsxq_import.fetch_topic")
