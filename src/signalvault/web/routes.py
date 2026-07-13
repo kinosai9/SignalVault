@@ -15,6 +15,7 @@ from signalvault.db.repository import (
 )
 from signalvault.db.session import get_session, init_db
 from signalvault.db.unified_search import unified_search
+from signalvault.utils.perf import measure_page, measure_stage
 
 router = APIRouter(tags=["web"])
 
@@ -457,71 +458,76 @@ def _build_dashboard_context(vault_path: Path) -> dict:
     P2-N.4.3: Uses shared system_curation and review_priority logic for consistency
     between web dashboard and Obsidian Home.
     """
-    from signalvault.workspace.scanner import VaultScanner
+    from signalvault.workspace.scanner_cache import scan_with_cache
 
-    scanner = VaultScanner(vault_path)
-    snapshot = scanner.scan()
+    with measure_stage("dashboard_scan"):
+        snapshot = scan_with_cache(vault_path)
 
     # P2-N.4.3: Compute system_curation for topics and companies
-    try:
-        from signalvault.workspace.system_curation import (
-            compute_company_system_curation,
-            compute_topic_system_curation,
-            curation_label,
-        )
-        from signalvault.workspace.watchlist import load_watchlist
-        wl_config = load_watchlist(vault_path)
-        wl_companies_set = set(wl_config.companies)
-        wl_topics_set = set(wl_config.topics)
-    except Exception:
-        wl_config = None
-        wl_companies_set = set()
-        wl_topics_set = set()
-        curation_label = lambda x: x  # noqa: E731
-
-    for t in snapshot.topics:
-        t.system_curation = compute_topic_system_curation(t, snapshot, wl_topics_set)
-    for c in snapshot.companies:
-        c.system_curation = compute_company_system_curation(c, snapshot, wl_companies_set)
-
-    # P2-N.4.3: Compute review_priority
-    try:
-        from signalvault.workspace.review_priority import (
-            PRIORITY_AUTO_ACCEPTED,
-            PRIORITY_LOW,
-            claims_needing_review,
-            compute_claim_review_priority,
-            compute_signal_review_priority,
-            signals_needing_review,
-        )
-        for cl in snapshot.claims:
-            cl.review_priority = compute_claim_review_priority(
-                cl, snapshot, wl_companies_set, wl_topics_set,
+    with measure_stage("dashboard_system_curation"):
+        try:
+            from signalvault.workspace.system_curation import (
+                compute_company_system_curation,
+                compute_topic_system_curation,
+                curation_label,
             )
-        for s in snapshot.signals:
-            s.review_priority = compute_signal_review_priority(
-                s, snapshot, wl_companies_set, wl_topics_set,
+            from signalvault.workspace.watchlist import load_watchlist
+            wl_config = load_watchlist(vault_path)
+            wl_companies_set = set(wl_config.companies)
+            wl_topics_set = set(wl_config.topics)
+        except Exception:
+            wl_config = None
+            wl_companies_set = set()
+            wl_topics_set = set()
+            curation_label = lambda x: x  # noqa: E731
+
+        for t in snapshot.topics:
+            t.system_curation = compute_topic_system_curation(t, snapshot, wl_topics_set)
+        for c in snapshot.companies:
+            c.system_curation = compute_company_system_curation(c, snapshot, wl_companies_set)
+
+    # P2-N.4.3: Compute review_priority (single pass: set attributes + accumulate stats)
+    with measure_stage("dashboard_review_priority"):
+        try:
+            from signalvault.workspace.review_priority import (
+                PRIORITY_AUTO_ACCEPTED,
+                PRIORITY_CRITICAL,
+                PRIORITY_HIGH,
+                PRIORITY_LOW,
+                compute_claim_review_priority,
+                compute_signal_review_priority,
             )
-        needs_review_n = len(claims_needing_review(snapshot, wl_companies_set, wl_topics_set)) + \
-                         len(signals_needing_review(snapshot, wl_companies_set, wl_topics_set))
-        auto_accepted_n = sum(
-            1 for c in snapshot.claims
-            if compute_claim_review_priority(c, snapshot, wl_companies_set, wl_topics_set) == PRIORITY_AUTO_ACCEPTED
-        ) + sum(
-            1 for s in snapshot.signals
-            if compute_signal_review_priority(s, snapshot, wl_companies_set, wl_topics_set) == PRIORITY_AUTO_ACCEPTED
-        )
-        low_priority_n = sum(
-            1 for c in snapshot.claims
-            if compute_claim_review_priority(c, snapshot, wl_companies_set, wl_topics_set) == PRIORITY_LOW
-        ) + sum(
-            1 for s in snapshot.signals
-            if compute_signal_review_priority(s, snapshot, wl_companies_set, wl_topics_set) == PRIORITY_LOW
-        )
-    except Exception:
-        needs_review_n = len(snapshot.active_claims()) + len(snapshot.open_signals())
-        auto_accepted_n = 0
-        low_priority_n = 0
+            needs_review_n = 0
+            auto_accepted_n = 0
+            low_priority_n = 0
+
+            for cl in snapshot.claims:
+                priority = compute_claim_review_priority(
+                    cl, snapshot, wl_companies_set, wl_topics_set,
+                )
+                cl.review_priority = priority
+                if priority in (PRIORITY_CRITICAL, PRIORITY_HIGH):
+                    needs_review_n += 1
+                elif priority == PRIORITY_AUTO_ACCEPTED:
+                    auto_accepted_n += 1
+                elif priority == PRIORITY_LOW:
+                    low_priority_n += 1
+
+            for s in snapshot.signals:
+                priority = compute_signal_review_priority(
+                    s, snapshot, wl_companies_set, wl_topics_set,
+                )
+                s.review_priority = priority
+                if priority in (PRIORITY_CRITICAL, PRIORITY_HIGH):
+                    needs_review_n += 1
+                elif priority == PRIORITY_AUTO_ACCEPTED:
+                    auto_accepted_n += 1
+                elif priority == PRIORITY_LOW:
+                    low_priority_n += 1
+        except Exception:
+            needs_review_n = len(snapshot.active_claims()) + len(snapshot.open_signals())
+            auto_accepted_n = 0
+            low_priority_n = 0
 
     # P2-N.4.3: Priority-grouped summary instead of raw counts
     summary = {
@@ -658,56 +664,59 @@ def _build_dashboard_context(vault_path: Path) -> dict:
         )
 
     # Build research brief (rule-based insights)
-    try:
-        from signalvault.workspace.research_brief import generate_brief
-        research_brief = generate_brief(snapshot)
-        # Enrich recommended_reports with DB report_ids for direct linking
-        if research_brief and research_brief.recommended_reports:
-            _enrich_recommended_with_report_ids(research_brief.recommended_reports)
-    except Exception:
-        research_brief = None
+    with measure_stage("dashboard_briefs"):
+        try:
+            from signalvault.workspace.research_brief import generate_brief
+            research_brief = generate_brief(snapshot)
+            # Enrich recommended_reports with DB report_ids for direct linking
+            if research_brief and research_brief.recommended_reports:
+                _enrich_recommended_with_report_ids(research_brief.recommended_reports)
+        except Exception:
+            research_brief = None
 
-    # Build watchlist brief
-    try:
-        from signalvault.workspace.watchlist import (
-            ensure_watchlist_template,
-            generate_watchlist_brief,
-        )
-        from signalvault.workspace.watchlist import (
-            load_watchlist as _load_wl,
-        )
-        if wl_config is None:
-            wl_config = _load_wl(vault_path)
-        watchlist_items = generate_watchlist_brief(snapshot, vault_path) if (
-            wl_config.companies or wl_config.topics
-        ) else []
-        watchlist_configured = bool(wl_config.companies or wl_config.topics)
-        if not watchlist_configured:
-            ensure_watchlist_template(vault_path)
-    except Exception:
-        watchlist_items = []
-        watchlist_configured = False
+        # Build watchlist brief
+        try:
+            from signalvault.workspace.watchlist import (
+                ensure_watchlist_template,
+                generate_watchlist_brief,
+            )
+            from signalvault.workspace.watchlist import (
+                load_watchlist as _load_wl,
+            )
+            if wl_config is None:
+                wl_config = _load_wl(vault_path)
+            watchlist_items = generate_watchlist_brief(snapshot, vault_path) if (
+                wl_config.companies or wl_config.topics
+            ) else []
+            watchlist_configured = bool(wl_config.companies or wl_config.topics)
+            if not watchlist_configured:
+                ensure_watchlist_template(vault_path)
+        except Exception:
+            watchlist_items = []
+            watchlist_configured = False
 
-    operational = _build_dashboard_operational_context(vault_path)
-    daily_radar_cards = _build_daily_radar_cards(
-        summary,
-        research_brief,
-        operational["diagnostics_summary"],
-        operational["ingest_counts"],
-        operational["review_counts"],
-        pending_patches,
-    )
-    diagnostic_radar_card = _build_diagnostic_radar_card(
-        operational["diagnostics_summary"]
-    )
-    today_actions = _build_today_actions(
-        operational["diagnostics_summary"],
-        operational["ingest_counts"],
-        operational["review_counts"],
-        pending_patches,
-        operational["recent_ingest_jobs"],
-        operational["open_review_items"],
-    )
+    with measure_stage("dashboard_operational_context"):
+        operational = _build_dashboard_operational_context(vault_path)
+    with measure_stage("dashboard_cards_actions"):
+        daily_radar_cards = _build_daily_radar_cards(
+            summary,
+            research_brief,
+            operational["diagnostics_summary"],
+            operational["ingest_counts"],
+            operational["review_counts"],
+            pending_patches,
+        )
+        diagnostic_radar_card = _build_diagnostic_radar_card(
+            operational["diagnostics_summary"]
+        )
+        today_actions = _build_today_actions(
+            operational["diagnostics_summary"],
+            operational["ingest_counts"],
+            operational["review_counts"],
+            pending_patches,
+            operational["recent_ingest_jobs"],
+            operational["open_review_items"],
+        )
 
     return {
         "vault_configured": True,
@@ -731,6 +740,16 @@ def _build_dashboard_context(vault_path: Path) -> dict:
 
 
 # ── GET Routes ────────────────────────────────────────────────────
+
+@router.get("/debug/perf")
+def api_perf_report(request: Request):
+    """Return per-stage timing stats for the last 20 requests (dev only)."""
+    from signalvault.utils.perf import get_stage_report
+    return JSONResponse({
+        "stages": get_stage_report(),
+        "note": "In-memory data, resets on restart. Development diagnostics only.",
+    })
+
 
 @router.get("/docs", response_class=HTMLResponse)
 def page_api_docs(request: Request):
@@ -913,6 +932,7 @@ def action_repair_vault(request: Request):
 
 
 @router.get("/dashboard")
+@measure_page("dashboard")
 def page_dashboard(request: Request):
     vault_path_str = _get_vault_path()
     ctx = {"request": request, "vault_configured": False, "vault_path": vault_path_str,
@@ -1041,14 +1061,13 @@ def page_research_brief(request: Request):
 
     try:
         from signalvault.workspace.research_brief import generate_brief
-        from signalvault.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner_cache import scan_with_cache
         from signalvault.workspace.watchlist import (
             generate_watchlist_brief,
             load_watchlist,
         )
 
-        scanner = VaultScanner(vp)
-        snapshot = scanner.scan()
+        snapshot = scan_with_cache(vp)
         brief = generate_brief(snapshot)
         ctx["brief"] = brief
 
@@ -1086,11 +1105,10 @@ def page_watchlist(request: Request):
         ctx["config_created"] = True
 
     try:
-        from signalvault.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner_cache import scan_with_cache
         from signalvault.workspace.watchlist import generate_watchlist_brief
 
-        scanner = VaultScanner(vp)
-        snapshot = scanner.scan()
+        snapshot = scan_with_cache(vp)
         ctx["items"] = generate_watchlist_brief(snapshot, vp)
     except Exception as e:
         ctx["error"] = str(e)
@@ -1123,14 +1141,13 @@ def page_watchlist_settings(request: Request):
 
     # Check card existence and suggestions
     try:
-        from signalvault.workspace.scanner import VaultScanner
+        from signalvault.workspace.scanner_cache import scan_with_cache
         from signalvault.workspace.watchlist import (
             get_suggested_companies,
             get_suggested_topics,
             resolve_watchlist_name,
         )
-        scanner = VaultScanner(vp)
-        snapshot = scanner.scan()
+        snapshot = scan_with_cache(vp)
         known_companies = {c.name for c in snapshot.companies}
         known_topics = {t.name for t in snapshot.topics}
         ctx["known_companies"] = known_companies

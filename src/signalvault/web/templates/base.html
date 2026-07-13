@@ -96,5 +96,21 @@
         });
     })();
     </script>
+    <script>
+    (function() {
+      if (!window.performance || !performance.timing) return;
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var t = performance.timing;
+          var dns      = t.domainLookupEnd - t.domainLookupStart;
+          var connect  = t.connectEnd - t.connectStart;
+          var ttfb     = t.responseStart - t.requestStart;
+          var domReady = t.domContentLoadedEventEnd - t.requestStart;
+          var pageLoad = t.loadEventEnd - t.requestStart;
+          console.log('[PageTiming] DNS:' + dns + 'ms TCP:' + connect + 'ms TTFB:' + ttfb + 'ms DOMReady:' + domReady + 'ms PageLoad:' + pageLoad + 'ms');
+        }, 0);
+      });
+    })();
+    </script>
 </body>
 </html>

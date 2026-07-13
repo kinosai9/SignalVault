@@ -224,6 +224,14 @@ class WorkspaceSnapshot:
     channels: list[ChannelInfo] = field(default_factory=list)
     llm_patches: list[LWPatchInfo] = field(default_factory=list)
 
+    # Lazy-computed count caches (built once on first access, then reused)
+    _claims_count_cache: dict[str, int] | None = field(
+        default=None, init=False, repr=False
+    )
+    _signals_count_cache: dict[str, int] | None = field(
+        default=None, init=False, repr=False
+    )
+
     # ── Topic helpers ──
 
     def core_topics(self) -> list[TopicInfo]:
@@ -328,23 +336,37 @@ class WorkspaceSnapshot:
         """Count claims that reference a topic/company by wiki-link name.
 
         P2-N.4.3: Also matches by scanning claim text for the topic/company name.
+        Frontmatter-based matches are pre-computed and cached on first call.
+        Cache misses fall back to the original linear scan (for names only in text).
         """
+        if self._claims_count_cache is not None:
+            cached = self._claims_count_cache.get(wiki_name)
+            if cached is not None:
+                return cached
+
+        # First call: build cache from frontmatter fields in one pass
+        if self._claims_count_cache is None:
+            cache: dict[str, int] = {}
+            for c in self.claims:
+                names: set[str] = set(c.related_topics) | set(c.related_companies)
+                for sr in c.source_reports:
+                    names.add(sr)
+                for name in names:
+                    cache[name] = cache.get(name, 0) + 1
+            self._claims_count_cache = cache
+
+        cached = self._claims_count_cache.get(wiki_name)
+        if cached is not None:
+            return cached
+
+        # Cache miss: this name only appears in claim body text.
+        # Do a linear scan with the original logic and cache the result.
         count = 0
         name_lower = wiki_name.lower()
         for c in self.claims:
-            # Direct frontmatter match
-            if wiki_name in c.related_topics or wiki_name in c.related_companies:
+            if name_lower in c.claim.lower():
                 count += 1
-                continue
-            # Check source_reports for matching wiki-link
-            for sr in c.source_reports:
-                if wiki_name in sr:
-                    count += 1
-                    break
-            else:
-                # Fallback: scan claim text for name
-                if name_lower in c.claim.lower():
-                    count += 1
+        self._claims_count_cache[wiki_name] = count
         return count
 
     def signals_count_for(self, wiki_name: str) -> int:
@@ -356,8 +378,16 @@ class WorkspaceSnapshot:
           3. Company-inferred: signal mentions a company that co-occurs with
              this topic in claims (for topics only)
 
-        Only counts non-archived signals (archived already excluded at scan time).
+        Full result is cached per name after first computation.
         """
+        if self._signals_count_cache is not None:
+            cached = self._signals_count_cache.get(wiki_name)
+            if cached is not None:
+                return cached
+        if self._signals_count_cache is None:
+            self._signals_count_cache = {}
+
+        # ── Full 3-pass logic ──
         # Pass 1: direct frontmatter match
         count = 0
         matched_signal_ids: set[str] = set()
@@ -399,6 +429,7 @@ class WorkspaceSnapshot:
                         count += 1
                         matched_signal_ids.add(s.card_id)
 
+        self._signals_count_cache[wiki_name] = count
         return count
 
     # ── Internal caching for aggregation ──
