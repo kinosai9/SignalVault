@@ -452,11 +452,16 @@ def _build_today_actions(
     return actions[:4]
 
 
-def _build_dashboard_context(vault_path: Path) -> dict:
+def _build_dashboard_context(vault_path: Path, *, skip_briefs: bool = False) -> dict:
     """Build dashboard data from vault scan. Returns context dict or error info.
 
     P2-N.4.3: Uses shared system_curation and review_priority logic for consistency
     between web dashboard and Obsidian Home.
+
+    Args:
+        vault_path: Path to the Obsidian vault.
+        skip_briefs: If True, skip research_brief and watchlist_brief.
+            Used when briefs are loaded asynchronously.
     """
     from signalvault.workspace.scanner_cache import scan_with_cache
 
@@ -663,37 +668,79 @@ def _build_dashboard_context(vault_path: Path) -> dict:
             recent_reports, core_topics, summary,
         )
 
-    # Build research brief (rule-based insights)
-    with measure_stage("dashboard_briefs"):
-        try:
-            from signalvault.workspace.research_brief import generate_brief
-            research_brief = generate_brief(snapshot)
-            # Enrich recommended_reports with DB report_ids for direct linking
-            if research_brief and research_brief.recommended_reports:
-                _enrich_recommended_with_report_ids(research_brief.recommended_reports)
-        except Exception:
-            research_brief = None
+    # Pre-compute canonicalize results once (shared by research_brief
+    # and watchlist_brief to avoid duplicate O(n²) computation)
+    _claim_groups = None
+    _signal_groups = None
+    _canonical_claim_views = None
+    _canonical_signal_views = None
+    if not skip_briefs:
+        with measure_stage("dashboard_canonicalize"):
+            try:
+                from signalvault.workspace.canonicalize import (
+                    group_duplicate_claims,
+                    group_duplicate_signals,
+                )
+                _claim_groups = group_duplicate_claims(snapshot.claims)
+                _signal_groups = group_duplicate_signals(snapshot.signals)
+            except Exception:
+                _claim_groups = None
+                _signal_groups = None
+            try:
+                from signalvault.workspace.canonical_view import (
+                    build_canonical_claim_views,
+                    build_canonical_signal_views,
+                )
+                _canonical_claim_views = build_canonical_claim_views(
+                    snapshot, precomputed_groups=_claim_groups,
+                ) if _claim_groups is not None else None
+                _canonical_signal_views = build_canonical_signal_views(
+                    snapshot, precomputed_groups=_signal_groups,
+                ) if _signal_groups is not None else None
+            except Exception:
+                _canonical_claim_views = None
+                _canonical_signal_views = None
 
-        # Build watchlist brief
-        try:
-            from signalvault.workspace.watchlist import (
-                ensure_watchlist_template,
-                generate_watchlist_brief,
-            )
-            from signalvault.workspace.watchlist import (
-                load_watchlist as _load_wl,
-            )
-            if wl_config is None:
-                wl_config = _load_wl(vault_path)
-            watchlist_items = generate_watchlist_brief(snapshot, vault_path) if (
-                wl_config.companies or wl_config.topics
-            ) else []
-            watchlist_configured = bool(wl_config.companies or wl_config.topics)
-            if not watchlist_configured:
-                ensure_watchlist_template(vault_path)
-        except Exception:
-            watchlist_items = []
-            watchlist_configured = False
+    # Build research brief (rule-based insights)
+    if not skip_briefs:
+        with measure_stage("dashboard_briefs"):
+            try:
+                from signalvault.workspace.research_brief import generate_brief
+                research_brief = generate_brief(
+                    snapshot, claim_groups=_claim_groups,
+                )
+                # Enrich recommended_reports with DB report_ids for direct linking
+                if research_brief and research_brief.recommended_reports:
+                    _enrich_recommended_with_report_ids(research_brief.recommended_reports)
+            except Exception:
+                research_brief = None
+
+            # Build watchlist brief
+            try:
+                from signalvault.workspace.watchlist import (
+                    ensure_watchlist_template,
+                    generate_watchlist_brief,
+                )
+                from signalvault.workspace.watchlist import (
+                    load_watchlist as _load_wl,
+                )
+                if wl_config is None:
+                    wl_config = _load_wl(vault_path)
+                watchlist_items = generate_watchlist_brief(
+                    snapshot, vault_path,
+                    canonical_claim_views=_canonical_claim_views,
+                    canonical_signal_views=_canonical_signal_views,
+                ) if (wl_config.companies or wl_config.topics) else []
+                watchlist_configured = bool(wl_config.companies or wl_config.topics)
+                if not watchlist_configured:
+                    ensure_watchlist_template(vault_path)
+            except Exception:
+                watchlist_items = []
+                watchlist_configured = False
+    else:
+        research_brief = None
+        watchlist_items = []
+        watchlist_configured = False
 
     with measure_stage("dashboard_operational_context"):
         operational = _build_dashboard_operational_context(vault_path)
@@ -969,10 +1016,75 @@ def page_dashboard(request: Request):
         pass
 
     try:
-        ctx.update(_build_dashboard_context(vp))
+        ctx.update(_build_dashboard_context(vp, skip_briefs=True))
     except Exception as e:
         ctx["error"] = str(e)
     return _render("dashboard.html", ctx)
+
+
+@router.get("/dashboard/brief-fragment")
+def page_dashboard_brief_fragment(request: Request):
+    """Async fragment: research_brief + watchlist_brief for lazy loading."""
+    vault_path_str = _get_vault_path()
+    if not vault_path_str:
+        return HTMLResponse("")
+    vp = Path(vault_path_str)
+    if not vp.exists():
+        return HTMLResponse("")
+
+    try:
+        from signalvault.workspace.scanner_cache import scan_with_cache
+        from signalvault.workspace.canonicalize import (
+            group_duplicate_claims,
+            group_duplicate_signals,
+        )
+        from signalvault.workspace.canonical_view import (
+            build_canonical_claim_views,
+            build_canonical_signal_views,
+        )
+        from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.watchlist import (
+            ensure_watchlist_template,
+            generate_watchlist_brief,
+            load_watchlist as _load_wl,
+        )
+
+        snapshot = scan_with_cache(vp)
+        wl_config = _load_wl(vp)
+
+        # Pre-compute canonicalize once
+        _claim_groups = group_duplicate_claims(snapshot.claims)
+        _signal_groups = group_duplicate_signals(snapshot.signals)
+        _canonical_claim_views = build_canonical_claim_views(
+            snapshot, precomputed_groups=_claim_groups,
+        )
+        _canonical_signal_views = build_canonical_signal_views(
+            snapshot, precomputed_groups=_signal_groups,
+        )
+
+        research_brief = generate_brief(snapshot, claim_groups=_claim_groups)
+        if research_brief and research_brief.recommended_reports:
+            _enrich_recommended_with_report_ids(research_brief.recommended_reports)
+
+        watchlist_items = generate_watchlist_brief(
+            snapshot, vp,
+            canonical_claim_views=_canonical_claim_views,
+            canonical_signal_views=_canonical_signal_views,
+        ) if (wl_config.companies or wl_config.topics) else []
+        watchlist_configured = bool(wl_config.companies or wl_config.topics)
+        if not watchlist_configured:
+            ensure_watchlist_template(vp)
+
+        ctx: dict = {
+            "request": request,
+            "research_brief": research_brief,
+            "watchlist_items": watchlist_items,
+            "watchlist_configured": watchlist_configured,
+        }
+    except Exception:
+        return HTMLResponse("")
+
+    return _render("_dashboard_brief_fragment.html", ctx)
 
 
 @router.get("/reports")

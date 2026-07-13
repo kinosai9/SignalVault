@@ -7,6 +7,7 @@ No LLM, no external APIs. Pure deterministic rules.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -210,41 +211,58 @@ class WatchlistItemBrief:
     context_topics: list[str] = field(default_factory=list)  # P2-N.4.3.2: topics discussed for companies
 
 
-def load_watchlist(vault_path: Path) -> WatchlistConfig:
+# Module-level cache for load_watchlist to avoid repeated file I/O
+_WATCHLIST_CACHE: dict[str, tuple[float, WatchlistConfig]] = {}
+_WATCHLIST_CACHE_TTL = 30  # seconds
+
+
+def load_watchlist(vault_path: Path, use_cache: bool = True) -> WatchlistConfig:
     """Load watchlist from 99_System/Watchlist.yaml. Auto-corrects known aliases.
+
+    Caches result in memory for 30s to avoid repeated file I/O within a single
+    dashboard request (where it was called 4-5 times).
 
     Returns empty config if missing.
     """
+    cache_key = str(vault_path.resolve())
+    if use_cache and cache_key in _WATCHLIST_CACHE:
+        cached_at, cached_config = _WATCHLIST_CACHE[cache_key]
+        if time.time() - cached_at < _WATCHLIST_CACHE_TTL:
+            return cached_config
+
     path = vault_path / "99_System" / WATCHLIST_YAML
     if not path.exists():
-        return WatchlistConfig()
-    try:
-        content = read_text_safe(path)
-        config = _parse_watchlist_yaml(content)
-        # Auto-correct known company aliases
-        corrected = False
-        for i, name in enumerate(config.companies):
-            name_lower = name.lower()
-            if name_lower in COMPANY_ALIAS_MAP:
-                canonical = COMPANY_ALIAS_MAP[name_lower]
-                if canonical != name:
-                    config.companies[i] = canonical
-                    corrected = True
-                    logger.info("Watchlist: auto-corrected '%s' → '%s'", name, canonical)
-        if corrected:
-            # Deduplicate after correction
-            seen = set()
-            unique = []
-            for c in config.companies:
-                if c not in seen:
-                    seen.add(c)
-                    unique.append(c)
-            config.companies = unique
-            save_watchlist(vault_path, config)
-        return config
-    except Exception:
-        logger.warning("Failed to parse Watchlist.yaml, using empty config")
-        return WatchlistConfig()
+        config = WatchlistConfig()
+    else:
+        try:
+            content = read_text_safe(path)
+            config = _parse_watchlist_yaml(content)
+            # Auto-correct known company aliases
+            corrected = False
+            for i, name in enumerate(config.companies):
+                name_lower = name.lower()
+                if name_lower in COMPANY_ALIAS_MAP:
+                    canonical = COMPANY_ALIAS_MAP[name_lower]
+                    if canonical != name:
+                        config.companies[i] = canonical
+                        corrected = True
+                        logger.info("Watchlist: auto-corrected '%s' → '%s'", name, canonical)
+            if corrected:
+                # Deduplicate after correction
+                seen = set()
+                unique = []
+                for c in config.companies:
+                    if c not in seen:
+                        seen.add(c)
+                        unique.append(c)
+                config.companies = unique
+                save_watchlist(vault_path, config)
+        except Exception:
+            logger.warning("Failed to parse Watchlist.yaml, using empty config")
+            config = WatchlistConfig()
+
+    _WATCHLIST_CACHE[cache_key] = (time.time(), config)
+    return config
 
 
 def ensure_watchlist_template(vault_path: Path) -> Path:
@@ -282,8 +300,21 @@ def _parse_watchlist_yaml(content: str) -> WatchlistConfig:
 def generate_watchlist_brief(
     snapshot: WorkspaceSnapshot,
     vault_path: Path,
+    *,
+    canonical_claim_views: list | None = None,
+    canonical_signal_views: list | None = None,
 ) -> list[WatchlistItemBrief]:
-    """Generate per-item watchlist brief from vault snapshot."""
+    """Generate per-item watchlist brief from vault snapshot.
+
+    Args:
+        snapshot: The workspace snapshot.
+        vault_path: Path to the vault root.
+        canonical_claim_views: Pre-computed canonical claim views.
+            If None, computes them internally (~0.4s). Pass both this
+            and canonical_signal_views from the caller to avoid
+            redundant O(n²) computation.
+        canonical_signal_views: Pre-computed canonical signal views.
+    """
     from signalvault.workspace.canonical_view import (
         build_canonical_claim_views,
         build_canonical_signal_views,
@@ -298,11 +329,22 @@ def generate_watchlist_brief(
     core_topic_names = {t.name for t in snapshot.core_topics()}
     active_topic_names = _get_active_topic_names(snapshot)
 
-    # Pre-compute canonical views once (expensive, ~0.4s each)
-    # Formerly called per-item inside _build_item_brief and
-    # build_watchlist_evidence (9 items × 2 views = ~7s wasted)
-    canonical_views = build_canonical_claim_views(snapshot)
-    signal_views = build_canonical_signal_views(snapshot)
+    has_items = bool(config.companies or config.topics)
+
+    # Pre-compute canonical views (expensive, ~0.4s each) or use caller's
+    if canonical_claim_views is not None:
+        canonical_views = canonical_claim_views
+    elif has_items:
+        canonical_views = build_canonical_claim_views(snapshot)
+    else:
+        canonical_views = []  # Skip when no companies/topics configured
+
+    if canonical_signal_views is not None:
+        signal_views = canonical_signal_views
+    elif has_items:
+        signal_views = build_canonical_signal_views(snapshot)
+    else:
+        signal_views = []  # Skip when no companies/topics configured
 
     # Process companies
     for name in config.companies:
@@ -567,6 +609,7 @@ def save_watchlist(vault_path: Path, config: WatchlistConfig) -> Path:
         lines.append("")
 
     path.write_text("\n".join(lines), encoding="utf-8")
+    _WATCHLIST_CACHE.pop(str(vault_path.resolve()), None)  # invalidate cache
     return path
 
 

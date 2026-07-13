@@ -173,14 +173,15 @@ source_reports: []
         resp = api_client.get("/dashboard")
         assert resp.status_code == 200
         html = resp.text
-        # Should show vault path
+        # Should show vault path and app identity
         assert str(vault) in html or "SignalVault" in html
-        # Should show AI Agents
-        assert "AI Agents" in html
-        # Should show AI Agents in topic or brief
-        assert "AI Agents" in html or "研究摘要" in html
-        # Should show research brief summary
-        assert "研究摘要" in html or "SignalVault" in html
+        # Core sections always render: radar cards + today-actions
+        assert "变化雷达" in html
+        # Brief sections now load async via /dashboard/brief-fragment
+        assert "dashboard-briefs-area" in html
+        # Verify brief fragment endpoint works separately
+        frag_resp = api_client.get("/dashboard/brief-fragment")
+        assert frag_resp.status_code == 200
     finally:
         os.environ["OBSIDIAN_VAULT_PATH"] = old_vault
 

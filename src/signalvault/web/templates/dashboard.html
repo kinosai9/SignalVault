@@ -93,209 +93,39 @@
     </section>
     {% endif %}
 
-    <!-- ── 研究摘要 ── -->
-    {% if research_brief and research_brief.summary %}
-    <section class="section-card highlight-section">
-        <h2>研究摘要</h2>
-        <div class="brief-summary">
-            {% for bullet in research_brief.summary %}
-            <p class="brief-bullet">{{ bullet }}</p>
-            {% endfor %}
-        </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:10px">生成时间: {{ research_brief.generated_at }} &middot; 基于 {{ research_brief.total_reports }} 份报告、{{ research_brief.total_claims }} 条判断、{{ research_brief.total_signals }} 个观察点</p>
-    </section>
-    {% endif %}
-
-    <div class="dash-columns">
-        <div class="dash-col">
-
-            <!-- ── 我的关注 ── -->
-            {% if watchlist_items %}
-            {% set watchlist_priority = (watchlist_items | selectattr('status', 'equalto', 'direct') | list) + (watchlist_items | selectattr('status', 'equalto', 'indirect') | list) + (watchlist_items | selectattr('status', 'equalto', 'no_new_evidence') | list) %}
-            <section class="section-card dashboard-focus-card">
-                <div class="source-section-head">
-                    <div>
-                        <h2>优先关注</h2>
-                        <p>按新证据强度排序，只保留最值得先看的三个对象。</p>
-                    </div>
-                    <a href="/watchlist" class="btn-action btn-secondary">进入我的关注</a>
-                </div>
-                <div class="dashboard-focus-list">
-                {% for item in watchlist_priority[:3] %}
-                <div class="wl-item">
-                    <span class="wl-status wl-{{ item.status }}">
-                        {{ {'direct': '●', 'indirect': '◐', 'no_new_evidence': '○'}.get(item.status, '○') }}
-                    </span>
-                    <div class="wl-body">
-                        <strong>{{ item.name }}</strong>
-                        <span class="tag" style="font-size:0.68rem">{{ {'company': '公司', 'topic': '主题', 'theme': '方向'}.get(item.item_type, '') }}</span>
-                        <p style="font-size:0.82rem;color:var(--text-soft);margin:2px 0 0">{{ item.summary }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-                </div>
-            </section>
-            {% elif not watchlist_configured %}
-            <section class="section-card">
-                <h2>我的关注</h2>
-                <p style="font-size:0.82rem;color:var(--muted)">你还没有设置关注对象。系统已在 <code>99_System/Watchlist.yaml</code> 生成模板，编辑后刷新页面即可看到关注简报。</p>
-            </section>
-            {% endif %}
-
-            <!-- ── 升温主题 ── -->
-            {% if research_brief and research_brief.active_topics %}
-            <section class="section-card">
-                <h2>升温主题</h2>
-                <table class="dash-table">
-                    <thead><tr><th>主题</th><th class="num">报告</th><th class="num">判断</th><th class="num">观察</th></tr></thead>
-                    <tbody>
-                    {% for t in research_brief.active_topics %}
-                    <tr>
-                        <td class="name">{{ t.name }}</td>
-                        <td class="num">{{ t.reports }}</td>
-                        <td class="num">{{ t.claims }}</td>
-                        <td class="num">{{ t.signals }}</td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </section>
-            {% endif %}
-
-            <!-- ── 强化判断 ── -->
-            {% if research_brief and research_brief.reinforced_claims %}
-            <section id="reinforced-claims" class="section-card">
-                <h2>被多份报告交叉验证的判断</h2>
-                <ul class="brief-list">
-                    {% for c in research_brief.reinforced_claims %}
-                    <li>{{ c }}</li>
-                    {% endfor %}
-                </ul>
-            </section>
-            {% endif %}
-
-            <!-- ── 最近内容 ── -->
-            <section class="section-card">
-                <h2>最近内容</h2>
-                {% if recent_reports %}
-                <table class="dash-table">
-                    <thead><tr><th>日期</th><th>频道</th><th>标题</th></tr></thead>
-                    <tbody>
-                    {% for r in recent_reports[:5] %}
-                    <tr>
-                        <td style="white-space:nowrap">{{ r.date }}</td>
-                        <td>{{ r.channel }}</td>
-                        <td class="wrap" title="{{ r.title }}">{{ r.title }}</td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p class="empty-state" style="padding:16px">分析新视频后，内容将出现在这里。</p>
-                {% endif %}
-            </section>
-        </div>
-
-        <div class="dash-col">
-
-            <!-- ── 值得关注的公司 ── -->
-            {% if research_brief and research_brief.active_companies %}
-            <section class="section-card">
-                <h2>值得关注的公司</h2>
-                <table class="dash-table">
-                    <thead><tr><th>公司</th><th class="num">报告</th><th class="num">判断</th><th class="num">观察</th></tr></thead>
-                    <tbody>
-                    {% for c in research_brief.active_companies %}
-                    <tr>
-                        <td class="name">{{ c.name }}</td>
-                        <td class="num">{{ c.reports }}</td>
-                        <td class="num">{{ c.claims }}</td>
-                        <td class="num">{{ c.signals }}</td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </section>
-            {% endif %}
-
-            <!-- ── 新增观察点 ── -->
-            {% if research_brief and research_brief.new_signals %}
-            <section id="new-signals" class="section-card">
-                <h2>新增观察点</h2>
-                <ul class="brief-list">
-                    {% for s in research_brief.new_signals %}
-                    <li>{{ s }}</li>
-                    {% endfor %}
-                </ul>
-            </section>
-            {% endif %}
-
-            <!-- ── 推荐阅读 ── -->
-            {% if research_brief and research_brief.recommended_reports %}
-            <section class="section-card">
-                <h2>推荐阅读</h2>
-                <ul class="brief-list">
-                    {% for r in research_brief.recommended_reports %}
-                    <li>
-                        {% if r.channel %}{{ r.channel }} — {% endif %}{{ r.title }}
-                        {% if r.report_id %}
-                        <a href="/reports/{{ r.report_id }}" class="btn-sm" style="margin-left:8px">查看</a>
-                        {% elif r.video_id %}
-                        <a href="/search?q={{ r.video_id | urlencode }}" class="btn-sm" style="margin-left:8px">查找</a>
-                        {% else %}
-                        <a href="/search?q={{ r.title | urlencode }}" class="btn-sm" style="margin-left:8px">查找</a>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </section>
-            {% endif %}
-
-            <!-- ── 今日建议 ── -->
-            {% if recommendations %}
-            <section id="recommendations" class="section-card">
-                <h2>今日建议</h2>
-                <div style="display:flex;flex-direction:column;gap:8px">
-                {% for r in recommendations %}
-                <div class="rec-item">
-                    <span class="rec-icon">{{ r.icon }}</span>
-                    <div class="rec-body">
-                        <p class="rec-text">{{ r.text }}</p>
-                        <p class="rec-reason">{{ r.reason }}
-                        {% if r.status_label %}<span class="tag" style="font-size:0.7rem;margin-left:6px">{{ r.status_label }}</span>{% endif %}</p>
-                    </div>
-                    <div class="rec-action">
-                        {% if r.primary_action == 'view_patch' %}
-                        <a href="/patches/{{ r.patch_id }}" class="btn-sm">查看</a>
-                        {% elif r.is_actionable and r.primary_action == 'accept' %}
-                        <form method="post" action="{{ r.post_url }}" class="inline-form">
-                            <input type="hidden" name="return_to" value="dashboard">
-                            <input type="hidden" name="note" value="">
-                            <button name="status" value="verified" class="btn-sm btn-sm-ok">采纳</button>
-                            <button name="status" value="archived" class="btn-sm btn-sm-no">忽略</button>
-                        </form>
-                        {% elif r.is_actionable and r.primary_action == 'follow' %}
-                        <form method="post" action="{{ r.post_url }}" class="inline-form">
-                            <input type="hidden" name="return_to" value="dashboard">
-                            <input type="hidden" name="note" value="">
-                            <button name="status" value="watching" class="btn-sm btn-sm-ok">关注</button>
-                            <button name="status" value="archived" class="btn-sm btn-sm-no">忽略</button>
-                        </form>
-                        {% elif r.status_label == '已在跟踪' %}
-                        <span class="btn-sm" style="opacity:0.6;cursor:default">已在跟踪</span>
-                        {% elif r.status_label == '已采纳' %}
-                        <span class="btn-sm" style="opacity:0.6;cursor:default">已采纳</span>
-                        {% elif r.primary_action == 'view_report' %}
-                        <a href="/reports" class="btn-sm">查看</a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-                </div>
-            </section>
-            {% endif %}
+    <!-- ── Async-loaded briefs placeholder ── -->
+    <div id="dashboard-briefs-area">
+        <div style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+            <p style="margin:0">正在分析最新数据…</p>
         </div>
     </div>
+    <script>
+    (function() {
+        var el = document.getElementById('dashboard-briefs-area');
+        if (!el) return;
+        var done = false;
+        function loadBriefs() {
+            if (done) return;
+            done = true;
+            fetch('/dashboard/brief-fragment')
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(function(html) {
+                    if (html.trim()) el.outerHTML = html;
+                    else el.innerHTML = '';
+                })
+                .catch(function() { el.innerHTML = ''; });
+        }
+        // Start loading 100ms after page load to not block initial render
+        if (document.readyState === 'complete') {
+            setTimeout(loadBriefs, 100);
+        } else {
+            window.addEventListener('load', function() { setTimeout(loadBriefs, 100); });
+        }
+    })();
+    </script>
 
 </div>
 

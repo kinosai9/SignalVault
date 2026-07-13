@@ -46,8 +46,20 @@ class ResearchBrief:
     total_signals: int = 0
 
 
-def generate_brief(snapshot: WorkspaceSnapshot) -> ResearchBrief:
-    """Generate a research brief from vault snapshot. Pure rules, no LLM."""
+def generate_brief(
+    snapshot: WorkspaceSnapshot,
+    *,
+    claim_groups: list | None = None,
+) -> ResearchBrief:
+    """Generate a research brief from vault snapshot. Pure rules, no LLM.
+
+    Args:
+        snapshot: The workspace snapshot.
+        claim_groups: Pre-computed duplicate claim groups from
+            canonicalize.group_duplicate_claims(). If provided, skips
+            the expensive O(n²) recomputation. Pass this when the
+            caller already computed the groups (e.g., for watchlist brief).
+    """
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     brief = ResearchBrief(generated_at=now)
@@ -90,12 +102,12 @@ def generate_brief(snapshot: WorkspaceSnapshot) -> ResearchBrief:
 
     # ── Reinforced Claims (claims tied to multiple reports or core topics) ──
     # P2-N.4.4: Canonical dedup — only show canonical claim per duplicate group
-    from signalvault.workspace.canonicalize import (
-        group_duplicate_claims,
-        normalize_claim_text,
-    )
+    # Accept pre-computed groups to avoid O(n²) recomputation
+    if claim_groups is None:
+        from signalvault.workspace.canonicalize import group_duplicate_claims
+        claim_groups = group_duplicate_claims(snapshot.claims)
+    from signalvault.workspace.canonicalize import normalize_claim_text
     core_topic_names = {t.name for t in snapshot.core_topics()}
-    claim_groups = group_duplicate_claims(snapshot.claims)
     reinforced = []
     seen_fingerprints: set[str] = set()
     for cg in claim_groups:

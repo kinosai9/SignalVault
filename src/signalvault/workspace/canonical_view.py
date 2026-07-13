@@ -114,11 +114,21 @@ class EvidenceView:
 
 # ── Builders ────────────────────────────────────────────────────────
 
-def build_canonical_claim_views(snapshot: "WorkspaceSnapshot") -> list[CanonicalClaimView]:
+def build_canonical_claim_views(
+    snapshot: "WorkspaceSnapshot",
+    *,
+    precomputed_groups: list | None = None,
+) -> list[CanonicalClaimView]:
     """Build canonical claim views from snapshot.
 
     Groups all claims by fingerprint, selects canonical per group,
     computes actionability for each canonical.
+
+    Args:
+        snapshot: The workspace snapshot.
+        precomputed_groups: Pre-computed duplicate groups from
+            group_duplicate_claims(). If provided, skips the expensive
+            O(n²) recomputation.
     """
     from signalvault.workspace.actionability import get_claim_actionability
     from signalvault.workspace.canonicalize import (
@@ -127,7 +137,8 @@ def build_canonical_claim_views(snapshot: "WorkspaceSnapshot") -> list[Canonical
         normalize_claim_text,
     )
 
-    groups = group_duplicate_claims(snapshot.claims)
+    groups = precomputed_groups if precomputed_groups is not None else (
+        group_duplicate_claims(snapshot.claims))
     views: list[CanonicalClaimView] = []
 
     for g in groups:
@@ -156,8 +167,19 @@ def build_canonical_claim_views(snapshot: "WorkspaceSnapshot") -> list[Canonical
     return views
 
 
-def build_canonical_signal_views(snapshot: "WorkspaceSnapshot") -> list[CanonicalSignalView]:
-    """Build canonical signal views from snapshot."""
+def build_canonical_signal_views(
+    snapshot: "WorkspaceSnapshot",
+    *,
+    precomputed_groups: list | None = None,
+) -> list[CanonicalSignalView]:
+    """Build canonical signal views from snapshot.
+
+    Args:
+        snapshot: The workspace snapshot.
+        precomputed_groups: Pre-computed duplicate groups from
+            group_duplicate_signals(). If provided, skips the expensive
+            O(n²) recomputation.
+    """
     from signalvault.workspace.actionability import get_signal_actionability
     from signalvault.workspace.canonicalize import (
         group_duplicate_signals,
@@ -165,7 +187,8 @@ def build_canonical_signal_views(snapshot: "WorkspaceSnapshot") -> list[Canonica
         signal_fingerprint,
     )
 
-    groups = group_duplicate_signals(snapshot.signals)
+    groups = precomputed_groups if precomputed_groups is not None else (
+        group_duplicate_signals(snapshot.signals))
     views: list[CanonicalSignalView] = []
 
     for g in groups:
