@@ -2,11 +2,11 @@
 {% block title %}诊断中心与操作日志 — SignalVault{% endblock %}
 {% block content %}
 
-<section class="diagnostics-center">
-    <div class="diagnostics-hero status-{{ diagnostics.overall_status }}">
+<section class="diagnostics-center page-shell">
+    <div class="page-hero diagnostics-hero status-{{ diagnostics.overall_status }}">
         <div>
             <p class="eyebrow">Diagnostics Center</p>
-            <h2 class="page-title">诊断中心与操作日志</h2>
+            <h1 class="page-title">诊断中心与操作日志</h1>
             <p class="page-desc">{{ diagnostics_headline }}。{{ diagnostics_subhead }}</p>
         </div>
         <div class="diagnostics-hero-actions">

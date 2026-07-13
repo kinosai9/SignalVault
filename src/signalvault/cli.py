@@ -3103,7 +3103,7 @@ app.add_typer(zsxq_app, name="zsxq")
 
 @zsxq_app.command("doctor")
 def zsxq_doctor():
-    """检测 zsxq-cli 可用性和登录状态。"""
+    """检测 ZSXQ CLI 可用性和登录状态。"""
     from signalvault.diagnostics.operation_log import OperationLogManager
     from signalvault.sources.zsxq_cli import check_cli
 
@@ -3117,7 +3117,7 @@ def zsxq_doctor():
         console.print("\n[bold]ZSXQ CLI Check[/bold]")
 
         if result["available"]:
-            console.print(f"  CLI: [green]{result['version'] or 'zsxq-cli'}[/green] ✓")
+            console.print(f"  CLI: [green]{result['version'] or result.get('command') or 'zsxq'}[/green] ✓")
         else:
             console.print("  CLI: [red]not found[/red] ✗")
             console.print(f"  [red]{result['error']}[/red]")
@@ -3125,7 +3125,7 @@ def zsxq_doctor():
                 op,
                 error_code="CONFIG_DEP_001",
                 error_detail=result.get("error", ""),
-                summary="zsxq-cli 未安装",
+                summary="ZSXQ CLI 未安装",
             )
             return
 
@@ -3163,7 +3163,7 @@ def zsxq_doctor():
 
 @zsxq_app.command("groups")
 def zsxq_groups(
-    refresh: bool = typer.Option(False, "--refresh", help="调用 zsxq-cli 刷新授权星球列表"),
+    refresh: bool = typer.Option(False, "--refresh", help="调用 ZSXQ CLI 刷新授权星球列表"),
 ):
     """列出本地 group registry 中的星球。使用 --refresh 手动刷新授权范围。"""
     from signalvault.sources.zsxq_cli import (

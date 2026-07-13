@@ -231,7 +231,7 @@ $ signalvault logs show op_004
   Error:     AUTH_ZSXQ_001 — 知识星球未登录
   Summary:   zsxq-cli returned "not logged in"
   Duration:  0.8s
-  Suggested: 运行 zsxq-cli auth login
+  Suggested: 运行 zsxq auth login
 ```
 
 ### 5.3 Web 对接（供 Codex）

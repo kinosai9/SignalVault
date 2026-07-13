@@ -50,3 +50,7 @@ htmlcov/
 .git.backup/
 .gstack/
 claudellm_wiki_ref/
+
+# Dev artifacts (screenshots, test logs)
+.codex-ui-screenshots/
+pic/

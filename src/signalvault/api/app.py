@@ -17,8 +17,11 @@ def create_app() -> FastAPI:
         yield
 
     app = FastAPI(
-        title="投资音视频研究助手 API",
+        title="SignalVault 多源投资研究助手 API",
+        description="SignalVault 的只读研究数据 API。用于访问报告、观点、实体、来源和统一搜索结果。",
         version="0.1.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
         lifespan=lifespan,
     )
 

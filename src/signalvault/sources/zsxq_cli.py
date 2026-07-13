@@ -1,4 +1,4 @@
-"""P6-A1: ZSXQ CLI wrapper — subprocess interface to official zsxq-cli.
+"""P6-A1: ZSXQ CLI wrapper — subprocess interface to official ZSXQ CLI.
 
 Only wraps read-only commands. No write operations.
 Uses subprocess with timeout; all calls return structured results.
@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json as _json
 import logging
+import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 
@@ -15,7 +17,7 @@ from signalvault.sources.zsxq_models import ZsxqTopic, compute_content_hash
 
 logger = logging.getLogger(__name__)
 
-ZSXQ_CLI = "zsxq-cli"
+ZSXQ_CLI_CANDIDATES = ("zsxq", "zsxq-cli")
 CALL_TIMEOUT = 30  # seconds
 
 
@@ -23,7 +25,7 @@ CALL_TIMEOUT = 30  # seconds
 
 
 class ZsxqCliMissingError(Exception):
-    """zsxq-cli not found in PATH."""
+    """ZSXQ CLI executable not found in PATH."""
     pass
 
 
@@ -58,25 +60,43 @@ class CliResult:
 # ── Internal runner ─────────────────────────────────────────────────────────
 
 
+def _resolve_zsxq_cli() -> str | None:
+    """Return the configured or discovered ZSXQ CLI executable.
+
+    The upstream tool is distributed from GitHub rather than as a guaranteed
+    Python package. Depending on how users install it, the executable may be
+    named `zsxq` or `zsxq-cli`. `ZSXQ_CLI_PATH` lets advanced users point to a
+    local binary/script directly.
+    """
+    configured = os.getenv("ZSXQ_CLI_PATH", "").strip()
+    if configured:
+        return configured
+    for candidate in ZSXQ_CLI_CANDIDATES:
+        found = shutil.which(candidate)
+        if found:
+            return found
+    return None
+
+
 def _run_zsxq(args: list[str], timeout: int = CALL_TIMEOUT) -> CliResult:
-    """Run zsxq-cli with args and parse JSON output.
+    """Run the ZSXQ CLI with args and parse JSON output.
 
     All external calls go through this function for consistent error handling.
     """
-    import shutil
-    if not shutil.which(ZSXQ_CLI):
+    cli = _resolve_zsxq_cli()
+    if not cli:
         return CliResult(
-            error=f"{ZSXQ_CLI} not found in PATH",
+            error="ZSXQ CLI not found in PATH. Install it from the official GitHub release/source, then ensure `zsxq` or `zsxq-cli` is on PATH.",
             error_type="missing",
         )
 
     try:
         proc = subprocess.run(
-            [ZSXQ_CLI] + args,
+            [cli] + args,
             capture_output=True, text=True, timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        return CliResult(error="zsxq-cli timed out", error_type="timeout")
+        return CliResult(error="ZSXQ CLI timed out", error_type="timeout")
     except Exception as e:
         return CliResult(error=str(e), error_type="unknown")
 
@@ -87,7 +107,7 @@ def _run_zsxq(args: list[str], timeout: int = CALL_TIMEOUT) -> CliResult:
     stderr_lower = stderr.lower()
     if "not logged in" in stderr_lower or "unauthorized" in stderr_lower or "token" in stderr_lower:
         return CliResult(stdout=stdout, stderr=stderr,
-                         error="ZSXQ authentication required. Run 'zsxq-cli auth login'.",
+                         error="ZSXQ authentication required. Run `zsxq auth login` (or the equivalent command name from your GitHub install).",
                          error_type="auth")
 
     if "permission denied" in stderr_lower or "forbidden" in stderr_lower or "access denied" in stderr_lower:
@@ -97,7 +117,7 @@ def _run_zsxq(args: list[str], timeout: int = CALL_TIMEOUT) -> CliResult:
 
     if proc.returncode != 0:
         return CliResult(stdout=stdout, stderr=stderr,
-                         error=stderr or f"zsxq-cli exited with code {proc.returncode}",
+                         error=stderr or f"ZSXQ CLI exited with code {proc.returncode}",
                          error_type="unknown")
 
     # Parse JSON
@@ -109,7 +129,7 @@ def _run_zsxq(args: list[str], timeout: int = CALL_TIMEOUT) -> CliResult:
         return CliResult(success=True, stdout=stdout, stderr=stderr, data=data)
     except _json.JSONDecodeError as e:
         return CliResult(stdout=stdout, stderr=stderr,
-                         error=f"Failed to parse zsxq-cli JSON output: {e}",
+                         error=f"Failed to parse ZSXQ CLI JSON output: {e}",
                          error_type="parse")
 
 
@@ -117,20 +137,20 @@ def _run_zsxq(args: list[str], timeout: int = CALL_TIMEOUT) -> CliResult:
 
 
 def check_cli() -> dict:
-    """Check zsxq-cli availability and login status.
+    """Check ZSXQ CLI availability and login status.
 
     Returns:
-        {"available": bool, "version": str, "logged_in": bool, "error": str}
+        {"available": bool, "version": str, "logged_in": bool, "error": str, "command": str}
     """
-    import shutil
-    available = shutil.which(ZSXQ_CLI) is not None
-    if not available:
+    cli = _resolve_zsxq_cli()
+    if not cli:
         return {"available": False, "version": "", "logged_in": False,
-                "error": f"{ZSXQ_CLI} not found in PATH"}
+                "command": "",
+                "error": "未找到 ZSXQ CLI (not found)。请从官方 GitHub 仓库安装/构建，并把生成的 `zsxq` 或 `zsxq-cli` 加入 PATH；也可设置 ZSXQ_CLI_PATH。"}
 
     version = ""
     try:
-        proc = subprocess.run([ZSXQ_CLI, "--version"], capture_output=True, text=True, timeout=10)
+        proc = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=10)
         version = proc.stdout.strip() or proc.stderr.strip()
     except Exception:
         pass
@@ -143,6 +163,7 @@ def check_cli() -> dict:
         "available": True,
         "version": version,
         "logged_in": logged_in,
+        "command": cli,
         "error": result.error if not logged_in else "",
     }
 

@@ -1,52 +1,231 @@
 {% extends "base.html" %}
-{% block title %}报告库 — SignalVault{% endblock %}
+{% block title %}研究资产库 — SignalVault{% endblock %}
 
 {% block content %}
-<h2 class="page-title">报告库</h2>
-<p class="page-desc">已分析的音视频报告，可按来源、关注点快速浏览。</p>
+<div class="page-shell reports-page">
+<section class="page-hero">
+    <div>
+        <p class="eyebrow">Research Assets</p>
+        <h1 class="page-title">研究资产库</h1>
+        <p class="page-desc">已分析资料的可复用研究资产，可按来源、关注点、日期和证据密度快速浏览。</p>
+    </div>
+    <div class="hero-actions">
+        <a href="/sources/import/new" class="btn-action">导入信息源</a>
+        <a href="/search" class="btn-action btn-secondary">搜索知识库</a>
+    </div>
+</section>
 
 {% if reports %}
-<table class="report-table">
+<section class="asset-filter-panel">
+    <div class="asset-filter-grid">
+        <label>来源
+            <select data-report-filter="source">
+                <option value="">全部来源</option>
+                {% for source in source_options %}
+                <option value="{{ source }}">{{ source }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>关注点
+            <select data-report-filter="focus">
+                <option value="">全部关注点</option>
+                {% for focus in focus_options %}
+                <option value="{{ focus }}">{{ focus }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>日期
+            <select data-report-filter="date">
+                <option value="">全部日期</option>
+                <option value="今天">今天</option>
+                <option value="本周">本周</option>
+                <option value="更早">更早</option>
+            </select>
+        </label>
+        <label>实体 / 标题
+            <input data-report-filter="entity" type="search" list="report-entity-options" placeholder="输入实体、标题或视频 ID">
+            <datalist id="report-entity-options">
+                {% for entity in entity_options %}
+                <option value="{{ entity }}">
+                {% endfor %}
+            </datalist>
+        </label>
+        <label>观点数量
+            <select data-report-filter="views">
+                <option value="0">不限</option>
+                <option value="1">至少 1 条</option>
+                <option value="5">至少 5 条</option>
+                <option value="10">至少 10 条</option>
+            </select>
+        </label>
+        <label>排序
+            <select data-report-sort>
+                <option value="date-desc">最新优先</option>
+                <option value="views-desc">观点最多</option>
+                <option value="entities-desc">实体最多</option>
+            </select>
+        </label>
+    </div>
+    <div class="asset-filter-summary">
+        <span data-report-count>{{ reports|length }}</span> 份资产
+        <button type="button" data-report-reset>重置筛选</button>
+    </div>
+</section>
+
+<div class="page-content-panel reports-panel">
+<table class="report-table asset-table">
     <thead>
         <tr>
-            <th>ID</th>
             <th>日期</th>
+            <th>研究资产</th>
             <th>来源</th>
-            <th>标题 / 视频</th>
             <th>关注点</th>
             <th class="num">观点</th>
             <th class="num">实体</th>
             <th></th>
         </tr>
     </thead>
-    <tbody>
+    <tbody data-report-list>
+        {% set ns = namespace(group='') %}
         {% for r in reports %}
-        <tr>
-            <td style="color:var(--muted);font-size:0.78rem">#{{ loop.index }}</td>
-            <td style="white-space:nowrap">{{ r.created_at.strftime("%Y-%m-%d") if r.created_at else "-" }}</td>
+        {% if r.date_group != ns.group %}
+        {% set ns.group = r.date_group %}
+        <tr class="asset-group-row" data-group-header="{{ r.date_group }}">
+            <td colspan="7">{{ r.date_group }}</td>
+        </tr>
+        {% endif %}
+        {% set title = r.episode_title or r.title or '-' %}
+        {% set summary = r.executive_summary or '暂无摘要，可进入报告查看完整观点、实体和证据链。' %}
+        <tr class="asset-row"
+            data-report-row
+            data-source="{{ r.source_type }}"
+            data-focus="{{ (r.focus_areas or []) | join(',') }}"
+            data-date-group="{{ r.date_group }}"
+            data-title="{{ title | lower }}"
+            data-views="{{ r.view_count }}"
+            data-entities="{{ r.entity_count }}"
+            data-timestamp="{{ r.created_at.timestamp() if r.created_at else 0 }}">
+            <td class="asset-date">
+                <span>{{ r.created_at.strftime("%m-%d") if r.created_at else "-" }}</span>
+                <em>#{{ r.id }}</em>
+            </td>
+            <td class="asset-title-cell">
+                <div class="asset-title-line">
+                    <a href="/reports/{{ r.id }}">{{ title }}</a>
+                    {% if r.video_id %}<span>{{ r.video_id }}</span>{% endif %}
+                </div>
+                <details class="asset-preview">
+                    <summary>摘要预览</summary>
+                    <p>{{ summary[:260] }}{% if summary|length > 260 %}...{% endif %}</p>
+                </details>
+            </td>
             <td>
                 <span class="tag tag-source {{ r.source_type }}">{{ r.source_type }}</span>
             </td>
-            <td class="title">{{ r.episode_title or r.title or "-" }}</td>
-            <td>
-                {% for fa in r.focus_areas[:3] %}
+            <td class="asset-tags">
+                {% for fa in r.focus_areas[:2] %}
                 <span class="tag">{{ fa }}</span>
                 {% endfor %}
-                {% if r.focus_areas|length > 3 %}
-                <span class="tag">+{{ r.focus_areas|length - 3 }}</span>
+                {% if r.focus_areas|length > 2 %}
+                <span class="tag muted-tag">+{{ r.focus_areas|length - 2 }}</span>
                 {% endif %}
             </td>
-            <td class="num">{{ r.view_count }}</td>
-            <td class="num">{{ r.entity_count }}</td>
+            <td class="num">
+                <a href="/reports/{{ r.id }}#views">{{ r.view_count }}</a>
+            </td>
+            <td class="num">
+                <a href="/reports/{{ r.id }}#entities">{{ r.entity_count }}</a>
+            </td>
             <td><a href="/reports/{{ r.id }}" class="btn-view">查看</a></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<div class="empty-state asset-empty" data-report-empty hidden>
+    <p style="font-weight:600;color:var(--text-soft)">没有匹配的研究资产</p>
+    <p>可以放宽来源、关注点、日期或观点数量筛选。</p>
+</div>
+</div>
 {% else %}
 <div class="empty-state">
     <p style="font-weight:600;color:var(--text-soft)">暂无报告</p>
-    <p>在控制台中分析新视频后，报告将出现在这里。</p>
+    <p>导入并分析信息源后，报告会沉淀为可复用研究资产。</p>
 </div>
 {% endif %}
+</div>
+
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('[data-report-row]'));
+  if (!rows.length) return;
+  var filters = {
+    source: document.querySelector('[data-report-filter="source"]'),
+    focus: document.querySelector('[data-report-filter="focus"]'),
+    date: document.querySelector('[data-report-filter="date"]'),
+    entity: document.querySelector('[data-report-filter="entity"]'),
+    views: document.querySelector('[data-report-filter="views"]')
+  };
+  var sort = document.querySelector('[data-report-sort]');
+  var count = document.querySelector('[data-report-count]');
+  var empty = document.querySelector('[data-report-empty]');
+  var list = document.querySelector('[data-report-list]');
+  var reset = document.querySelector('[data-report-reset]');
+
+  function matches(row) {
+    var source = filters.source.value;
+    var focus = filters.focus.value;
+    var date = filters.date.value;
+    var entity = filters.entity.value.trim().toLowerCase();
+    var minViews = Number(filters.views.value || 0);
+    if (source && row.dataset.source !== source) return false;
+    if (focus && !row.dataset.focus.split(',').includes(focus)) return false;
+    if (date && row.dataset.dateGroup !== date) return false;
+    if (entity && !row.dataset.title.includes(entity)) return false;
+    if (Number(row.dataset.views || 0) < minViews) return false;
+    return true;
+  }
+
+  function compareRows(a, b) {
+    var mode = sort.value;
+    if (mode === 'views-desc') return Number(b.dataset.views) - Number(a.dataset.views);
+    if (mode === 'entities-desc') return Number(b.dataset.entities) - Number(a.dataset.entities);
+    return Number(b.dataset.timestamp) - Number(a.dataset.timestamp);
+  }
+
+  function apply() {
+    rows.sort(compareRows).forEach(function (row) { list.appendChild(row); });
+    var visible = 0;
+    rows.forEach(function (row) {
+      var ok = matches(row);
+      row.hidden = !ok;
+      if (ok) visible += 1;
+    });
+    Array.prototype.slice.call(document.querySelectorAll('[data-group-header]')).forEach(function (header) {
+      var group = header.dataset.groupHeader;
+      var hasVisible = rows.some(function (row) {
+        return !row.hidden && row.dataset.dateGroup === group;
+      });
+      header.hidden = !hasVisible;
+      if (hasVisible) list.insertBefore(header, rows.find(function (row) {
+        return !row.hidden && row.dataset.dateGroup === group;
+      }));
+    });
+    count.textContent = visible;
+    empty.hidden = visible !== 0;
+  }
+
+  Object.keys(filters).forEach(function (key) {
+    filters[key].addEventListener('input', apply);
+    filters[key].addEventListener('change', apply);
+  });
+  sort.addEventListener('change', apply);
+  reset.addEventListener('click', function () {
+    Object.keys(filters).forEach(function (key) { filters[key].value = ''; });
+    filters.views.value = '0';
+    sort.value = 'date-desc';
+    apply();
+  });
+  apply();
+})();
+</script>
 {% endblock %}

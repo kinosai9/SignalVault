@@ -6,13 +6,16 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/sources/import/new" class="back-link">&larr; 返回导入中心</a>
-
-<section class="import-hero">
+<div class="page-shell source-page">
+<section class="page-hero import-hero">
     <div>
         <p class="eyebrow">本地文件</p>
-        <h1>上传文本资料</h1>
-        <p>适合已经整理好的 Markdown、纯文本或 HTML。系统先提取内容并生成预览，你确认后才归档。</p>
+        <h1>上传文件资料</h1>
+        <p>适合已经整理好的 Markdown、纯文本或 HTML；PDF 资料保留页码证据，按专用流程分析。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/import/new" class="btn-action">返回导入中心</a>
+        <a href="/sources" class="btn-action btn-secondary">信息源工作台</a>
     </div>
 </section>
 
@@ -59,5 +62,7 @@
         <span>普通文件上传不会直接生成投资报告，避免把资料归档误当成观点抽取。</span>
     </div>
 </section>
+
+</div>
 
 {% endblock %}

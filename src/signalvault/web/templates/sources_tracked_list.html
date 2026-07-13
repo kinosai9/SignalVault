@@ -6,19 +6,69 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/sources/channels" class="back-link">&larr; 返回信息源管理</a>
-
-<!-- ── Header ── -->
-<section class="source-card">
-    <div class="card-body">
-        <h1>信息源跟踪</h1>
-        <p class="form-help">持续跟踪外部结构化信息源，发现新内容并选择导入。</p>
-        <a href="/sources/tracked/add" class="btn btn-primary">添加跟踪源</a>
+<div class="page-shell source-page">
+<section class="page-hero source-hero">
+    <div>
+        <p class="eyebrow">固定信息源</p>
+        <h1>固定源适配器</h1>
+        <p>用于已经写好解析规则的长期来源。当前主要支持 All-In Podcast 中文笔记，其他网页请走单网页导入。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/tracked/add" class="btn-action">添加固定源</a>
+        <a href="/sources/import/new" class="btn-action btn-secondary">返回导入中心</a>
     </div>
 </section>
 
-<!-- ── Tracked Sources List ── -->
 {% if sources %}
+{% if inline_source %}
+<section class="source-card tracked-inline-source">
+    <div class="card-body">
+        <div class="tracked-inline-head">
+            <div>
+                <h2>{{ inline_source.name or inline_source.provider }}</h2>
+                <p>{{ inline_source.provider }} · 已发现 {{ inline_source.entries_discovered_count }} · 已入库 {{ inline_source.entries_imported_count }}</p>
+            </div>
+            <div class="source-hero-actions">
+                <form method="post" action="/sources/tracked/{{ inline_source.id }}/refresh">
+                    <button type="submit" class="btn-action">刷新条目</button>
+                </form>
+                <a href="/sources/tracked/{{ inline_source.id }}/entries" class="btn-action btn-secondary">完整条目页</a>
+            </div>
+        </div>
+
+        {% if inline_entries %}
+        <div class="tracked-entry-list">
+            {% for e in inline_entries[:12] %}
+            <article class="tracked-entry-card">
+                <div>
+                    <h3>{{ e.title or '无标题' }}</h3>
+                    <p>
+                        {% if e.published_at %}{{ e.published_at }} · {% endif %}
+                        {% if e.slug %}{{ e.slug }}{% else %}{{ e.url or '' }}{% endif %}
+                    </p>
+                </div>
+                <div class="tracked-entry-actions">
+                    <span class="status-badge status-{{ e.status }}">{{ entry_status_labels.get(e.status, e.status) }}</span>
+                    {% if e.status == 'preview_ready' %}
+                    <form method="post" action="/sources/tracked/{{ inline_source.id }}/entries/{{ e.id }}/import">
+                        <input type="hidden" name="action" value="import_as_deep_notes_derived_only">
+                        <button type="submit" class="btn btn-primary btn-sm">导入</button>
+                    </form>
+                    {% elif e.url %}
+                    <a href="{{ e.url }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">原文</a>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>还没有条目。点击“刷新条目”发现新内容。</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% else %}
 <section class="source-card">
     <div class="card-body">
         <table class="data-table">
@@ -78,17 +128,20 @@
         </table>
     </div>
 </section>
+{% endif %}
 {% else %}
 <div class="empty-state">
-    <p>还没有添加任何跟踪信息源。</p>
-    <p><a href="/sources/tracked/add">添加第一个跟踪源 &rarr;</a></p>
+    <p>还没有添加固定信息源。当前可添加 All-In Podcast 中文笔记适配器。</p>
+    <p><a href="/sources/tracked/add">添加固定源 &rarr;</a></p>
 </div>
 {% endif %}
 
 <nav style="margin-top:16px">
-    <a href="/sources/channels">&larr; 返回信息源管理</a>
+    <a href="/sources/import/new">&larr; 返回导入中心</a>
     &nbsp;·&nbsp;
     <a href="/sources/import">单网页导入 &rarr;</a>
 </nav>
+
+</div>
 
 {% endblock %}

@@ -169,8 +169,8 @@ recent_failures:
 
 | 场景 | 动作 |
 |------|------|
-| zsxq-cli 未安装 | 指引安装 `zsxq-cli` |
-| zsxq 未登录 | `zsxq-cli auth login` |
+| ZSXQ CLI 未安装 | 指引从官方 GitHub 仓库按 README 安装/构建，并把 `zsxq` 或 `zsxq-cli` 加入 PATH |
+| zsxq 未登录 | `zsxq auth login` |
 | LLM API Key 未配置 | 编辑 `.env` → 设置 `LLM_API_KEY` |
 | ingest job 失败 | `ingest retry <job_id>` |
 | Vault 健康问题 | `vault-lint --vault <path>` |

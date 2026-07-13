@@ -6,10 +6,18 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/watchlist" class="back-link">&larr; 返回我的关注</a>
-
-<h2 class="page-title">我的关注设置</h2>
-<p class="page-desc">添加关注的公司、主题或方向。系统会自动识别简称、别名和拼写变体。</p>
+<div class="page-shell watchlist-page">
+<section class="page-hero">
+    <div>
+        <p class="eyebrow">Focus Settings</p>
+        <h1>我的关注设置</h1>
+        <p>添加关注的公司、主题或方向。系统会自动识别简称、别名和拼写变体。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/watchlist" class="btn-action">查看我的关注</a>
+        <a href="/dashboard" class="btn-action btn-secondary">返回变化雷达</a>
+    </div>
+</section>
 
 {% if not vault_configured %}
 <div class="empty-state"><p>Vault 未配置。</p></div>
@@ -17,8 +25,9 @@
 <div class="empty-state"><p>配置文件加载失败。</p></div>
 {% else %}
 
+<div class="watchlist-settings-grid">
 <!-- Companies -->
-<div class="section-card">
+<section class="section-card watchlist-settings-card">
     <h2>关注公司</h2>
     {% if resolved_items %}
     {% set companies = resolved_items | selectattr('type', 'equalto', 'company') | list %}
@@ -65,10 +74,10 @@
         {% endfor %}
     </p>
     {% endif %}
-</div>
+</section>
 
 <!-- Topics -->
-<div class="section-card">
+<section class="section-card watchlist-settings-card">
     <h2>关注主题</h2>
     {% if resolved_items %}
     {% set topics = resolved_items | selectattr('type', 'equalto', 'topic') | list %}
@@ -115,10 +124,10 @@
         {% endfor %}
     </p>
     {% endif %}
-</div>
+</section>
 
 <!-- Themes -->
-<div class="section-card">
+<section class="section-card watchlist-settings-card">
     <h2>关注方向</h2>
     {% if resolved_items %}
     {% set themes = resolved_items | selectattr('type', 'equalto', 'theme') | list %}
@@ -155,9 +164,11 @@
         <input type="text" name="name" placeholder="方向名称，如 Agent 工具链" required>
         <button type="submit" class="btn-action btn-sm-action">添加</button>
     </form>
+</section>
 </div>
 
 <p style="font-size:0.72rem;color:var(--muted);margin-top:16px">配置文件: <code>99_System/Watchlist.yaml</code></p>
 
 {% endif %}
+</div>
 {% endblock %}

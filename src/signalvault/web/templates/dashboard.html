@@ -18,10 +18,10 @@
 
 {% else %}
 
-<div class="dashboard">
+<div class="dashboard page-shell">
 
     <!-- ── Action Bar ── -->
-    <div class="dashboard-hero">
+    <div class="page-hero dashboard-hero">
         <div>
             <p class="eyebrow">今日研究入口</p>
             <h1>变化雷达</h1>
@@ -42,16 +42,24 @@
             <span class="radar-action">{{ card.action }} →</span>
         </a>
         {% endfor %}
+        <a class="radar-card radar-{{ diagnostic_radar_card.tone }}" href="{{ diagnostic_radar_card.href }}">
+            <span class="radar-label">{{ diagnostic_radar_card.label }}</span>
+            <strong class="radar-value">{{ diagnostic_radar_card.value }}</strong>
+            <span class="radar-text">{{ diagnostic_radar_card.text }}</span>
+            <span class="radar-action">{{ diagnostic_radar_card.action }} →</span>
+        </a>
     </div>
 
-    {% if today_actions or active_task_count > 0 or needs_repair %}
+    {% set workflow_actions = today_actions | rejectattr("kind", "equalto", "diagnostic") | list %}
+
+    {% if workflow_actions or active_task_count > 0 or needs_repair %}
     <section class="today-panel">
         <div class="today-panel-head">
             <div>
                 <h2>今天先处理</h2>
-                <p>按影响顺序排列，处理完再进入深度阅读。</p>
+                <p>只放会阻塞研究动作的事项，处理完再进入深度阅读。</p>
             </div>
-            <a href="/tasks">任务与诊断 →</a>
+            <a href="/tasks">查看全部任务 →</a>
         </div>
 
         {% if active_task_count > 0 %}
@@ -75,7 +83,7 @@
         </div>
         {% endif %}
 
-        {% for action in today_actions %}
+        {% for action in workflow_actions %}
         <a class="today-action action-{{ action.tone }}" href="{{ action.href }}">
             <strong>{{ action.title }}</strong>
             <span>{{ action.body }}</span>
@@ -84,25 +92,6 @@
         {% endfor %}
     </section>
     {% endif %}
-
-    <div class="action-bar compact-actions">
-        <form method="post" action="/dashboard/actions/refresh-workspace">
-            <button type="submit" class="btn-action">更新知识库</button>
-        </form>
-        <a href="/sources" class="btn-action">添加信息源</a>
-        <a href="/content/new" class="btn-action btn-secondary">手动添加内容</a>
-        <a href="/tasks" class="btn-action btn-secondary">
-            整理任务
-            {% if active_task_count > 0 %}
-            <span style="background:var(--accent);color:#fff;border-radius:10px;padding:0 6px;font-size:0.7rem;margin-left:4px">{{ active_task_count }}</span>
-            {% endif %}
-        </a>
-        <a href="/reports" class="btn-action btn-secondary">浏览报告</a>
-        <a href="/sources" class="btn-action btn-secondary">信息源</a>
-        {% if research_brief %}
-        <a href="/briefs/latest" class="btn-action btn-secondary">研究简报</a>
-        {% endif %}
-    </div>
 
     <!-- ── 研究摘要 ── -->
     {% if research_brief and research_brief.summary %}
@@ -122,10 +111,17 @@
 
             <!-- ── 我的关注 ── -->
             {% if watchlist_items %}
-            <section class="section-card">
-                <h2>我的关注<a href="/watchlist" style="font-size:0.78rem;font-weight:400;margin-left:8px">查看全部 →</a><a href="/watchlist/settings" style="font-size:0.78rem;font-weight:400;margin-left:12px">管理</a></h2>
-                <div style="display:flex;flex-direction:column;gap:10px">
-                {% for item in watchlist_items[:5] %}
+            {% set watchlist_priority = (watchlist_items | selectattr('status', 'equalto', 'direct') | list) + (watchlist_items | selectattr('status', 'equalto', 'indirect') | list) + (watchlist_items | selectattr('status', 'equalto', 'no_new_evidence') | list) %}
+            <section class="section-card dashboard-focus-card">
+                <div class="source-section-head">
+                    <div>
+                        <h2>优先关注</h2>
+                        <p>按新证据强度排序，只保留最值得先看的三个对象。</p>
+                    </div>
+                    <a href="/watchlist" class="btn-action btn-secondary">进入我的关注</a>
+                </div>
+                <div class="dashboard-focus-list">
+                {% for item in watchlist_priority[:3] %}
                 <div class="wl-item">
                     <span class="wl-status wl-{{ item.status }}">
                         {{ {'direct': '●', 'indirect': '◐', 'no_new_evidence': '○'}.get(item.status, '○') }}

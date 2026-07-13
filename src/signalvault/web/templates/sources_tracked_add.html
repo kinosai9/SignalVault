@@ -6,43 +6,61 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/sources/tracked" class="back-link">&larr; 返回信息源跟踪</a>
+<div class="page-shell source-page">
+<section class="page-hero source-hero">
+    <div>
+        <p class="eyebrow">固定信息源</p>
+        <h1>添加 All-In 中文笔记源</h1>
+        <p>这是一个已有解析规则的固定源适配器。系统会识别新条目，之后你再决定是否导入知识库。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/tracked" class="btn-action">固定源列表</a>
+        <a href="/sources/import/new" class="btn-action btn-secondary">返回导入中心</a>
+    </div>
+</section>
 
-<section class="source-card">
-    <div class="card-body">
-        <h1>添加跟踪信息源</h1>
-        <p class="form-help">
-            添加外部站点的首页 URL，系统会定期扫描发现新内容。
-            目前仅支持 All-In Podcast 中文笔记。
-        </p>
+<div class="import-layout">
+    <section class="section-card import-form-card">
+        <h2>连接固定源</h2>
 
         <form method="post" action="/sources/tracked/profile" style="margin-top:20px">
             <div class="form-group">
-                <label for="homepage_url">首页 URL</label>
+                <label for="homepage_url">All-In 中文笔记首页 URL</label>
                 <input type="url" id="homepage_url" name="homepage_url"
                        required autofocus
+                       value="https://chirs-ma.github.io/allin-podcast-zh-notes/"
                        placeholder="https://chirs-ma.github.io/allin-podcast-zh-notes/"
                        style="width:100%;max-width:600px">
                 <p class="form-help">
-                    目前支持：
-                    <code>allin-podcast-zh-notes</code>（All-In Podcast 中文笔记）。
-                    其他站点请使用 <a href="/sources/import">单网页导入</a>。
+                    当前只支持 <code>allin-podcast-zh-notes</code> 这一类结构化笔记。其他站点请使用 <a href="/sources/import">单网页导入</a>。
                 </p>
             </div>
 
             <div class="form-group">
-                <label for="name">名称（可选）</label>
+                <label for="name">显示名称（可选）</label>
                 <input type="text" id="name" name="name"
-                       placeholder="留空则自动使用提供方名称"
+                       placeholder="All-In Podcast 中文笔记"
                        style="width:100%;max-width:400px">
             </div>
 
             <div style="display:flex;gap:12px;margin-top:24px">
-                <button type="submit" class="btn btn-primary">添加跟踪</button>
+                <button type="submit" class="btn btn-primary">检测并添加</button>
                 <a href="/sources/tracked" class="btn btn-secondary">取消</a>
             </div>
         </form>
-    </div>
-</section>
+    </section>
+
+    <aside class="import-guide">
+        <h2>为什么不是通用跟踪</h2>
+        <ol>
+            <li><strong>固定结构</strong><span>需要适配器理解列表页和条目页结构。</span></li>
+            <li><strong>先发现</strong><span>刷新后只发现候选条目，不直接写入知识库。</span></li>
+            <li><strong>再确认</strong><span>用户选择值得整理的条目后才进入导入流程。</span></li>
+            <li><strong>普通网页</strong><span>没有适配器的网站走单网页预览，避免误判。</span></li>
+        </ol>
+    </aside>
+</div>
+
+</div>
 
 {% endblock %}

@@ -6,7 +6,8 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<section class="source-hero">
+<div class="page-shell source-page">
+<section class="page-hero source-hero">
     <div>
         <p class="eyebrow">ZSXQ Read-only Import</p>
         <h1>知识星球导入</h1>
@@ -24,12 +25,12 @@
     <div class="zsxq-status-card {% if not cli_status.available %}status-danger{% elif not cli_status.logged_in %}status-warning{% endif %}">
         <span>CLI 状态</span>
         <strong>{% if cli_status.available %}已安装{% else %}未安装{% endif %}</strong>
-        <p>{{ cli_status.version or cli_status.error or "zsxq-cli" }}</p>
+        <p>{{ cli_status.version or cli_status.error or "zsxq / zsxq-cli" }}</p>
     </div>
     <div class="zsxq-status-card {% if not cli_status.logged_in %}status-warning{% endif %}">
         <span>登录状态</span>
         <strong>{% if cli_status.logged_in %}已登录{% else %}需要登录{% endif %}</strong>
-        <p>{% if cli_status.logged_in %}可以读取已授权星球{% else %}运行 zsxq-cli auth login 后刷新{% endif %}</p>
+        <p>{% if cli_status.logged_in %}可以读取已授权星球{% else %}运行 zsxq auth login 后刷新；如安装名为 zsxq-cli，请使用对应命令{% endif %}</p>
     </div>
     <div class="zsxq-status-card">
         <span>本地星球</span>
@@ -47,73 +48,92 @@
     <section class="source-lanes">
         <div class="source-section-head">
             <div>
-                <h2>导入或分析主题</h2>
-                <p>输入已订阅星球的 group_id 和 topic_id。导入只创建摄入任务；分析会进入报告生成流程。</p>
+                <h2>选择已订阅星球</h2>
+                <p>先刷新授权列表，再选择一个星球同步最近主题。需要精确处理单个主题时，再展开高级导入。</p>
             </div>
         </div>
 
-        <div class="zsxq-action-grid">
-            <form method="post" action="/sources/zsxq/import-topic" class="zsxq-action-card">
-                <h3>导入单个主题</h3>
-                <p>读取主题内容并创建 ingest job，不触发 LLM 分析。</p>
-                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
-                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
-                <button type="submit" class="btn-action">导入为待确认项</button>
-            </form>
-
-            <form method="post" action="/sources/zsxq/analyze" class="zsxq-action-card">
-                <h3>导入并分析</h3>
-                <p>读取主题后进入现有分析 pipeline，保留 group/topic 证据来源。</p>
-                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
-                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
-                <label>关注点<input name="focus" placeholder="AI芯片, 新能源, 港股"></label>
-                <div class="form-inline">
-                    <label>深度
-                        <select name="depth">
-                            <option value="standard">standard</option>
-                            <option value="deep">deep</option>
-                        </select>
-                    </label>
-                    <label>模型
-                        <select name="provider_mode">
-                            <option value="configured">使用项目配置</option>
-                            <option value="mock">mock 验证</option>
-                        </select>
-                    </label>
+        {% if groups %}
+        <div class="zsxq-group-picker">
+            {% for group in groups %}
+            <article class="zsxq-group-card {% if group.access_status != 'active' %}is-muted{% endif %}">
+                <div class="zsxq-group-main">
+                    <div>
+                        <h3>{{ group.group_name or group.group_id }}</h3>
+                        <p>{{ group.group_id }} · {{ group.access_status }} · {{ group.topic_count }} topics</p>
+                    </div>
+                    <span class="status-badge {% if group.access_status == 'active' %}status-success{% else %}status-warning{% endif %}">
+                        {% if group.access_status == 'active' %}可读取{% else %}需重新授权{% endif %}
+                    </span>
                 </div>
-                <button type="submit" class="btn-action">导入并分析</button>
-            </form>
-
-            <form method="post" action="/sources/zsxq/sync" class="zsxq-action-card">
-                <h3>同步星球最新主题</h3>
-                <p>批量读取指定星球近期主题，创建多个 ingest jobs。</p>
-                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
-                <label>数量上限<input name="limit" type="number" min="1" max="100" value="20"></label>
-                <button type="submit" class="btn-action">同步最新主题</button>
-            </form>
+                <form method="post" action="/sources/zsxq/sync" class="zsxq-inline-form">
+                    <input type="hidden" name="group_id" value="{{ group.group_id }}">
+                    <label>读取最近
+                        <input name="limit" type="number" min="1" max="100" value="20">
+                        条主题
+                    </label>
+                    <button type="submit" class="btn-action" {% if group.access_status != 'active' %}disabled{% endif %}>同步最新主题</button>
+                </form>
+                <details class="zsxq-details">
+                    <summary>导入或分析指定主题</summary>
+                    <div class="zsxq-detail-actions">
+                        <form method="post" action="/sources/zsxq/import-topic" class="zsxq-compact-form">
+                            <input type="hidden" name="group_id" value="{{ group.group_id }}">
+                            <label>Topic ID<input name="topic_id" required placeholder="粘贴主题 ID"></label>
+                            <button type="submit" class="btn-action btn-secondary">只导入</button>
+                        </form>
+                        <form method="post" action="/sources/zsxq/analyze" class="zsxq-compact-form">
+                            <input type="hidden" name="group_id" value="{{ group.group_id }}">
+                            <label>Topic ID<input name="topic_id" required placeholder="粘贴主题 ID"></label>
+                            <label>关注点<input name="focus" placeholder="AI芯片, 港股, 宏观"></label>
+                            <div class="form-inline">
+                                <label>深度
+                                    <select name="depth">
+                                        <option value="standard">standard</option>
+                                        <option value="deep">deep</option>
+                                    </select>
+                                </label>
+                                <label>模型
+                                    <select name="provider_mode">
+                                        <option value="configured">使用项目配置</option>
+                                        <option value="mock">mock 验证</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn-action">导入并分析</button>
+                        </form>
+                    </div>
+                </details>
+            </article>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="attention-empty zsxq-empty-state">
+            <strong>还没有可选择的星球</strong>
+            <p>先点击右上角“刷新星球列表”。如果 CLI 未安装或未登录，系统会在上方状态卡和问题修复区提示下一步。</p>
+        </div>
+        {% endif %}
     </section>
 
     <aside class="source-side-stack">
         <section class="source-attention">
             <div class="source-section-head">
                 <div>
-                    <h2>已授权星球</h2>
-                    <p>刷新后会写入本地 registry。</p>
+                    <h2>高级手动导入</h2>
+                    <p>只在你已经知道 group_id 和 topic_id 时使用。</p>
                 </div>
             </div>
-            {% if groups %}
-            <div class="zsxq-group-list">
-                {% for group in groups[:8] %}
-                <div>
-                    <strong>{{ group.group_name or group.group_id }}</strong>
-                    <span>{{ group.group_id }} · {{ group.access_status }} · {{ group.topic_count }} topics</span>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="attention-empty">还没有本地星球列表。先刷新星球列表。</div>
-            {% endif %}
+            <form method="post" action="/sources/zsxq/import-topic" class="zsxq-compact-form">
+                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
+                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
+                <button type="submit" class="btn-action btn-secondary">只导入主题</button>
+            </form>
+            <form method="post" action="/sources/zsxq/analyze" class="zsxq-compact-form">
+                <label>Group ID<input name="group_id" required placeholder="例如 G001"></label>
+                <label>Topic ID<input name="topic_id" required placeholder="例如 T001"></label>
+                <label>关注点<input name="focus" placeholder="AI芯片, 新能源, 港股"></label>
+                <button type="submit" class="btn-action">导入并分析</button>
+            </form>
         </section>
 
         <section class="source-attention">
@@ -162,7 +182,9 @@
 
 <section class="source-note">
     <strong>安全边界</strong>
-    <span>Web 只调用只读导入和分析能力；如果未安装或未登录 zsxq-cli，系统会写入审核项并提示修复步骤，不会尝试绕过授权。</span>
+    <span>Web 只调用只读导入和分析能力；如果未安装或未登录 ZSXQ CLI，系统会写入审核项并提示修复步骤，不会尝试绕过授权。</span>
 </section>
+
+</div>
 
 {% endblock %}

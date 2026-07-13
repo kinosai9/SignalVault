@@ -122,21 +122,21 @@ def import_topic_to_ingest(
     """
     review_findings: list[dict] = []
 
-    # 1. Fetch topic from zsxq-cli
+    # 1. Fetch topic from the external ZSXQ CLI
     try:
         topic = fetch_topic(group_id, topic_id)
     except ZsxqCliMissingError:
-        return _error_result("zsxq-cli not found in PATH", "zsxq_cli_missing",
+        return _error_result("ZSXQ CLI not found in PATH", "zsxq_cli_missing",
                              [{"rule": "zsxq_cli_missing", "severity": "error",
                                "file_path": f"zsxq:group:{group_id}",
-                               "message": "zsxq-cli not found in PATH.",
-                               "detail": "Install zsxq-cli and ensure it is on PATH."}])
+                               "message": "ZSXQ CLI not found in PATH.",
+                               "detail": "请从官方 GitHub 仓库按 README 安装/构建，并确保 zsxq 或 zsxq-cli 在 PATH；也可设置 ZSXQ_CLI_PATH。"}])
     except ZsxqAuthRequiredError:
         return _error_result("ZSXQ authentication required", "zsxq_auth_required",
                              [{"rule": "zsxq_auth_required", "severity": "warning",
                                "file_path": f"zsxq:group:{group_id}",
                                "message": "ZSXQ authentication required.",
-                               "detail": "Run 'zsxq-cli auth login'."}])
+                               "detail": "Run 'zsxq auth login' or the equivalent command name from your install."}])
     except ZsxqPermissionDeniedError:
         return _error_result("Permission denied", "zsxq_permission_denied",
                              [{"rule": "zsxq_permission_denied", "severity": "warning",
@@ -148,7 +148,7 @@ def import_topic_to_ingest(
                              [{"rule": "zsxq_parse_failed", "severity": "error",
                                "file_path": f"zsxq:group:{group_id}:topic:{topic_id}",
                                "message": f"Failed to parse topic JSON: {e}",
-                               "detail": "Check zsxq-cli version and output format."}])
+                               "detail": "Check ZSXQ CLI version and output format."}])
 
     # 2. Build profile
     profile = build_zsxq_source_profile(topic)
@@ -221,7 +221,7 @@ def sync_group_to_ingest(
     try:
         topics = fetch_topics(group_id, limit=limit)
     except ZsxqCliMissingError:
-        return _sync_error("zsxq-cli not found", "zsxq_cli_missing", group_id)
+        return _sync_error("ZSXQ CLI not found", "zsxq_cli_missing", group_id)
     except ZsxqAuthRequiredError:
         return _sync_error("Authentication required", "zsxq_auth_required", group_id)
     except ZsxqPermissionDeniedError:

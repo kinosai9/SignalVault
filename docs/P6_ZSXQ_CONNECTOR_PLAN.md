@@ -92,7 +92,7 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 
 **目标：** 通过官方 `zsxq-cli` 导入用户已订阅的知识星球内容，进入现有分析 pipeline。
 
-**依赖：** `zsxq-cli`（官方 CLI，需用户自行安装和登录）
+**依赖：** 外部 ZSXQ CLI（官方 GitHub 开源工具，需用户按官方 README 安装/构建并登录；不是 `pip install zsxq-cli`）
 
 **交付：**
 - `sources/zsxq_connector.py` — zsxq-cli wrapper + JSON parser
@@ -101,7 +101,7 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 - ingest_jobs 扩展：`source_type="zsxq_topic"`, job_key 含 group_id+topic_id
 - review_items 扩展：`zsxq_cli_missing`, `zsxq_auth_required`, `zsxq_permission_denied`, `zsxq_parse_failed`, `zsxq_attachment_unsupported`
 - CLI: `zsxq doctor`, `zsxq groups`, `zsxq import-topic`, `zsxq sync`, `zsxq analyze`
-- 不新增 pyproject.toml 依赖（zsxq-cli 由用户自行安装）
+- 不新增 pyproject.toml 依赖（ZSXQ CLI 由用户从官方 GitHub 自行安装）
 
 **验收标准：**
 - [x] `zsxq doctor` 检测 zsxq-cli 可用性和登录状态
@@ -142,9 +142,9 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 
 | 命令 | 功能 |
 |------|------|
-| `zsxq doctor` | 检测 zsxq-cli 可用性、登录状态、token 有效性 ✅ |
+| `zsxq doctor` | 检测外部 ZSXQ CLI 可用性、登录状态、token 有效性 ✅ |
 | `zsxq groups` | 列出本地 group registry 中的星球及 access_status ✅ |
-| `zsxq groups --refresh` | 调用 zsxq-cli 刷新当前账号可访问的星球列表，更新 group registry ✅ |
+| `zsxq groups --refresh` | 调用外部 ZSXQ CLI 刷新当前账号可访问的星球列表，更新 group registry ✅ |
 | `zsxq import-topic --group-id <id> --topic-id <id>` | 导入单个主题 ✅ |
 | `zsxq sync --group-id <id> --limit <n>` | 批量导入指定星球的最新主题 ✅ |
 | `zsxq analyze --group-id <id> --topic-id <id>` | 导入 + 分析单个主题（含 LLM analysis） ✅ |
@@ -164,11 +164,11 @@ unified_search / knowledge_graph  ← EXISTING: 自动受益
 
 ## 六、接入方式
 
-**唯一接入方式：官方 `zsxq-cli`。**
+**唯一接入方式：官方 GitHub 开源 ZSXQ CLI。**
 
 | 约束 | 说明 |
 |------|------|
-| 使用官方 CLI | `zsxq-cli` — 知识星球官方提供的命令行工具 |
+| 使用官方 CLI | 从官方 GitHub 仓库安装/构建，命令名通常为 `zsxq`，兼容 `zsxq-cli` |
 | 不使用社区逆向工具 | 不使用任何第三方反编译、cookie 注入、API 逆向工具 |
 | 不抓 cookie | 不从浏览器或系统提取 cookie |
 | 不自行反编译 API | 不逆向知识星球的内部 API |
@@ -224,7 +224,7 @@ content_hash → 去重（复用 ingest_jobs partial unique index）
 
 | item_type | 触发条件 | severity |
 |-----------|----------|----------|
-| `zsxq_cli_missing` | zsxq-cli 未安装或不可用 | error |
+| `zsxq_cli_missing` | ZSXQ CLI 未安装或不可用 | error |
 | `zsxq_auth_required` | 未登录或 token 过期 | warning |
 | `zsxq_permission_denied` | 无权访问指定星球或主题 | warning |
 | `zsxq_parse_failed` | JSON 解析失败 | error |

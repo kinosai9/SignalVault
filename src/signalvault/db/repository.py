@@ -235,6 +235,7 @@ def list_reports(
             "created_at": report.analysis_timestamp,
             "focus_areas": _parse_focus_areas(report.focus_areas),
             "analysis_depth": report.analysis_depth,
+            "executive_summary": report.executive_summary or "",
             "view_count": _count_views(session, report.id),
             "entity_count": _count_entities_in_extraction(report.extraction_json),
         })

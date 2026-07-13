@@ -136,7 +136,7 @@ class TestCliOutputEnhancements:
         from signalvault.sources.review_items import ReviewItemManager
         ReviewItemManager.create_item(
             item_type="zsxq_cli_missing",
-            title="zsxq-cli 未安装",
+            title="ZSXQ CLI 未安装",
             severity="error",
             session=db_session,
         )

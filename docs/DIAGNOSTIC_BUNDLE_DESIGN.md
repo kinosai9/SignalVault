@@ -346,8 +346,8 @@ $ signalvault doctor
               zsxq_cli_missing: 1
 
   ── ZSXQ ────────────────────────────────────────────
-  ❌ 异常    zsxq-cli not found
-              → 安装 zsxq-cli: pip install zsxq-cli
+  ❌ 异常    ZSXQ CLI not found
+              → 从官方 GitHub 仓库按 README 安装/构建，并把 zsxq 或 zsxq-cli 加入 PATH
 
   ── Config ───────────────────────────────────────────
   ⚠️ 注意    LLM_API_KEY 未配置 (mock 模式可用)
@@ -360,7 +360,7 @@ $ signalvault doctor
   ✅ 正常    45 nodes, 128 edges (last rebuild: 07-03 14:00)
 
   Suggestions:
-    • 安装 zsxq-cli 以启用知识星球导入
+    • 安装 ZSXQ CLI 以启用知识星球导入
     • 配置 LLM_API_KEY 以使用真实 AI 分析
     • ingest retry 42 重试失败任务
 ```
@@ -437,7 +437,7 @@ GET  /api/operations/logs/{operation_id}          → OperationLog detail
     "severity": "error",
     "user_message": "知识星球未登录。",
     "technical_detail": "...",
-    "suggested_actions": ["运行 zsxq-cli auth login"],
+    "suggested_actions": ["运行 zsxq auth login"],
     "trace_id": "op_abc123"
   }
 }
@@ -450,12 +450,12 @@ GET  /api/operations/logs/{operation_id}          → OperationLog detail
 RECOVERY_ACTIONS = {
     "zsxq_login": {
         "label": "登录知识星球",
-        "cli": "zsxq-cli auth login",
+        "cli": "zsxq auth login",
         "doctor_check": "zsxq.logged_in",
     },
     "zsxq_install": {
-        "label": "安装 zsxq-cli",
-        "cli": "pip install zsxq-cli",
+        "label": "安装 ZSXQ CLI",
+        "cli": "按官方 GitHub README 安装/构建；不要使用 pip install zsxq-cli",
         "doctor_check": "zsxq.cli_available",
     },
     "llm_config": {

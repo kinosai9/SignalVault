@@ -4,9 +4,25 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SignalVault{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=2d2ef5f5">
+    <link rel="stylesheet" href="/static/style.css?v=phase9-responsive-qa8">
 </head>
 <body>
+    <header class="mobile-topbar" aria-label="移动端导航">
+        <a class="mobile-brand" href="/" aria-label="SignalVault 首页">
+            <img class="brand-mark" src="/static/signalvault-icon.svg" alt="">
+            <span>
+                <strong>SignalVault</strong>
+                <small>多源投资研究助手</small>
+            </span>
+        </a>
+        <button class="mobile-menu-button" type="button" aria-label="打开导航" aria-expanded="false" data-nav-toggle>
+            <span></span>
+            <span></span>
+            <span></span>
+            <strong>菜单</strong>
+        </button>
+    </header>
+    <div class="sidebar-backdrop" data-nav-close></div>
     <div class="app-shell">
         <aside class="app-sidebar">
             <a class="site-brand" href="/" aria-label="SignalVault 首页">
@@ -18,29 +34,30 @@
             </a>
 
             {% set current = request.url.path %}
-            <div class="nav-label">研究工作台</div>
-            <nav class="side-nav" aria-label="主导航">
+            <div class="nav-label">每日工作</div>
+            <nav class="side-nav" aria-label="每日工作导航">
                 <a href="/dashboard"{% if current == '/dashboard' %} class="active"{% endif %}>变化雷达</a>
-                <a href="/sources"{% if current == '/sources' or current.startswith('/sources/channels') or current.startswith('/sources/tracked') or current == '/sources/import' or current.startswith('/sources/files') %} class="active"{% endif %}>信息源工作台</a>
-                <a href="/sources/import/new"{% if current == '/sources/import/new' %} class="active"{% endif %}>导入中心</a>
-                <a href="/search"{% if current == '/search' %} class="active"{% endif %}>知识库搜索</a>
-                <a href="/reports"{% if current.startswith('/reports') %} class="active"{% endif %}>报告库</a>
-                <a href="/tasks"{% if current.startswith('/tasks') or current.startswith('/content/jobs') or current.startswith('/sync/jobs') %} class="active"{% endif %}>任务与诊断</a>
+                <a href="/watchlist"{% if current.startswith('/watchlist') %} class="active"{% endif %}>我的关注</a>
+                <a href="/search"{% if current == '/search' %} class="active"{% endif %}>知识搜索</a>
             </nav>
 
-            <div class="nav-label">来源类型</div>
-            <nav class="side-nav side-nav-secondary" aria-label="来源导航">
-                <a href="/sources/channels"{% if current == '/sources/channels' or current.startswith('/sources/channels/') %} class="active"{% endif %}>YouTube 视频</a>
-                <a href="/sources/import"{% if current == '/sources/import' %} class="active"{% endif %}>网页链接</a>
-                <a href="/sources/tracked"{% if current.startswith('/sources/tracked') %} class="active"{% endif %}>固定信息源</a>
+            <div class="nav-label">资料与资产</div>
+            <nav class="side-nav" aria-label="资料与资产导航">
+                <a href="/sources/import/new"{% if current == '/sources/import/new' %} class="active"{% endif %}>导入中心</a>
+                <a href="/sources"{% if current == '/sources' %} class="active"{% endif %}>信息源工作台</a>
+                <a href="/reports"{% if current.startswith('/reports') %} class="active"{% endif %}>报告库</a>
+            </nav>
+
+            <div class="nav-label">系统与集成</div>
+            <nav class="side-nav side-nav-secondary" aria-label="系统与集成导航">
+                <a href="/tasks"{% if current.startswith('/tasks') or current.startswith('/content/jobs') or current.startswith('/sync/jobs') %} class="active"{% endif %}>任务与诊断</a>
+                <a href="/docs"{% if current.startswith('/docs') %} class="active"{% endif %}>API</a>
+                <a href="/sources/channels"{% if current == '/sources/channels' or current.startswith('/sources/channels/') %} class="active"{% endif %}>YouTube</a>
+                <a href="/sources/import"{% if current == '/sources/import' %} class="active"{% endif %}>网页</a>
+                <a href="/sources/tracked"{% if current.startswith('/sources/tracked') %} class="active"{% endif %}>固定源</a>
                 <a href="/sources/files/import"{% if current.startswith('/sources/files') %} class="active"{% endif %}>文件 / PDF</a>
                 <a href="/sources/zsxq"{% if current.startswith('/sources/zsxq') %} class="active"{% endif %}>知识星球</a>
             </nav>
-
-            <div class="sidebar-footer">
-                <a href="/watchlist/settings">关注设置</a>
-                <a href="/docs">API</a>
-            </div>
         </aside>
 
         <div class="app-main">
@@ -55,5 +72,29 @@
             </footer>
         </div>
     </div>
+    <script>
+    (function () {
+        var button = document.querySelector('[data-nav-toggle]');
+        var closeTarget = document.querySelector('[data-nav-close]');
+        var body = document.body;
+        if (!button) return;
+        function setOpen(open) {
+            body.classList.toggle('nav-open', open);
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        button.addEventListener('click', function () {
+            setOpen(!body.classList.contains('nav-open'));
+        });
+        if (closeTarget) {
+            closeTarget.addEventListener('click', function () { setOpen(false); });
+        }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') setOpen(false);
+        });
+        document.querySelectorAll('.app-sidebar a').forEach(function (link) {
+            link.addEventListener('click', function () { setOpen(false); });
+        });
+    })();
+    </script>
 </body>
 </html>

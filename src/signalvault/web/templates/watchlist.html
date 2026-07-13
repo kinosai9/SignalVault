@@ -6,10 +6,18 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/dashboard" class="back-link">&larr; 返回首页</a>
-
-<h2 class="page-title">我的关注</h2>
-<p class="page-desc">基于你在 Watchlist.yaml 中配置的关注对象，自动生成每个对象的更新简报。 <a href="/watchlist/settings">管理关注对象 →</a></p>
+<div class="page-shell watchlist-page">
+<section class="page-hero">
+    <div>
+        <p class="eyebrow">Daily Focus</p>
+        <h1>我的关注</h1>
+        <p>围绕你设定的公司、主题和方向，汇总本轮新增信息、相关判断和仍需观察的变化。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/watchlist/settings" class="btn-action">管理关注对象</a>
+        <a href="/dashboard" class="btn-action btn-secondary">返回变化雷达</a>
+    </div>
+</section>
 
 {% if not vault_configured %}
 <div class="empty-state"><p>Vault 未配置。</p></div>
@@ -37,85 +45,152 @@
 {% set companies = items | selectattr('item_type', 'equalto', 'company') | list %}
 {% set topics = items | selectattr('item_type', 'equalto', 'topic') | list %}
 {% set themes = items | selectattr('item_type', 'equalto', 'theme') | list %}
+{% set companies_ranked = (companies | selectattr('status', 'equalto', 'direct') | list) + (companies | selectattr('status', 'equalto', 'indirect') | list) + (companies | selectattr('status', 'equalto', 'no_new_evidence') | list) %}
+{% set topics_ranked = (topics | selectattr('status', 'equalto', 'direct') | list) + (topics | selectattr('status', 'equalto', 'indirect') | list) + (topics | selectattr('status', 'equalto', 'no_new_evidence') | list) %}
+{% set themes_ranked = (themes | selectattr('status', 'equalto', 'direct') | list) + (themes | selectattr('status', 'equalto', 'indirect') | list) + (themes | selectattr('status', 'equalto', 'no_new_evidence') | list) %}
 
+{% macro focus_item_card(item) -%}
+<article class="watchlist-card priority-{{ item.status }}">
+    <header class="watchlist-card-head">
+        <div>
+            <span class="watchlist-type">{{ {'company': '公司', 'topic': '主题', 'theme': '方向'}.get(item.item_type, '关注') }}</span>
+            <h3>
+                <span class="wl-status wl-{{ item.status }}">{{ {'direct': '●', 'indirect': '◐', 'no_new_evidence': '○'}.get(item.status, '○') }}</span>
+                {{ item.name }}
+            </h3>
+        </div>
+        <span class="watchlist-priority">
+            {{ {'direct': '优先查看', 'indirect': '可快速扫过', 'no_new_evidence': '暂无新证据'}.get(item.status, '待判断') }}
+        </span>
+    </header>
+
+    <div class="watchlist-metrics">
+        {% if item.direct_count %}<span>{{ item.direct_count }} 条直接相关</span>{% endif %}
+        {% if item.indirect_count %}<span>{{ item.indirect_count }} 条关联线索</span>{% endif %}
+        {% if item.observation_count %}<span>{{ item.observation_count }} 个观察点</span>{% endif %}
+        {% if item.reinforced_count %}<span>{{ item.reinforced_count }} 个强化信号</span>{% endif %}
+        {% if not item.card_exists %}<span class="is-warning">未找到知识卡</span>{% endif %}
+    </div>
+
+    <p class="wl-summary">{{ item.summary }}</p>
+
+    <div class="watchlist-signal-lines">
+        {% if item.context_topics %}
+        <p><strong>重点变化</strong><span>{{ item.context_topics[:3] | join('、') }}</span></p>
+        {% elif item.direct_count %}
+        <p><strong>重点变化</strong><span>出现新的直接相关观点或信号，建议优先核对证据。</span></p>
+        {% elif item.indirect_count %}
+        <p><strong>关联变化</strong><span>相关主题或相邻对象有变化，可作为后续跟踪线索。</span></p>
+        {% else %}
+        <p><strong>当前判断</strong><span>暂无足够新证据，维持观察。</span></p>
+        {% endif %}
+        {% if item.observation_count %}
+        <p><strong>风险信号</strong><span>{{ item.observation_count }} 个观察点待跟踪。</span></p>
+        {% endif %}
+    </div>
+
+    <div class="watchlist-card-actions">
+        {% if item.direct_items or item.indirect_items or item.observations %}
+        <details class="watchlist-evidence">
+            <summary>查看证据</summary>
+            {% if item.direct_items %}
+            <div class="evidence-group">
+                <strong>直接相关</strong>
+                <ul class="brief-list">{% for d in item.direct_items[:3] %}<li>{{ d }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+            {% if item.indirect_items %}
+            <div class="evidence-group">
+                <strong>间接相关</strong>
+                <ul class="brief-list">{% for d in item.indirect_items[:3] %}<li>{{ d }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+            {% if item.observations %}
+            <div class="evidence-group">
+                <strong>待观察</strong>
+                <ul class="brief-list">{% for o in item.observations[:3] %}<li>{{ o }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+        </details>
+        {% endif %}
+        <a href="/search?q={{ item.name | urlencode }}" class="btn-sm">进入分析</a>
+    </div>
+</article>
+{%- endmacro %}
+
+<div class="watchlist-section-grid" data-watchlist-layout>
+<div class="watchlist-section-column" data-watchlist-column="left">
 {% if companies %}
-<div class="section-card">
-    <h2>公司</h2>
-    {% for item in companies %}
-    <div class="wl-detail">
-        <h3>
-            <span class="wl-status wl-{{ item.status }}">{{ {'direct': '●', 'indirect': '◐', 'no_new_evidence': '○'}.get(item.status, '○') }}</span>
-            {{ item.name }}
-            {% if not item.card_exists %}<span class="tag" style="background:var(--danger-soft);color:var(--danger)">未找到卡片</span>{% endif %}
-        </h3>
-        <p class="wl-summary">{{ item.summary }}</p>
-
-        {% if item.direct_items %}
-        <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 4px">直接相关:</p>
-        <ul class="brief-list">
-            {% for d in item.direct_items[:3] %}<li>{{ d }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
-        {% if item.indirect_items %}
-        <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 4px">间接相关:</p>
-        <ul class="brief-list">
-            {% for d in item.indirect_items[:3] %}<li>{{ d }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
-        {% if item.observations %}
-        <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 4px">待观察 ({{ item.observation_count }}):</p>
-        <ul class="brief-list">
-            {% for o in item.observations[:3] %}<li>{{ o }}</li>{% endfor %}
-        </ul>
-        {% endif %}
+<section class="watchlist-section" data-watchlist-primary>
+    <div class="source-section-head">
+        <div>
+            <h2>关注公司</h2>
+            <p>优先看与标的直接相关的新证据和待观察信号。</p>
+        </div>
     </div>
+    <div class="watchlist-item-list">
+    {% for item in companies_ranked %}
+    {{ focus_item_card(item) }}
     {% endfor %}
-</div>
+    </div>
+</section>
 {% endif %}
+</div>
 
+<div class="watchlist-section-column" data-watchlist-column="right">
 {% if topics %}
-<div class="section-card">
-    <h2>主题</h2>
-    {% for item in topics %}
-    <div class="wl-detail">
-        <h3>
-            <span class="wl-status wl-{{ item.status }}">{{ {'direct': '●', 'indirect': '◐', 'no_new_evidence': '○'}.get(item.status, '○') }}</span>
-            {{ item.name }}
-            {% if not item.card_exists %}<span class="tag" style="background:var(--danger-soft);color:var(--danger)">未找到卡片</span>{% endif %}
-        </h3>
-        <p class="wl-summary">{{ item.summary }}</p>
-
-        {% if item.direct_items %}
-        <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 4px">直接相关:</p>
-        <ul class="brief-list">
-            {% for d in item.direct_items[:3] %}<li>{{ d }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
-        {% if item.observations %}
-        <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 4px">待观察 ({{ item.observation_count }}):</p>
-        <ul class="brief-list">
-            {% for o in item.observations[:3] %}<li>{{ o }}</li>{% endfor %}
-        </ul>
-        {% endif %}
+<section class="watchlist-section" data-watchlist-primary>
+    <div class="source-section-head">
+        <div>
+            <h2>关注主题</h2>
+            <p>把主题变化和观点强化单独看，避免淹没在公司列表里。</p>
+        </div>
     </div>
+    <div class="watchlist-item-list">
+    {% for item in topics_ranked %}
+    {{ focus_item_card(item) }}
     {% endfor %}
-</div>
+    </div>
+</section>
 {% endif %}
+</div>
 
 {% if themes %}
-<div class="section-card">
-    <h2>方向</h2>
-    {% for item in themes %}
-    <div class="wl-detail">
-        <h3><span class="wl-status wl-no_new_evidence">○</span> {{ item.name }}</h3>
-        <p class="wl-summary">{{ item.summary }}</p>
+<section class="watchlist-section" data-watchlist-floating>
+    <div class="source-section-head">
+        <div>
+            <h2>关注方向</h2>
+            <p>方向用于把多个主题合并成一条投资研究视角。</p>
+        </div>
     </div>
+    <div class="watchlist-item-list">
+    {% for item in themes_ranked %}
+    {{ focus_item_card(item) }}
     {% endfor %}
-</div>
+    </div>
+</section>
 {% endif %}
+</div>
+
+<script>
+(function () {
+  var layout = document.querySelector('[data-watchlist-layout]');
+  if (!layout) return;
+  var floating = layout.querySelector('[data-watchlist-floating]');
+  if (!floating) return;
+  var columns = Array.prototype.slice.call(layout.querySelectorAll('[data-watchlist-column]'));
+  if (columns.length < 2) return;
+  var target = columns.reduce(function (shorter, column) {
+    var primary = column.querySelector('[data-watchlist-primary]');
+    var height = primary ? primary.getBoundingClientRect().height : 0;
+    var shorterPrimary = shorter.querySelector('[data-watchlist-primary]');
+    var shorterHeight = shorterPrimary ? shorterPrimary.getBoundingClientRect().height : 0;
+    return height < shorterHeight ? column : shorter;
+  }, columns[0]);
+  target.appendChild(floating);
+})();
+</script>
 
 {% endif %}
+</div>
 {% endblock %}

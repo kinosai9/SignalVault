@@ -6,13 +6,16 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<a href="/sources/import/new" class="back-link">&larr; 返回导入中心</a>
-
-<section class="import-hero">
+<div class="page-shell source-page">
+<section class="page-hero import-hero">
     <div>
         <p class="eyebrow">网页来源</p>
         <h1>粘贴一个网页链接</h1>
         <p>系统先解析内容并检测重复，你确认后才会写入知识库。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/import/new" class="btn-action">返回导入中心</a>
+        <a href="/sources" class="btn-action btn-secondary">信息源工作台</a>
     </div>
 </section>
 
@@ -59,5 +62,7 @@
         <span>如果检测到相关视频或报告，预览页会提示可关联的导入方式。</span>
     </div>
 </section>
+
+</div>
 
 {% endblock %}

@@ -294,8 +294,8 @@ def _register_builtin_codes() -> None:
     # ── AUTH ─────────────────────────────────────────────────────────────
     ErrorCodeRegistry.register(ErrorRecord(
         error_code="AUTH_ZSXQ_001", category=ErrorCategory.AUTH, severity=ErrorSeverity.ERROR,
-        user_message="知识星球未登录。请在终端运行 `zsxq-cli auth login` 后重试。",
-        suggested_actions=["运行 zsxq-cli auth login", "运行 signalvault zsxq doctor 检查状态"],
+        user_message="知识星球未登录。请在终端运行 `zsxq auth login` 后重试；如果你的安装命令名是 `zsxq-cli`，使用对应命令即可。",
+        suggested_actions=["运行 zsxq auth login", "运行 signalvault zsxq doctor 检查状态"],
         related_command="signalvault zsxq doctor",
         create_review_item=True, review_item_type="zsxq_auth_required",
     ))

@@ -309,8 +309,6 @@ def _build_daily_radar_cards(
     pending_ingest = ingest_counts.get("pending_preview", 0) or 0
     failed_ingest = ingest_counts.get("preview_failed", 0) or 0
     open_reviews = review_counts.get("open", 0) or 0
-    attention = (diagnostics_summary or {}).get("attention_count", 0) or 0
-    blocked = (diagnostics_summary or {}).get("blocked_count", 0) or 0
 
     return [
         {
@@ -338,16 +336,46 @@ def _build_daily_radar_cards(
             "action": "处理建议" if needs_review_count or pending_patches else "设置关注",
         },
         {
-            "label": "导入/系统",
-            "value": pending_ingest + failed_ingest + open_reviews + attention + blocked,
-            "tone": "danger" if failed_ingest or blocked else (
-                "warning" if pending_ingest or open_reviews or attention else "quiet"
+            "label": "导入待处理",
+            "value": pending_ingest + failed_ingest + open_reviews,
+            "tone": "danger" if failed_ingest else (
+                "warning" if pending_ingest or open_reviews else "quiet"
             ),
-            "text": "信息源、审核队列和诊断状态。",
-            "href": "/sources" if pending_ingest or failed_ingest else "/tasks",
-            "action": "处理信息源" if pending_ingest or failed_ingest else "查看任务",
+            "text": "信息源、审核队列和待确认内容。",
+            "href": "/sources" if pending_ingest or failed_ingest else "/sources/import/new",
+            "action": "处理信息源" if pending_ingest or failed_ingest else "继续导入",
         },
     ]
+
+
+def _build_diagnostic_radar_card(diagnostics_summary: dict) -> dict:
+    """Build a radar card for system health so diagnostics stays visible but not central."""
+    diagnostics_summary = diagnostics_summary or {}
+    attention = diagnostics_summary.get("attention_count", 0) or 0
+    blocked = diagnostics_summary.get("blocked_count", 0) or 0
+    total = attention + blocked
+    overall = diagnostics_summary.get("overall_status", "ok")
+    if blocked:
+        tone = "danger"
+        text = "核心能力可能不可用，需要先处理。"
+    elif attention:
+        tone = "warning"
+        text = "系统基本正常，但有事项需要关注。"
+    elif overall in ("ok", "success"):
+        tone = "success"
+        text = "摄入、搜索和知识库状态正常。"
+    else:
+        tone = "quiet"
+        text = "暂时无法生成完整诊断摘要。"
+
+    return {
+        "label": "系统诊断",
+        "value": total,
+        "tone": tone,
+        "text": text,
+        "href": "/tasks",
+        "action": "查看诊断" if total else "查看状态",
+    }
 
 
 def _build_today_actions(
@@ -368,6 +396,7 @@ def _build_today_actions(
         failed = [j for j in recent_ingest_jobs if j.get("status") == "preview_failed"]
         name = failed[0].get("source_name") if failed else ""
         actions.append({
+            "kind": "import_failed",
             "tone": "danger",
             "title": f"{failed_ingest} 个导入预览失败",
             "body": f"先处理失败的来源{f'：{name}' if name else ''}，避免重要信息漏进知识库。",
@@ -377,6 +406,7 @@ def _build_today_actions(
 
     if pending_ingest:
         actions.append({
+            "kind": "import_pending",
             "tone": "warning",
             "title": f"{pending_ingest} 个导入待确认",
             "body": "这些内容已经生成预览，还需要你确认归档、跳过或改用其他方式。",
@@ -387,6 +417,7 @@ def _build_today_actions(
     if open_reviews:
         first = open_review_items[0] if open_review_items else {}
         actions.append({
+            "kind": "review",
             "tone": "warning",
             "title": f"{open_reviews} 个审核项待处理",
             "body": first.get("title") or "包含 PDF、Vault Lint、知识星球等需要人工判断的项目。",
@@ -397,6 +428,7 @@ def _build_today_actions(
     if pending_patches:
         p = pending_patches[0]
         actions.append({
+            "kind": "patch",
             "tone": "info",
             "title": f"{len(pending_patches)} 个知识补丁待确认",
             "body": f"最新建议涉及「{p.get('target', '关注对象')}」，确认后再写入知识库。",
@@ -408,6 +440,7 @@ def _build_today_actions(
     if overall in ("attention", "blocked"):
         guidance = (diagnostics_summary.get("metadata") or {}).get("user_guidance", "")
         actions.append({
+            "kind": "diagnostic",
             "tone": "danger" if overall == "blocked" else "warning",
             "title": "系统诊断需要关注" if overall == "attention" else "核心能力可能不可用",
             "body": guidance or "有子系统提示异常，建议先查看诊断信息再继续导入。",
@@ -664,6 +697,9 @@ def _build_dashboard_context(vault_path: Path) -> dict:
         operational["review_counts"],
         pending_patches,
     )
+    diagnostic_radar_card = _build_diagnostic_radar_card(
+        operational["diagnostics_summary"]
+    )
     today_actions = _build_today_actions(
         operational["diagnostics_summary"],
         operational["ingest_counts"],
@@ -687,6 +723,7 @@ def _build_dashboard_context(vault_path: Path) -> dict:
         "review_signals": review_signals,
         "recent_reports": recent_reports,
         "daily_radar_cards": daily_radar_cards,
+        "diagnostic_radar_card": diagnostic_radar_card,
         "today_actions": today_actions,
         **operational,
         "error": None,
@@ -694,6 +731,38 @@ def _build_dashboard_context(vault_path: Path) -> dict:
 
 
 # ── GET Routes ────────────────────────────────────────────────────
+
+@router.get("/docs", response_class=HTMLResponse)
+def page_api_docs(request: Request):
+    return _render(
+        "api_docs.html",
+        {
+            "request": request,
+            "api_groups": [
+                {
+                    "name": "健康检查",
+                    "path": "/api/health",
+                    "desc": "确认服务、数据库和基础依赖是否可用。",
+                },
+                {
+                    "name": "报告与证据",
+                    "path": "/api/reports",
+                    "desc": "读取已分析报告、观点、实体、信号和来源上下文。",
+                },
+                {
+                    "name": "统一搜索",
+                    "path": "/api/search",
+                    "desc": "跨报告、观点、实体和信号检索可追溯证据。",
+                },
+                {
+                    "name": "OpenAPI",
+                    "path": "/openapi.json",
+                    "desc": "机器可读接口定义，供调试工具或外部集成使用。",
+                },
+            ],
+        },
+    )
+
 
 @router.get("/")
 def page_index(request: Request):
@@ -893,7 +962,43 @@ def page_reports(request: Request, limit: int = 50, source: str | None = None):
         reports = list_reports(session, limit=limit, source_type=source)
     finally:
         session.close()
-    ctx = {"request": request, "reports": reports}
+    from datetime import datetime, timedelta
+
+    today = datetime.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    for report in reports:
+        created = report.get("created_at")
+        created_date = created.date() if hasattr(created, "date") else None
+        if created_date == today:
+            report["date_group"] = "今天"
+            report["date_group_order"] = 0
+        elif created_date and created_date >= week_start:
+            report["date_group"] = "本周"
+            report["date_group_order"] = 1
+        else:
+            report["date_group"] = "更早"
+            report["date_group_order"] = 2
+
+    source_options = sorted({r.get("source_type") for r in reports if r.get("source_type")})
+    focus_options = sorted({
+        focus
+        for r in reports
+        for focus in (r.get("focus_areas") or [])
+        if focus
+    })
+    entity_options = sorted({
+        (r.get("episode_title") or r.get("title") or "")
+        for r in reports
+        if r.get("entity_count", 0) > 0 and (r.get("episode_title") or r.get("title"))
+    })[:20]
+
+    ctx = {
+        "request": request,
+        "reports": reports,
+        "source_options": source_options,
+        "focus_options": focus_options,
+        "entity_options": entity_options,
+    }
     ctx.update(_flash(request))
     return _render("reports_list.html", ctx)
 
@@ -1477,15 +1582,15 @@ def _build_diagnostics_center_context(jobs: list[dict]) -> dict:
         {
             "label": "待处理任务",
             "value": len(active_jobs),
-            "tone": "attention" if active_jobs else "ok",
+            "tone": "info" if active_jobs else "ok",
             "hint": "正在运行、排队或无响应的任务。",
         },
         {
             "label": "失败/无响应",
             "value": len(failed_jobs) + len(diagnostics.get("recent_failures", []) or []),
-            "tone": "blocked" if failed_jobs else (
-                "attention" if diagnostics.get("recent_failures") else "ok"
-            ),
+            "tone": "blocked" if (
+                failed_jobs or diagnostics.get("recent_failures")
+            ) else "ok",
             "hint": "优先查看日志或按建议重试。",
         },
         {
@@ -3672,11 +3777,17 @@ def page_sources_tracked(request: Request):
     if not vp_str:
         return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
 
-    from signalvault.db.repository import list_tracked_sources
+    from signalvault.db.repository import list_tracked_source_entries, list_tracked_sources
 
     session = _get_session()
     try:
         sources = list_tracked_sources(session)
+        inline_source = sources[0] if len(sources) == 1 else None
+        inline_source_id = inline_source["id"] if inline_source else None
+        inline_entries = (
+            list_tracked_source_entries(session, inline_source_id)
+            if inline_source_id else []
+        )
     finally:
         session.close()
 
@@ -3685,6 +3796,8 @@ def page_sources_tracked(request: Request):
         "vault_configured": True,
         "vault_path": vp_str,
         "sources": sources,
+        "inline_source": inline_source,
+        "inline_entries": inline_entries,
         "status_labels": _TRACKED_SOURCE_STATUS_LABELS,
         "entry_status_labels": _TRACKED_ENTRY_STATUS_LABELS,
     }

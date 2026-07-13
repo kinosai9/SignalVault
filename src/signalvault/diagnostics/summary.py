@@ -221,9 +221,9 @@ class RecoveryActionRegistry:
 RECOVERY_ACTIONS: list[RecoveryAction] = [
     RecoveryAction(
         action_id="install_zsxq_cli",
-        title="安装 zsxq-cli",
-        description="知识星球命令行工具未安装。安装后可导入已订阅的星球内容。",
-        command="pip install zsxq-cli",
+        title="安装 ZSXQ CLI",
+        description="知识星球命令行工具不是 pip 包。请从官方 GitHub 仓库按 README 安装/构建，并把生成的 zsxq 或 zsxq-cli 加入 PATH。",
+        command="按官方 GitHub README 安装；安装后运行 zsxq auth login，并确认 zsxq 或 zsxq-cli 在 PATH",
         severity="error",
         category="zsxq",
     ),
@@ -231,7 +231,7 @@ RECOVERY_ACTIONS: list[RecoveryAction] = [
         action_id="login_zsxq",
         title="登录知识星球",
         description="知识星球未登录，无法获取已订阅内容。",
-        command="zsxq-cli auth login",
+        command="zsxq auth login",
         severity="warning",
         category="zsxq",
     ),
@@ -600,7 +600,7 @@ class DiagnosticsCenter:
 
         if not cli_available:
             status = STATUS_ATTENTION
-            issues.append("zsxq-cli 未安装")
+            issues.append("ZSXQ CLI 未安装")
             actions.append("install_zsxq_cli")
         elif check_zsxq and not logged_in:
             status = STATUS_ATTENTION

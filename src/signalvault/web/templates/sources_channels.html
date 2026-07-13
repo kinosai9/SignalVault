@@ -6,10 +6,18 @@
 <div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
 {% endif %}
 
-<div class="page-header">
-    <h1 style="font-size:1.3rem;font-weight:700;margin:0 0 4px">信息源管理</h1>
-    <p class="page-desc" style="margin:0">管理 YouTube 频道信息源，发现新视频，选择值得整理的内容进入知识库。</p>
-</div>
+<div class="page-shell source-page">
+<section class="page-hero source-hero">
+    <div>
+        <p class="eyebrow">YouTube 视频来源</p>
+        <h1>管理视频频道</h1>
+        <p>添加长期关注的频道，刷新新视频，再选择值得整理的内容进入知识库。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/sources/import/new" class="btn-action">返回导入中心</a>
+        <a href="/sources" class="btn-action btn-secondary">信息源工作台</a>
+    </div>
+</section>
 
 <!-- ── Add Channel Card ── -->
 <section class="source-card add-channel-card">
@@ -165,7 +173,7 @@
 </section>
 
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <a href="/dashboard" class="btn btn-secondary">返回控制台</a>
+    <a href="/sources/import/new" class="btn btn-secondary">返回导入中心</a>
     <a href="/content/new" class="btn btn-secondary">直接分析视频</a>
     <span style="color:var(--muted);font-size:0.82rem;margin:0 4px">|</span>
     <span style="font-size:0.82rem;color:var(--text-soft)">更多导入方式：</span>
@@ -181,5 +189,7 @@ function toggleEdit(channelId) {
     else { d.style.display = 'none'; e.style.display = ''; }
 }
 </script>
+
+</div>
 
 {% endblock %}

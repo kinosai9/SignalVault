@@ -307,11 +307,26 @@ python -m signalvault review list --type pdf_analysis_skipped
 
 知识星球内容作为只读信息源，接入现有分析 pipeline。**不做客户端操作、不做写入。**
 
+### 外部 CLI 前置
+
+SignalVault 不通过 `pip install zsxq-cli` 安装知识星球工具。请先从知识星球官方 GitHub 开源仓库按 README 安装或构建外部 ZSXQ CLI，并确认生成的 `zsxq`（或兼容命令名 `zsxq-cli`）已经加入 `PATH`。
+
+```bash
+# 检查外部 CLI 是否可用
+zsxq --version
+
+# 首次使用先登录；如果你的安装命令名是 zsxq-cli，请替换为对应命令
+zsxq auth login
+
+# 如果 CLI 不在 PATH，可指定可执行文件路径
+set ZSXQ_CLI_PATH=C:\path\to\zsxq.exe
+```
+
 ### 典型工作流
 
 ```bash
 # 0. 前置：在知识星球官方 App/Web 完成订阅
-#    (本项目不做订阅操作)
+#    并按官方 GitHub README 安装/登录外部 ZSXQ CLI
 
 # 1. 检查环境
 python -m signalvault zsxq doctor

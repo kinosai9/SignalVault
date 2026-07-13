@@ -133,7 +133,7 @@ parse_quality, quality_warnings, imported_at
 
 | item_type | 触发条件 | severity | 来源 |
 |-----------|----------|----------|------|
-| `zsxq_cli_missing` | zsxq-cli 未安装 | error | P6-A1 |
+| `zsxq_cli_missing` | ZSXQ CLI 未安装 | error | P6-A1 |
 | `zsxq_auth_required` | 未登录/token 过期 | warning | P6-A1 |
 | `zsxq_permission_denied` | 无权访问星球/主题 | warning | P6-A1 |
 | `zsxq_parse_failed` | JSON 解析失败 | error | P6-A1 |
@@ -259,7 +259,7 @@ Ruff: All checks passed.
 | 附件 OCR / 内容提取 | P6-B 候选 |
 | Web UI (ZSXQ 管理界面) | 非当前优先 |
 | 新 MCP tool | 现有 8 tool 已覆盖 |
-| 新外部依赖 | zsxq-cli 由用户自行安装 |
+| 新外部依赖 | ZSXQ CLI 由用户从官方 GitHub 仓库自行安装/构建 |
 
 ## 十一、P6-B 候选
 

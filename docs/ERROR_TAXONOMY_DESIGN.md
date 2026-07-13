@@ -71,7 +71,7 @@ class ErrorRecord:
 
 | error_code | severity | 触发条件 | user_message |
 |------------|----------|----------|-------------|
-| `AUTH_ZSXQ_001` | error | zsxq-cli 未登录 | 知识星球未登录。请在终端运行 `zsxq-cli auth login` 后重试。 |
+| `AUTH_ZSXQ_001` | error | ZSXQ CLI 未登录 | 知识星球未登录。请在终端运行 `zsxq auth login` 后重试；如安装命令名为 `zsxq-cli`，使用对应命令。 |
 | `AUTH_ZSXQ_002` | warning | zsxq token 即将过期 | 知识星球登录状态即将过期，建议重新登录。 |
 | `AUTH_LLM_001` | blocker | LLM API Key 未配置 | 未配置 LLM API Key。请在 .env 文件中设置 LLM_API_KEY。 |
 | `AUTH_LLM_002` | error | LLM API Key 无效 | LLM API Key 验证失败。请检查 .env 中的 LLM_API_KEY 是否正确。 |
@@ -249,7 +249,7 @@ err.metadata = {"cli_output": stderr}
 
 ```
 Error [AUTH_ZSXQ_001]: 知识星球未登录
-  请在终端运行 zsxq-cli auth login 后重试。
+  请在终端运行 zsxq auth login 后重试。
   关联命令: zsxq doctor
   详情: zsxq-cli returned "not logged in" (trace: op_abc123)
 ```
@@ -262,9 +262,9 @@ Error [AUTH_ZSXQ_001]: 知识星球未登录
   "error": {
     "error_code": "AUTH_ZSXQ_001",
     "severity": "error",
-    "user_message": "知识星球未登录。请在终端运行 `zsxq-cli auth login` 后重试。",
+    "user_message": "知识星球未登录。请在终端运行 `zsxq auth login` 后重试。",
     "suggested_actions": [
-      "运行 zsxq-cli auth login",
+      "运行 zsxq auth login",
       "运行 signalvault zsxq doctor 检查状态"
     ],
     "trace_id": "op_abc123"

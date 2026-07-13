@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}API — SignalVault{% endblock %}
+{% block content %}
+
+<div class="page-shell api-page">
+<section class="page-hero">
+    <div>
+        <p class="eyebrow">System Integration</p>
+        <h1>API</h1>
+        <p>面向本地集成和调试的只读接口。普通研究流程优先使用左侧工作流页面。</p>
+    </div>
+    <div class="source-hero-actions">
+        <a href="/api/docs" class="btn-action">打开 Swagger</a>
+        <a href="/openapi.json" class="btn-action btn-secondary">OpenAPI JSON</a>
+    </div>
+</section>
+
+<section class="source-board" aria-label="API 能力概览">
+    <a class="source-tile lane-ready" href="/api/health">
+        <div class="source-type">
+            <strong>健康检查</strong>
+            <span class="tag">只读</span>
+        </div>
+        <div>
+            <div class="source-primary">Health</div>
+            <div class="source-summary">确认服务、数据库和基础依赖是否正常。</div>
+        </div>
+        <span class="btn-like">查看接口 →</span>
+    </a>
+    <a class="source-tile lane-ready" href="/api/reports">
+        <div class="source-type">
+            <strong>研究资产</strong>
+            <span class="tag">Reports</span>
+        </div>
+        <div>
+            <div class="source-primary">Reports</div>
+            <div class="source-summary">读取报告列表、报告详情、观点、实体和信号。</div>
+        </div>
+        <span class="btn-like">查看接口 →</span>
+    </a>
+    <a class="source-tile lane-ready" href="/search">
+        <div class="source-type">
+            <strong>统一搜索</strong>
+            <span class="tag">Search</span>
+        </div>
+        <div>
+            <div class="source-primary">Search</div>
+            <div class="source-summary">跨报告、观点、实体和来源证据进行检索。</div>
+        </div>
+        <span class="btn-like">进入搜索 →</span>
+    </a>
+</section>
+
+<div class="import-layout">
+    <section class="section-card">
+        <h2>接口分组</h2>
+        <div class="api-route-list">
+            {% for group in api_groups %}
+            <a href="{{ group.path }}" class="api-route-row">
+                <strong>{{ group.name }}</strong>
+                <code>{{ group.path }}</code>
+                <span>{{ group.desc }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <aside class="import-guide">
+        <h2>使用边界</h2>
+        <ol>
+            <li><strong>只读优先</strong><span>接口用于读取研究资产和搜索证据，不用于输出投资建议。</span></li>
+            <li><strong>证据可追溯</strong><span>报告、观点和信号应保留来源、时间戳、页码或原文引用。</span></li>
+            <li><strong>调试入口</strong><span>需要逐项测试接口时进入 Swagger 控制台。</span></li>
+            <li><strong>本地集成</strong><span>外部工具可读取 OpenAPI JSON 生成客户端。</span></li>
+        </ol>
+    </aside>
+</div>
+</div>
+
+{% endblock %}
