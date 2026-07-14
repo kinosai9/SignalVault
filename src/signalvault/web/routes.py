@@ -3952,6 +3952,9 @@ def action_source_import_confirm(
 
     preview = _preview_store.pop(preview_id, None)
     if preview is None:
+        # P3-A: fall back to persistent ingest_jobs after server restart
+        preview = _recover_preview_from_db(preview_id)
+    if preview is None:
         return RedirectResponse(
             url="/sources/import?msg=error:预览已过期，请重新导入", status_code=303,
         )
@@ -4726,6 +4729,8 @@ def action_source_file_confirm(
 
     preview = _file_preview_store.pop(preview_id, None)
     if preview is None:
+        preview = _recover_preview_from_db(preview_id)
+    if preview is None:
         return RedirectResponse(
             url="/sources/files/import?msg=error:预览已过期，请重新上传", status_code=303,
         )
@@ -4823,6 +4828,22 @@ def action_source_file_confirm(
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def _recover_preview_from_db(preview_id: str) -> dict | None:
+    """Recover a preview from IngestJobManager after server restart."""
+    try:
+        from signalvault.sources.ingest_jobs import IngestJobManager
+        job = IngestJobManager.find_by_preview_id(preview_id)
+        if not job:
+            return None
+        preview_data = job.get("preview_data", "")
+        if not preview_data:
+            return None
+        import json as _json
+        return _json.loads(preview_data)
+    except Exception:
+        return None
 
 
 def _serialize_preview(preview: object) -> str:

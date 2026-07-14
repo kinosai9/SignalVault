@@ -156,3 +156,65 @@ def analyze_youtube_url(
             error_type="unknown",
             message=f"整理失败：{str(e)[:200]}",
         )
+
+
+def analyze_pdf_file(
+    file_path: str,
+    focus_areas: list[str] | None = None,
+    depth: str = "standard",
+    mock: bool = False,
+    progress_callback=None,
+) -> AnalyzeResult:
+    """Analyze a PDF file and generate a research report.
+
+    Args:
+        file_path: Path to the PDF file.
+        focus_areas: List of focus areas for the analysis.
+        depth: Analysis depth (standard / deep).
+        mock: Use mock LLM provider (for testing).
+        progress_callback: Optional callable(stage, message) for progress updates.
+
+    Returns:
+        AnalyzeResult with success status, report_id, and user-friendly message.
+    """
+    ensure_dirs()
+
+    if focus_areas is None:
+        focus_areas = ["通用投资研究"]
+
+    provider = "mock" if mock else "openai-compatible"
+
+    if progress_callback:
+        progress_callback("extracting", "正在提取 PDF 文本")
+
+    from signalvault.sources.pdf_analysis import analyze_pdf
+
+    try:
+        result = analyze_pdf(
+            file_path=file_path,
+            provider_name=provider,
+            focus_areas=focus_areas,
+            analysis_depth=depth,
+            write_review=True,
+        )
+    except Exception as e:
+        return AnalyzeResult(
+            success=False,
+            error_type="invalid_url",
+            message=f"无法读取 PDF 文件：{str(e)[:200]}",
+        )
+
+    if not result.get("success"):
+        reason = result.get("reason", "分析未完成")
+        return AnalyzeResult(
+            success=False,
+            error_type="no_subtitle",
+            message=f"PDF 分析未完成：{reason}",
+        )
+
+    report_id = result.get("report_id", 0)
+    return AnalyzeResult(
+        success=True,
+        report_id=report_id,
+        message=f"PDF 分析完成，已生成报告 #{report_id}",
+    )

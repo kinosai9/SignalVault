@@ -711,7 +711,6 @@ tests/                    # 当前可收集 1993 个 pytest 测试
 
 ## 当前不做
 
-- 小宇宙链接解析、xyz-dl 字幕下载
 - React / Next.js / Vue 等前端框架
 - Whisper 本地转写、多平台 RSS
 - RAG、向量数据库、AI 问答

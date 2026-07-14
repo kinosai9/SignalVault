@@ -52,7 +52,6 @@ Convert subtitles/text from different sources into unified `TranscriptSegment` f
 | YouTubeTranscriptAdapter | youtube-transcript-api | ✅ |
 | ChannelVideoAdapter | yt-dlp metadata | ✅ |
 | YtDlpAdapter | yt-dlp subtitle fallback | Not implemented |
-| XyzDlAdapter | xyz-dl (xiaoyuzhou) | Not implemented |
 
 ### llm/ — LLM Provider Adapters
 

@@ -46,11 +46,9 @@
 - [ ] P2-D.2: consolidate-topics --dry-run + --apply
 - [ ] P2-S.2: Deep Notes 真实 export 验证
 
-### P3：小宇宙 + 其他增强
+### P3：其他增强
 
 - [ ] 真实 LLM provider 完整接入与 prompt 调优
-- [ ] 小宇宙单集链接解析（可选 Adapter）
-- [ ] xyz-dl 字幕下载 Adapter（可选）
 - [ ] 说话人推断逻辑
 - [ ] 元数据获取（podcasts 表）
 

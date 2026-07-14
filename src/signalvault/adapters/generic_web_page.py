@@ -33,6 +33,8 @@ class ParsedWebPage:
     detected_youtube_urls: list[str] = field(default_factory=list)
     content_hash: str = ""
     summary: str = ""
+    publish_date: str = ""
+    author: str = ""
     parse_quality: str = "good"     # "good", "degraded", "minimal"
     raw_text_length: int = 0
     content_blocks_count: int = 0
@@ -109,22 +111,71 @@ class GenericWebPageAdapter(ExternalHTMLNotesAdapter):
                 )
                 populated += 1
 
+            # ── Published date ─────────────────────────────────────────
+            for date_sel in [
+                ("meta", {"property": "article:published_time"}),
+                ("meta", {"name": "pubdate"}),
+                ("meta", {"name": "publish_date"}),
+                ("time", {"datetime": True}),
+            ]:
+                tag, attrs = date_sel
+                el = soup.find(tag, attrs) if attrs else soup.find(tag)
+                if el:
+                    dt_val = el.get("content") or el.get("datetime") or el.get_text()
+                    if dt_val:
+                        result.publish_date = self._clean_text(str(dt_val))[:50]
+                        break
+
+            # ── Author ─────────────────────────────────────────────────
+            for auth_sel in [
+                ("meta", {"name": "author"}),
+                ("meta", {"property": "article:author"}),
+            ]:
+                el = soup.find(auth_sel[0], auth_sel[1])
+                if el and el.get("content"):
+                    result.author = self._clean_text(str(el["content"]))[:100]
+                    break
+
+            # ── Open Graph metadata ────────────────────────────────────
+            for og_prop in ["og:title", "og:description", "og:image"]:
+                el = soup.find("meta", property=og_prop)
+                if el and el.get("content") and og_prop == "og:description":
+                    if not result.meta_description:
+                        result.meta_description = self._clean_text(str(el["content"]))
+
+            # ── Find main content container ────────────────────────────
+            main_container = (
+                soup.find("article")
+                or soup.find("main")
+                or soup.find(attrs={"role": "main"})
+            )
+            search_root = main_container if main_container else soup
+
             # ── Headings ──────────────────────────────────────────────
             for tag_name, _attr in [
                 ("h1", "h1_texts"), ("h2", "h2_texts"), ("h3", "h3_texts"),
             ]:
-                for el in soup.find_all(tag_name):
+                for el in search_root.find_all(tag_name):
                     if self._is_content_element(el):
                         text = self._clean_text(el.get_text())
                         if text and len(text) > 1:
                             getattr(result, _attr).append(text)
 
             # ── Paragraphs ────────────────────────────────────────────
-            for p in soup.find_all("p"):
+            for p in search_root.find_all("p"):
                 if self._is_content_element(p):
                     text = self._clean_text(p.get_text())
                     if text and len(text) > 10:
                         result.paragraphs.append(text)
+            # Fallback: if main container yielded too few paragraphs, scan full page
+            if main_container and len(result.paragraphs) < 3:
+                for p in soup.find_all("p"):
+                    if self._is_content_element(p) and p not in (
+                        set(search_root.find_all("p")) if main_container else set()
+                    ):
+                        text = self._clean_text(p.get_text())
+                        if text and len(text) > 10:
+                            result.paragraphs.append(text)
 
             # ── YouTube URLs ──────────────────────────────────────────
             yt_re = re.compile(
