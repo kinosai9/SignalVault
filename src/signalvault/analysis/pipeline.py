@@ -271,6 +271,7 @@ def _run_pipeline(
         logger.info("Transcript chunked: %d chunks", len(chunks))
 
         chunk_results: list[ExtractionResult] = []
+        failed_chunks: list[dict] = []
         for ch in chunks:
             logger.info("Extracting chunk %d/%d (segments %d-%d, %d chars)",
                         ch.chunk_id, ch.chunk_count,
@@ -295,11 +296,18 @@ def _run_pipeline(
                             len(ch_extraction.tech_industry_insights))
             except Exception as e:
                 logger.error("Chunk %d/%d failed: %s", ch.chunk_id, ch.chunk_count, e)
-                # P2-B initial: abort on any chunk failure
-                raise
+                # P2-B: collect failure, continue with remaining chunks
+                failed_chunks.append({"chunk_id": ch.chunk_id, "error": str(e)})
+
+        if not chunk_results:
+            raise RuntimeError(
+                f"All {len(chunks)} chunks failed — no results to merge. "
+                f"First error: {failed_chunks[0]['error'] if failed_chunks else 'unknown'}"
+            )
 
         # Merge with compaction
-        logger.info("Merging %d chunk results", len(chunk_results))
+        logger.info("Merging %d/%d chunk results (%d failed)",
+                     len(chunk_results), len(chunks), len(failed_chunks))
         extraction = merge_extraction_results(chunk_results)
         extraction.focus_areas = focus_areas
         extraction.source_info = source_info

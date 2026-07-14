@@ -1,13 +1,25 @@
 """P2-S.3.2.1: LLM Source Profiler — optional LLM enhancement for profiling.
 
-This is a stub. The rule-based profiler in source_profiler.py handles all
-profiling decisions. When an LLM is connected, it can refine confidence scores
-and suggest additional risk warnings, but it MUST NOT:
+Status (2026-07-14): PERMANENT NO-OP ADAPTER. The rule-based profiler in
+source_profiler.py handles all profiling decisions correctly for current
+source types. This module exists as a documented extension point for future
+LLM-enhanced profiling.
+
+When implemented, it MAY:
+  - Refine confidence scores
+  - Suggest additional risk_warnings
+  - Provide richer quality assessments
+
+It MUST NOT:
   - Promote an unsupported source to supported
   - Select an adapter not in TRACKABLE_ADAPTER_ALLOWLIST
   - Override the source_kind assigned by rule-based profiling
   - Write any Report, Deep Notes, or Source Archive
 """
+
+# Implementation note: to activate LLM profiling, implement the _chat call
+# in LLMSourceProfiler.profile() using the same OpenAICompatibleProvider
+# pattern as in analysis/pipeline.py:get_llm_provider().
 
 from __future__ import annotations
 
