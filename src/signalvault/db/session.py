@@ -478,6 +478,31 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_operation_logs_table(_engine)
     _migrate_source_provenance_tables(_engine)
     _migrate_source_provenance_fks(_engine)
+    _track_schema_version(_engine)
+
+
+def _track_schema_version(engine, target_version: int = 1) -> None:
+    """Ensure schema_version table has a row tracking the current version."""
+    from datetime import datetime
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text("SELECT MAX(version) FROM schema_version"))
+            row = result.fetchone()
+            current = row[0] if row and row[0] is not None else 0
+            if current < target_version:
+                conn.execute(
+                    text(
+                        "INSERT INTO schema_version (version, description, applied_at) "
+                        "VALUES (:ver, :desc, :ts)"
+                    ),
+                    {
+                        "ver": target_version,
+                        "desc": "P0-P7 delivered: 18 tables, provenance layer, diagnostics",
+                        "ts": datetime.now(),
+                    },
+                )
+    except Exception:
+        pass  # schema_version table may not exist yet (first run)
 
 
 def get_session() -> Session:

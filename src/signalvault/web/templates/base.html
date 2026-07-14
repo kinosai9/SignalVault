@@ -72,45 +72,6 @@
             </footer>
         </div>
     </div>
-    <script>
-    (function () {
-        var button = document.querySelector('[data-nav-toggle]');
-        var closeTarget = document.querySelector('[data-nav-close]');
-        var body = document.body;
-        if (!button) return;
-        function setOpen(open) {
-            body.classList.toggle('nav-open', open);
-            button.setAttribute('aria-expanded', open ? 'true' : 'false');
-        }
-        button.addEventListener('click', function () {
-            setOpen(!body.classList.contains('nav-open'));
-        });
-        if (closeTarget) {
-            closeTarget.addEventListener('click', function () { setOpen(false); });
-        }
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') setOpen(false);
-        });
-        document.querySelectorAll('.app-sidebar a').forEach(function (link) {
-            link.addEventListener('click', function () { setOpen(false); });
-        });
-    })();
-    </script>
-    <script>
-    (function() {
-      if (!window.performance || !performance.timing) return;
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var t = performance.timing;
-          var dns      = t.domainLookupEnd - t.domainLookupStart;
-          var connect  = t.connectEnd - t.connectStart;
-          var ttfb     = t.responseStart - t.requestStart;
-          var domReady = t.domContentLoadedEventEnd - t.requestStart;
-          var pageLoad = t.loadEventEnd - t.requestStart;
-          console.log('[PageTiming] DNS:' + dns + 'ms TCP:' + connect + 'ms TTFB:' + ttfb + 'ms DOMReady:' + domReady + 'ms PageLoad:' + pageLoad + 'ms');
-        }, 0);
-      });
-    })();
-    </script>
+    <script src="/static/app.js?v=20260714"></script>
 </body>
 </html>

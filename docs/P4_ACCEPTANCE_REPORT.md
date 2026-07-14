@@ -177,7 +177,6 @@ tests/test_pdf_analysis.py    — 31 tests (P4-B)
 | P4-C | Web 上传 PDF + 非技术用户入口 | 中 |
 | P4-D | OCR Provider 实现（至少一个 provider） | 中 |
 | P5 | 搜索增强与知识图谱化 | 低 |
-| P5 | 多期观点对比 | 低 |
 
 ## 十二、验收结论
 

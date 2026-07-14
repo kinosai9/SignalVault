@@ -520,3 +520,14 @@ class SourceSegment(Base):
     translation_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class SchemaVersion(Base):
+    """Lightweight schema version tracking — one row, one version number."""
+
+    __tablename__ = "schema_version"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    description: Mapped[str] = mapped_column(String(200), default="")
+    applied_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
