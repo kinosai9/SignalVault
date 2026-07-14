@@ -14,7 +14,7 @@
 - `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md`: clarified backend/CLI completion and moved Web/API page integration into the SignalVault frontend experience track.
 
 **Verification:**
-- `python -m pytest --collect-only -q` collected 1908 tests.
+- `python -m pytest --collect-only -q` collected 1993 tests.
 - Documentation scan no longer reports stale current-state claims such as P3/P7 planning in entry docs.
 
 ### P7-D — Diagnostic Bundle Export (2026-07-03)

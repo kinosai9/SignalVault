@@ -7,7 +7,7 @@ SignalVault has moved from a YouTube/podcast transcript research tool to a multi
 Current verified collection count:
 
 ```bash
-python -m pytest --collect-only -q  # 1908 tests collected
+python -m pytest --collect-only -q  # 1993 tests collected
 ```
 
 Backend/CLI capabilities through P7 are implemented. The active product work is now frontend experience alignment:
@@ -54,19 +54,19 @@ See `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`.
 
 | Track | Description | Status |
 |---|---|---|
-| UI-X | SignalVault frontend experience refactor using four prototypes | In progress |
+| UI-X | SignalVault frontend experience refactor using four prototypes | ✅ Implemented (Phase 8 validated) |
 
-## Planned Frontend Phases
+## Implemented Frontend Phases
 
-| Phase | Description |
-|---|---|
-| UI-X-1 | Global shell and SignalVault brand |
-| UI-X-2 | Dashboard as investment change radar |
-| UI-X-3 | Source workbench for YouTube/Web/PDF/File/ZSXQ/tracked sources |
-| UI-X-4 | Guided import entry and preview flow |
-| UI-X-5 | Unified knowledge search page |
-| UI-X-6 | Report detail evidence trail UX |
-| UI-X-7 | Diagnostics and operation log Web pages |
+| Phase | Description | Status |
+|---|---|---|
+| UI-X-1 | Global shell and SignalVault brand | ✅ |
+| UI-X-2 | Dashboard as investment change radar | ✅ |
+| UI-X-3 | Source workbench for YouTube/Web/PDF/File/ZSXQ/tracked sources | ✅ |
+| UI-X-4 | Guided import entry and preview flow | ✅ |
+| UI-X-5 | Unified knowledge search page | ✅ |
+| UI-X-6 | Report detail evidence trail UX | ✅ |
+| UI-X-7 | Diagnostics and operation log Web pages | ✅ |
 
 ## Not Planned
 

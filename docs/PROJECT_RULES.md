@@ -36,7 +36,7 @@ mcp_server/ → MCP Server（P3/P5）。只读查询，不修改任何内容。
 
 ```bash
 python -m pytest tests/ -v    # full suite（mock provider）
-python -m pytest --collect-only -q  # 当前可收集 1908 tests
+python -m pytest --collect-only -q  # 当前可收集 1993 tests
 python -m pytest tests/ -q    # 快速模式
 ```
 

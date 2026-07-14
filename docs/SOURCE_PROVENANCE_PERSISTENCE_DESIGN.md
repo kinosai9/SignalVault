@@ -1,5 +1,7 @@
 # Source Provenance Persistence Design
 
+> **状态 (2026-07-14):** Schema + CRUD 已实现，YouTube/PDF/ZSXQ hook 已接入，Unified Search 和 Knowledge Graph 已集成。Web/文件上传 hook、报告详情页原文展示、翻译服务已完成。原文层已部分落地，后续继续补齐搜索和前端交互。
+
 ## 结论
 
 投资研究知识库的核心不是一次性生成答案，而是让用户能沿着检索结果回到原始材料、证据片段、报告结论和信号变化之间的链条。

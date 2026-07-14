@@ -73,9 +73,10 @@ Model provider abstraction only. Does NOT handle data source logic.
 
 ### db/ — Data Layer
 
-8 core tables: reports, investment_views, entities, tracking_signals, channels, channel_videos, tracked_sources, tracked_source_entries.
+18 tables: episodes, reports, investment_views, tracking_signals, entities, channels, channel_videos, jobs, job_events, tracked_sources, tracked_source_entries, ingest_jobs, review_items, knowledge_nodes, knowledge_edges, operation_logs, source_documents, source_segments.
 
 - `repository.py` — read/write queries
+- `source_provenance.py` — SourceDocument/SourceSegment CRUD
 - `channel_repository.py` — channel/video queries + metadata lookup
 - `fts.py` — FTS5 full-text search (CJK whitespace tokenization)
 - `session.py` — SQLite session management
@@ -86,7 +87,7 @@ Read-only JSON API. `create_app()` factory pattern. Routes: health, reports, sea
 
 ### web/ — Web Console (Jinja2)
 
-HTML pages served by the same FastAPI app. `web/` and `api/` are separated: api returns JSON, web returns HTML. 20 templates, no frontend framework, minimal CSS.
+HTML pages served by the same FastAPI app. `web/` and `api/` are separated: api returns JSON, web returns HTML. 33 templates, no frontend framework, minimal CSS.
 
 ### services/ — Business Logic
 
