@@ -11,7 +11,7 @@
     <div>
         <p class="eyebrow">本地文件</p>
         <h1>上传文件资料</h1>
-        <p>适合已经整理好的 Markdown、纯文本或 HTML；PDF 资料保留页码证据，按专用流程分析。</p>
+        <p>支持 Markdown、TXT、HTML 文本文件直接归档，以及 PDF 文档提取分析。</p>
     </div>
     <div class="source-hero-actions">
         <a href="/sources/import/new" class="btn-action">返回导入中心</a>
@@ -26,9 +26,9 @@
             <div class="form-group">
                 <label class="form-label" for="file">选择文件</label>
                 <input type="file" id="file" name="file"
-                       accept=".md,.txt,.html,.htm"
+                       accept=".md,.txt,.html,.htm,.pdf"
                        class="form-input" required autofocus>
-                <p class="form-help">当前 Web 上传支持 .md / .txt / .html / .htm，最大 {{ max_upload_mb }} MB。</p>
+                <p class="form-help">支持 .md / .txt / .html / .htm（最大 5 MB）和 .pdf（最大 20 MB）。PDF 将自动提取文本并分析。</p>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn-action">生成预览</button>
@@ -55,7 +55,7 @@
     </div>
     <div>
         <strong>PDF 资料</strong>
-        <span>PDF 已具备预览、提取和分析能力，当前主要通过专用命令保留页码证据。</span>
+        <span>上传 PDF 后将自动提取文本、评估质量并进行分析，保留页码级证据。</span>
     </div>
     <div>
         <strong>不会自动分析</strong>

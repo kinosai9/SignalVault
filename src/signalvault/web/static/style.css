@@ -3395,6 +3395,12 @@ select.form-input { cursor: pointer; }
   accent-color: var(--accent);
 }
 
+.batch-select {
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .form-actions {
   display: flex;
   gap: 10px;

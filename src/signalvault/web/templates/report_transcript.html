@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}原文稿 — {{ report.episode_title or report.title }} — SignalVault{% endblock %}
+{% block content %}
+
+<div class="page-shell">
+    <section class="page-hero">
+        <div>
+            <p class="eyebrow">原文追溯</p>
+            <h1>{{ report.episode_title or report.title }}</h1>
+            <p>
+                {% if doc %}来源: {{ doc.source_type }} · {{ segment_count }} 个段落{% endif %}
+                {% if doc.language %} · 语言: {{ doc.language }}{% endif %}
+            </p>
+        </div>
+        <div class="hero-actions">
+            <a href="/reports/{{ report.id }}" class="btn-action">返回报告详情</a>
+            {% if needs_translation %}
+            <button id="translate-btn" class="btn-action btn-secondary" onclick="triggerTranslation()">
+                翻译为中文
+            </button>
+            {% endif %}
+            <a href="/dashboard" class="btn-action btn-secondary">变化雷达</a>
+        </div>
+    </section>
+
+    {% if needs_translation %}
+    <div id="translate-status" class="alert alert-info" style="display:none">
+        <span id="translate-msg"></span>
+    </div>
+    {% endif %}
+
+    <section class="section-card" style="margin-top:16px">
+        <div class="transcript-container">
+            {% for seg in segments %}
+            <div class="transcript-row{% if seg.start_time in view_timestamps %} transcript-cited{% endif %}"
+                 id="seg_{{ seg.segment_id }}">
+                <div class="transcript-time">
+                    {% if seg.start_time %}{{ seg.start_time }}{% elif seg.page_number %}p.{{ seg.page_number }}{% else %}#{{ seg.sequence_index }}{% endif %}
+                </div>
+                <div class="transcript-texts">
+                    <div class="transcript-original">{{ seg.text_original }}</div>
+                    {% if seg.text_translated and seg.translation_status == 'translated' %}
+                    <div class="transcript-translated">{{ seg.text_translated }}</div>
+                    {% elif seg.translation_status == 'failed' %}
+                    <div class="transcript-translated transcript-failed">翻译失败</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+{% if needs_translation %}
+<script>
+async function triggerTranslation() {
+    const btn = document.getElementById('translate-btn');
+    const status = document.getElementById('translate-status');
+    const msg = document.getElementById('translate-msg');
+    btn.disabled = true;
+    btn.textContent = '翻译中...';
+    status.style.display = 'block';
+    msg.textContent = '正在调用 LLM 翻译，请稍候...';
+
+    try {
+        const resp = await fetch('/reports/{{ report.id }}/translate', { method: 'POST' });
+        const data = await resp.json();
+        if (data.error) {
+            msg.textContent = '翻译失败: ' + data.error;
+            status.className = 'alert alert-error';
+        } else {
+            msg.textContent =
+                '翻译完成: ' + data.translated + ' 段成功'
+                + (data.failed > 0 ? ', ' + data.failed + ' 段失败' : '')
+                + ' (共 ' + data.total + ' 段)';
+            status.className = 'alert alert-success';
+            // Reload to show translations
+            setTimeout(() => location.reload(), 1500);
+        }
+    } catch (e) {
+        msg.textContent = '翻译请求失败: ' + e.message;
+        status.className = 'alert alert-error';
+    }
+    btn.disabled = false;
+    btn.textContent = '翻译为中文';
+}
+</script>
+{% endif %}
+
+<style>
+.transcript-container { max-height: 80vh; overflow-y: auto; }
+.transcript-row {
+  display: flex; gap: 12px; padding: 8px 0;
+  border-bottom: 1px solid var(--border, #e0e0e0);
+}
+.transcript-row.transcript-cited {
+  background: var(--accent-soft, #e8f0fe);
+  border-left: 3px solid var(--accent, #1a73e8);
+  padding-left: 12px;
+}
+.transcript-time {
+  min-width: 80px; font-size: 0.8rem; color: var(--text-soft, #666);
+  font-family: monospace; padding-top: 2px;
+}
+.transcript-texts { flex: 1; }
+.transcript-original { font-size: 0.9rem; line-height: 1.6; color: var(--text, #333); }
+.transcript-translated {
+  font-size: 0.9rem; line-height: 1.6; color: var(--accent, #1a73e8);
+  margin-top: 4px; padding-top: 4px;
+  border-top: 1px dashed var(--border, #e0e0e0);
+}
+.transcript-failed { color: var(--danger, #d93025); font-style: italic; }
+</style>
+{% endblock %}

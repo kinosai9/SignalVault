@@ -65,12 +65,15 @@ def rebuild_knowledge_graph(session: Session) -> dict:
     _build_view_nodes(session)
     _build_signal_nodes(session)
     _build_evidence_nodes(session)
+    _build_source_document_nodes(session)
+    _build_source_segment_nodes(session)
 
     # Build edges
     _build_mentioned_in_edges(session)
     _build_derived_from_edges(session)
     _build_tracks_edges(session)
     _build_cites_edges(session)
+    _build_contains_edges(session)
 
     session.commit()
 
@@ -273,6 +276,63 @@ def _upsert_edge(session: Session, edge_key: str, source_key: str, target_key: s
     session.add(edge)
     session.flush()
     return edge
+
+
+# ── Source Provenance node/edge builders ──────────────────────────────────
+
+
+def _build_source_document_nodes(session: Session) -> int:
+    from signalvault.db.models import SourceDocument as SD
+    count = 0
+    for doc in session.query(SD).all():
+        key = f"source_document:{doc.source_doc_id}"
+        _upsert_node(session, key, "source_document",
+                     label=doc.title or doc.source_url or doc.source_doc_id,
+                     source_ref=key,
+                     metadata={
+                         "source_doc_id": doc.source_doc_id,
+                         "source_type": doc.source_type,
+                         "status": doc.status,
+                     })
+        count += 1
+    return count
+
+
+def _build_source_segment_nodes(session: Session) -> int:
+    from signalvault.db.models import SourceSegment as SS, SourceDocument as SD
+    count = 0
+    for seg, doc in (
+        session.query(SS, SD)
+        .join(SD, SS.source_doc_id == SD.source_doc_id).all()
+    ):
+        key = f"source_segment:{seg.source_doc_id}:{seg.sequence_index}"
+        label = (doc.title or "Segment") + (f" [{seg.start_time}]" if seg.start_time else "")
+        _upsert_node(session, key, "source_segment",
+                     label=label[:500], source_ref=key,
+                     metadata={
+                         "source_doc_id": seg.source_doc_id,
+                         "segment_type": seg.segment_type,
+                         "page_number": seg.page_number,
+                         "start_time": seg.start_time,
+                     })
+        count += 1
+    return count
+
+
+def _build_contains_edges(session: Session) -> int:
+    from signalvault.db.models import SourceSegment as SS
+    count = 0
+    for seg in session.query(SS).all():
+        src_key = f"source_document:{seg.source_doc_id}"
+        tgt_key = f"source_segment:{seg.source_doc_id}:{seg.sequence_index}"
+        if not _node_exists(session, src_key) or not _node_exists(session, tgt_key):
+            continue
+        edge_key = f"contains:{seg.source_doc_id}>{seg.sequence_index}"
+        _upsert_edge(session, edge_key, src_key, tgt_key, "contains",
+                     weight=0.5, source_type=seg.segment_type,
+                     page_number=seg.page_number, timestamp=seg.start_time or "")
+        count += 1
+    return count
 
 
 def _build_mentioned_in_edges(session: Session) -> int:

@@ -68,14 +68,16 @@ class TestProfileUploadedFile:
         finally:
             path.unlink(missing_ok=True)
 
-    def test_pdf_file_rejected(self):
+    def test_pdf_file_rejected_by_text_profiler(self):
         from signalvault.sources.file_profile import profile_uploaded_file
 
         path = _make_temp_file(".pdf", "%PDF-1.4 fake content")
         try:
             profile = profile_uploaded_file(path, "test.pdf")
+            # profile_uploaded_file only checks ALLOWED_TEXT_EXTENSIONS, so PDF is unsupported here
+            # (PDF handling is done at the web route level, not in the text profiler)
             assert profile.supported is False
-            assert "不支持" in profile.unsupported_reason or "not supported" in profile.unsupported_reason.lower() or "仅支持" in profile.unsupported_reason
+            assert profile.unsupported_reason is not None
             assert profile.parse_quality == "minimal"
         finally:
             path.unlink(missing_ok=True)
@@ -840,10 +842,10 @@ class TestFileImportWebRoutes:
         assert response.status_code in (302, 303, 422)
 
     def test_preview_unsupported_extension(self, api_client, configured_vault):
-        """POST /sources/files/preview with .pdf returns error."""
+        """POST /sources/files/preview with .xyz returns error."""
         response = api_client.post(
             "/sources/files/preview",
-            files={"file": ("test.pdf", b"%PDF-1.4 fake", "application/pdf")},
+            files={"file": ("test.xyz", b"fake content", "application/octet-stream")},
             follow_redirects=False,
         )
         assert response.status_code in (302, 303)

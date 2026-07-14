@@ -312,6 +312,62 @@ def analyze_zsxq_topic(
 # ── Convenience: fetch + import + analyze in one call ────────────────────────
 
 
+def _persist_zsxq_provenance(profile, analysis_result: dict) -> None:
+    """Persist ZSXQ topic as SourceDocument + SourceSegments. Best-effort."""
+    try:
+        from signalvault.db.session import get_session, init_db
+        from signalvault.db.source_provenance import (
+            compute_content_hash,
+            create_source_document,
+            create_source_segments,
+            upsert_source_document,
+        )
+        init_db()
+        session = get_session()
+        topic = getattr(profile, "content_text", "") or ""
+        ch = profile.content_hash or compute_content_hash(topic)
+
+        doc_id, is_new = upsert_source_document(
+            session,
+            source_type="zsxq_topic",
+            content_hash=ch,
+            title=getattr(profile, "topic_title", "") or f"ZSXQ {getattr(profile, 'topic_id', '')}",
+            source_url=getattr(profile, "source_url", "") or "",
+            access_scope="private_subscription",
+            retention_policy="metadata_only",
+        )
+        if not is_new:
+            return
+
+        # Create segments: topic body + comments if present
+        segs = [{
+            "segment_id": "body", "sequence_index": 0,
+            "segment_type": "topic_body",
+            "text_original": topic,
+            "content_hash": compute_content_hash(topic),
+        }]
+        if hasattr(profile, "comments") and profile.comments:
+            for i, c in enumerate(profile.comments):
+                segs.append({
+                    "segment_id": f"comment_{i}", "sequence_index": i + 1,
+                    "segment_type": "comment",
+                    "text_original": getattr(c, "text", str(c)),
+                    "content_hash": compute_content_hash(getattr(c, "text", str(c))),
+                })
+        create_source_segments(session, doc_id, segs)
+
+        # Link Episode
+        ep_id = analysis_result.get("episode_id")
+        if ep_id:
+            from signalvault.db.models import Episode
+            ep = session.query(Episode).filter(Episode.id == ep_id).first()
+            if ep is not None:
+                ep.source_doc_id = doc_id
+                session.flush()
+    except Exception:
+        pass
+
+
 def import_and_analyze(
     group_id: str,
     topic_id: str,
@@ -376,6 +432,9 @@ def import_and_analyze(
         analysis_depth=analysis_depth,
         write_review=True,
     )
+
+    # Source Provenance: persist ZSXQ topic as SourceDocument + SourceSegments
+    _persist_zsxq_provenance(profile, analysis_result)
 
     return {
         "success": analysis_result["success"],

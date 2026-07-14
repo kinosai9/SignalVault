@@ -12,13 +12,14 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB (text files)
+MAX_PDF_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB (PDF files)
 ALLOWED_TEXT_EXTENSIONS: set[str] = {".md", ".txt", ".html", ".htm"}
-# Optional future support: .csv, .json (text archive only, no structured analysis)
-# OPTIONAL_EXTENSIONS: set[str] = {".csv", ".json"}
+ALLOWED_PDF_EXTENSIONS: set[str] = {".pdf"}
+ALL_ACCEPTED_EXTENSIONS: set[str] = ALLOWED_TEXT_EXTENSIONS | ALLOWED_PDF_EXTENSIONS
 
 UNSUPPORTED_MESSAGE = (
-    "当前仅支持 .md / .txt / .html / .htm 文本类型文件。"
+    "当前支持 .md / .txt / .html / .htm 文本文件和 .pdf 文档。"
     "其他格式将在后续版本支持。"
 )
 
@@ -157,6 +158,11 @@ def profile_uploaded_file(
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def is_pdf_file(filename: str) -> bool:
+    """Check if a filename has a .pdf extension."""
+    return _normalize_extension(filename) in ALLOWED_PDF_EXTENSIONS
 
 
 def _normalize_extension(filename: str) -> str:

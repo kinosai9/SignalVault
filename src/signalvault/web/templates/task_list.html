@@ -11,8 +11,10 @@
         </div>
         <div class="diagnostics-hero-actions">
             <a href="/sources/import/new" class="btn-action">继续导入</a>
+            <a href="/tasks/diagnostics/export" class="btn-action btn-secondary">导出诊断包</a>
             <a href="/dashboard" class="btn-action btn-secondary">返回变化雷达</a>
         </div>
+        <p class="diagnostics-export-hint">诊断包包含系统状态、操作日志和配置摘要，所有敏感信息已脱敏，可用于远程排障。</p>
     </div>
 
     {% if flash_msg %}

@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 
 from signalvault.db.repository import (
@@ -1156,6 +1156,105 @@ def page_report_detail(request: Request, report_id: int, hl: str = ""):
     return _render("report_detail.html", ctx)
 
 
+def _report_has_source_document(report: dict) -> bool:
+    """Check if a report has a linked SourceDocument with segments."""
+    try:
+        session = _get_session()
+        try:
+            from signalvault.db.models import Episode
+            ep = session.query(Episode).filter(Episode.id == report.get("episode_id")).first()
+            if ep is None or not getattr(ep, "source_doc_id", None):
+                return False
+            from signalvault.db.source_provenance import count_segments
+            return count_segments(session, ep.source_doc_id) > 0
+        finally:
+            session.close()
+    except Exception:
+        return False
+
+
+@router.get("/reports/{report_id}/transcript")
+def page_report_transcript(request: Request, report_id: int):
+    """Display the full original transcript for a report (bilingual if translated)."""
+    session = _get_session()
+    try:
+        report = get_report_detail(session, report_id)
+        if not report:
+            ctx = {"request": request, "status_code": 404, "detail": "报告不存在"}
+            ctx.update(_flash(request))
+            return _render("error.html", ctx, status_code=404)
+
+        # Find SourceDocument via Episode.source_doc_id
+        from signalvault.db.models import Episode
+        ep = session.query(Episode).filter(Episode.id == report.get("episode_id")).first()
+        if ep is None or not getattr(ep, "source_doc_id", None):
+            ctx = {"request": request, "status_code": 404, "detail": "该报告没有关联的原文材料"}
+            ctx.update(_flash(request))
+            return _render("error.html", ctx, status_code=404)
+
+        from signalvault.db.source_provenance import get_segments, get_source_document
+
+        doc = get_source_document(session, ep.source_doc_id)
+        segments = get_segments(session, ep.source_doc_id)
+
+        # Collect view timestamps for highlighting
+        view_timestamps = set()
+        for v in report.get("views", []):
+            ts = v.get("timestamp_start", "")
+            if ts:
+                view_timestamps.add(ts)
+
+        # Check if translation is needed
+        needs_translation = any(
+            s.get("translation_status", "not_needed") == "not_needed"
+            and s.get("text_original", "").strip()
+            for s in segments
+        )
+
+        ctx = {
+            "request": request,
+            "report": report,
+            "doc": doc,
+            "segments": segments,
+            "view_timestamps": view_timestamps,
+            "needs_translation": needs_translation,
+            "segment_count": len(segments),
+        }
+        ctx.update(_flash(request))
+        return _render("report_transcript.html", ctx)
+    finally:
+        session.close()
+
+
+@router.post("/reports/{report_id}/translate")
+def action_translate_report(request: Request, report_id: int):
+    """Trigger LLM translation for a report's source segments."""
+    session = _get_session()
+    try:
+        from signalvault.db.models import Episode
+        report = get_report_detail(session, report_id)
+        if not report:
+            return JSONResponse({"error": "报告不存在"}, status_code=404)
+
+        ep = session.query(Episode).filter(Episode.id == report.get("episode_id")).first()
+        if ep is None or not getattr(ep, "source_doc_id", None):
+            return JSONResponse({"error": "没有原文材料"}, status_code=404)
+
+        # Get provider
+        provider_name = report.get("llm_provider", "mock")
+        from signalvault.analysis.pipeline import get_llm_provider
+        provider = get_llm_provider(provider_name)
+
+        from signalvault.services.translate_service import translate_segments
+        result = translate_segments(session, ep.source_doc_id, provider)
+
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        session.close()
+
+
 @router.get("/briefs/latest")
 def page_research_brief(request: Request):
     """P2-J.1: Latest Research Brief — rule-based insights from knowledge graph."""
@@ -1528,6 +1627,29 @@ def page_tasks(request: Request):
     return _render("task_list.html", ctx)
 
 
+@router.get("/tasks/diagnostics/export")
+def action_export_diagnostic_bundle():
+    """Generate and download a diagnostic bundle zip."""
+    import tempfile
+    from signalvault.diagnostics.bundle import export_diagnostic_bundle
+
+    tmpdir = tempfile.mkdtemp(prefix="sv_diag_")
+    result = export_diagnostic_bundle(output_dir=tmpdir)
+
+    if not result.success:
+        return HTMLResponse(
+            f"<h2>导出失败</h2><p>{result.error}</p><a href='/tasks'>返回诊断中心</a>",
+            status_code=500,
+        )
+
+    zip_path = Path(result.bundle_path)
+    return FileResponse(
+        path=str(zip_path),
+        filename=zip_path.name,
+        media_type="application/zip",
+    )
+
+
 @router.get("/tasks/{job_id}")
 def page_task_detail(request: Request, job_id: str):
     """Unified task detail page — renders task progress UI.
@@ -1864,7 +1986,7 @@ def _build_report_evidence_context(report: dict) -> dict:
         "quote_count": quote_count,
         "location_count": location_count,
         "entity_count": entity_count,
-        "has_full_transcript": False,
+        "has_full_transcript": _report_has_source_document(report),
         "source_info": source_info,
     }
 
@@ -4334,6 +4456,117 @@ def action_tracked_source_delete(request: Request, tracked_source_id: int):
 _UPLOAD_TEMP_DIR = Path(tempfile.gettempdir()) / "signalvault_uploads"
 
 
+async def _preview_pdf_upload(
+    request: Request,
+    filename: str,
+    tmp_path: Path,
+    vault_path: Path,
+):
+    """Handle PDF upload preview — extract PDF, build preview context, render template."""
+    from signalvault.sources.pdf_extraction import extract_pdf
+
+    result = extract_pdf(tmp_path)
+
+    preview_id = __import__("uuid").uuid4().hex[:8]
+
+    pdf_preview = {
+        "preview_id": preview_id,
+        "filename": filename,
+        "file_size_bytes": tmp_path.stat().st_size,
+        "page_count": result.page_count,
+        "quality": result.quality,
+        "needs_ocr": result.needs_ocr,
+        "content_hash": result.content_hash,
+        "title": result.metadata.title or Path(filename).stem,
+        "author": result.metadata.author or "",
+        "text_excerpt": result.full_text[:2000] if result.full_text else "",
+        "text_length": len(result.full_text or ""),
+        "error_message": result.error_message,
+        "import_eligible": result.quality in ("good", "degraded"),
+        "ineligible_reason": (
+            "PDF 文本提取失败，无法导入分析。" if result.quality == "failed"
+            else "PDF 文本量过少，无法进行有效分析。" if result.quality == "minimal"
+            else ""
+        ),
+        "_temp_path": tmp_path,
+        "_is_pdf": True,
+    }
+
+    # Store preview
+    _file_preview_store[preview_id] = pdf_preview
+
+    # Dual-write to ingest_jobs
+    try:
+        from signalvault.sources.ingest_jobs import IngestJobManager
+        IngestJobManager.create_job(
+            source_type="file_upload",
+            source_hash=result.content_hash or "",
+            source_name=filename,
+            preview_id=preview_id,
+            action="",
+        )
+    except Exception:
+        pass
+
+    from signalvault.sources.models import ACTION_DESCRIPTIONS, ACTION_LABELS
+
+    ctx = {
+        "request": request,
+        "preview": pdf_preview,
+        "is_pdf": True,
+        "vault_path": str(vault_path),
+        "vault_configured": True,
+        "action_labels": dict(ACTION_LABELS),
+        "action_descriptions": dict(ACTION_DESCRIPTIONS),
+    }
+    return _render("source_file_import_preview.html", ctx)
+
+
+def _confirm_pdf_analysis(preview_id: str, tmp_path: Path, preview: dict | object):
+    """Run PDF analysis synchronously and redirect to the report."""
+    try:
+        from signalvault.sources.ingest_jobs import IngestJobManager
+        from signalvault.sources.models import ACTION_LABELS
+        IngestJobManager.confirm_job(
+            preview_id,
+            action="pdf_analyze",
+            action_label=ACTION_LABELS.get("pdf_analyze", "PDF 分析"),
+            result_path=str(tmp_path),
+        )
+    except Exception:
+        pass
+
+    # Run analysis synchronously (same pattern as ZSXQ analyze route)
+    from signalvault.sources.pdf_analysis import analyze_pdf
+
+    try:
+        result = analyze_pdf(
+            file_path=tmp_path,
+            provider_name="mock",
+            write_review=True,
+        )
+    except Exception as e:
+        _cleanup_temp_file(tmp_path)
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:PDF 分析失败 — {str(e)[:120]}",
+            status_code=303,
+        )
+
+    _cleanup_temp_file(tmp_path)
+
+    if result.get("success") and result.get("report_id"):
+        return RedirectResponse(
+            url=f"/reports/{result['report_id']}?msg=success:PDF 分析完成",
+            status_code=303,
+        )
+    else:
+        reason = result.get("reason", "分析未能完成")
+        return RedirectResponse(
+            url=f"/sources/files/import?msg=error:{reason}",
+            status_code=303,
+        )
+
+
 @router.get("/sources/files/import")
 def page_source_file_import(request: Request):
     """File upload form page."""
@@ -4377,12 +4610,15 @@ async def action_source_file_preview(
 
     # ── Validate extension early ────────────────────────────────────────
     from signalvault.sources.file_profile import (
+        ALLOWED_PDF_EXTENSIONS,
         ALLOWED_TEXT_EXTENSIONS,
         UNSUPPORTED_MESSAGE,
+        is_pdf_file,
     )
 
     ext = Path(file.filename).suffix.lower()
-    if ext not in ALLOWED_TEXT_EXTENSIONS:
+    is_pdf = ext in ALLOWED_PDF_EXTENSIONS
+    if ext not in ALLOWED_TEXT_EXTENSIONS and not is_pdf:
         return RedirectResponse(
             url=f"/sources/files/import?msg=error:{UNSUPPORTED_MESSAGE}", status_code=303,
         )
@@ -4394,11 +4630,12 @@ async def action_source_file_preview(
     raw_bytes = await file.read()
 
     # ── Size check ──────────────────────────────────────────────────────
-    from signalvault.sources.file_profile import MAX_UPLOAD_BYTES
-    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+    from signalvault.sources.file_profile import MAX_PDF_UPLOAD_BYTES, MAX_UPLOAD_BYTES
+    max_bytes = MAX_PDF_UPLOAD_BYTES if is_pdf else MAX_UPLOAD_BYTES
+    if len(raw_bytes) > max_bytes:
         size_mb = len(raw_bytes) / (1024 * 1024)
         return RedirectResponse(
-            url=f"/sources/files/import?msg=error:文件大小 ({size_mb:.1f} MB) 超过限制 ({MAX_UPLOAD_BYTES // (1024 * 1024)} MB)", status_code=303,
+            url=f"/sources/files/import?msg=error:文件大小 ({size_mb:.1f} MB) 超过限制 ({max_bytes // (1024 * 1024)} MB)", status_code=303,
         )
 
     try:
@@ -4407,6 +4644,10 @@ async def action_source_file_preview(
         return RedirectResponse(
             url=f"/sources/files/import?msg=error:无法保存上传文件 — {e}", status_code=303,
         )
+
+    # ── PDF branch: extract and preview ──────────────────────────────────
+    if is_pdf:
+        return await _preview_pdf_upload(request, file.filename, tmp_path, vp)
 
     # ── Step 1: Profile the uploaded file ───────────────────────────────
     from signalvault.sources.file_profile import profile_uploaded_file
@@ -4526,7 +4767,23 @@ def action_source_file_confirm(
             status_code=303,
         )
 
-    # ── Execute import ──────────────────────────────────────────────────
+    # ── PDF branch: analyze as background job ────────────────────────────
+    is_pdf_preview = (
+        isinstance(preview, dict) and preview.get("_is_pdf")
+        or getattr(preview, "_is_pdf", False)
+    )
+    if is_pdf_preview:
+        tmp_path = getattr(preview, "_temp_path", None) or (
+            preview.get("_temp_path") if isinstance(preview, dict) else None
+        )
+        if not tmp_path:
+            return RedirectResponse(
+                url="/sources/files/import?msg=error:PDF 临时文件已丢失，请重新上传",
+                status_code=303,
+            )
+        return _confirm_pdf_analysis(preview_id, tmp_path, preview)
+
+    # ── Execute import (text files) ─────────────────────────────────────
     from signalvault.sources.file_import_preview import confirm_file_import
 
     try:

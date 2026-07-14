@@ -141,6 +141,79 @@ def _check_analysis_eligibility(result: PdfExtractionResult) -> tuple[bool, str,
     return True, "ok", findings
 
 
+# ── PDF provenance persistence ───────────────────────────────────────────
+
+def _persist_pdf_provenance(
+    extraction_result: PdfExtractionResult,
+    pipeline_result: dict,
+) -> None:
+    """Persist PDF extraction as SourceDocument + page-level SourceSegments.
+
+    Best-effort: failures are logged but never break the analysis pipeline.
+    """
+    try:
+        from signalvault.db.session import get_session, init_db
+        from signalvault.db.source_provenance import (
+            compute_content_hash,
+            create_source_segments,
+            upsert_source_document,
+        )
+
+        init_db()
+        session = get_session()
+
+        full_text = extraction_result.full_text or ""
+        content_hash = extraction_result.content_hash or compute_content_hash(full_text)
+
+        fp_source = Path(extraction_result.source_path) if extraction_result.source_path else Path(".")
+        doc_id, is_new = upsert_source_document(
+            session,
+            source_type="pdf_document",
+            content_hash=content_hash,
+            title=extraction_result.metadata.title or fp_source.stem,
+            source_path=str(fp_source.resolve()) if extraction_result.source_path else "",
+            source_url=str(fp_source.resolve()) if extraction_result.source_path else "",
+            access_scope="uploaded_private",
+            status="available" if extraction_result.quality in ("good", "degraded") else "degraded",
+        )
+
+        if not is_new:
+            logger.debug("SourceDocument already exists for PDF %s", doc_id)
+            return
+
+        # Create page-level segments
+        seg_dicts = []
+        for page in extraction_result.pages:
+            seg_dicts.append({
+                "segment_id": f"page_{page.page_number}",
+                "sequence_index": page.page_number - 1,
+                "segment_type": "page",
+                "text_original": page.text,
+                "page_number": page.page_number,
+                "char_start": 0,
+                "char_end": len(page.text),
+                "content_hash": compute_content_hash(page.text),
+            })
+
+        created = create_source_segments(session, doc_id, seg_dicts)
+        logger.info(
+            "Persisted PDF document: doc=%s pages=%d quality=%s",
+            doc_id, created, extraction_result.quality,
+        )
+
+        # Link Episode to SourceDocument
+        episode_id = pipeline_result.get("episode_id")
+        if episode_id:
+            from signalvault.db.models import Episode
+            ep = session.query(Episode).filter(Episode.id == episode_id).first()
+            if ep is not None:
+                ep.source_doc_id = doc_id
+                session.flush()
+
+    except Exception:
+        logger.warning("Failed to persist PDF provenance", exc_info=True)
+
+
 # ── PDF Analysis Entry Point ────────────────────────────────────────────────
 
 
@@ -267,6 +340,9 @@ def analyze_pdf(
         source_info=source_info,
         episode_extra=episode_extra,
     )
+
+    # Source Provenance: persist PDF as SourceDocument + page-level SourceSegments
+    _persist_pdf_provenance(result, pipeline_result)
 
     return {
         "success": True,

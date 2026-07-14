@@ -329,6 +329,140 @@ def _migrate_operation_logs_table(engine) -> None:
         ))
 
 
+def _migrate_source_provenance_tables(engine) -> None:
+    """Source Provenance: Create source_documents and source_segments tables."""
+    insp = inspect(engine)
+    existing_tables = insp.get_table_names()
+
+    if "source_documents" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE source_documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_doc_id VARCHAR(64) NOT NULL UNIQUE,
+                    source_type VARCHAR(30) NOT NULL,
+                    title VARCHAR(500) DEFAULT '',
+                    canonical_url VARCHAR(500) DEFAULT '',
+                    source_url VARCHAR(500) DEFAULT '',
+                    source_path VARCHAR(500) DEFAULT '',
+                    content_hash VARCHAR(64) DEFAULT '',
+                    language VARCHAR(20) DEFAULT '',
+                    original_language VARCHAR(20) DEFAULT '',
+                    translated_language VARCHAR(20) DEFAULT '',
+                    status VARCHAR(20) DEFAULT 'available',
+                    raw_text_path VARCHAR(500) DEFAULT '',
+                    normalized_text_path VARCHAR(500) DEFAULT '',
+                    translated_text_path VARCHAR(500) DEFAULT '',
+                    metadata_json TEXT DEFAULT '{}',
+                    access_scope VARCHAR(30) DEFAULT 'public_web',
+                    retention_policy VARCHAR(30) DEFAULT 'keep_full_text',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    fetched_at DATETIME,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_sd_type ON source_documents(source_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_sd_hash ON source_documents(content_hash)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_sd_status ON source_documents(status)"
+        ))
+
+    if "source_segments" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE source_segments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_doc_id VARCHAR(64) NOT NULL,
+                    segment_id VARCHAR(64) DEFAULT '',
+                    sequence_index INTEGER DEFAULT 0,
+                    segment_type VARCHAR(20) DEFAULT 'paragraph',
+                    text_original TEXT DEFAULT '',
+                    text_normalized TEXT DEFAULT '',
+                    text_translated TEXT DEFAULT '',
+                    start_time VARCHAR(20) DEFAULT '',
+                    end_time VARCHAR(20) DEFAULT '',
+                    page_number INTEGER,
+                    paragraph_index INTEGER,
+                    heading_path VARCHAR(300) DEFAULT '',
+                    char_start INTEGER,
+                    char_end INTEGER,
+                    locator_json TEXT DEFAULT '{}',
+                    content_hash VARCHAR(64) DEFAULT '',
+                    translation_status VARCHAR(20) DEFAULT 'not_needed',
+                    translation_metadata_json TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ss_doc ON source_segments(source_doc_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ss_segid ON source_segments(segment_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ss_type ON source_segments(segment_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_ss_page ON source_segments(page_number)"
+        ))
+
+
+def _migrate_source_provenance_fks(engine) -> None:
+    """Add optional source_doc_id / source_segment_id FK columns to existing tables."""
+    insp = inspect(engine)
+
+    # Episode.source_doc_id
+    if "episodes" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("episodes")}
+        if "source_doc_id" not in existing:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE episodes ADD COLUMN source_doc_id VARCHAR(64)"
+                ))
+
+    # Report.source_doc_id
+    if "reports" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("reports")}
+        if "source_doc_id" not in existing:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE reports ADD COLUMN source_doc_id VARCHAR(64)"
+                ))
+
+    # InvestmentViewRecord.source_segment_id
+    if "investment_views" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("investment_views")}
+        if "source_segment_id" not in existing:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE investment_views ADD COLUMN source_segment_id VARCHAR(64)"
+                ))
+
+    # TrackingSignalRecord.source_segment_id
+    if "tracking_signals" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("tracking_signals")}
+        if "source_segment_id" not in existing:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE tracking_signals ADD COLUMN source_segment_id VARCHAR(64)"
+                ))
+
+    # OperationLog.source_doc_id
+    if "operation_logs" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("operation_logs")}
+        if "source_doc_id" not in existing:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE operation_logs ADD COLUMN source_doc_id VARCHAR(64)"
+                ))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
@@ -342,6 +476,8 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_review_items_table(_engine)
     _migrate_knowledge_graph_tables(_engine)
     _migrate_operation_logs_table(_engine)
+    _migrate_source_provenance_tables(_engine)
+    _migrate_source_provenance_fks(_engine)
 
 
 def get_session() -> Session:

@@ -11,8 +11,11 @@ from signalvault.sources.file_import_preview import (
     evaluate_file_import_eligibility,
 )
 from signalvault.sources.file_profile import (
+    ALLOWED_PDF_EXTENSIONS,
     ALLOWED_TEXT_EXTENSIONS,
+    MAX_PDF_UPLOAD_BYTES,
     MAX_UPLOAD_BYTES,
+    is_pdf_file,
     profile_uploaded_file,
 )
 from signalvault.sources.import_preview import (
@@ -51,6 +54,7 @@ from signalvault.sources.tracked_source_service import (
 __all__ = [
     "ActionEnum",
     "ACTION_DESCRIPTIONS",
+    "ALLOWED_PDF_EXTENSIONS",
     "ALLOWED_TEXT_EXTENSIONS",
     "ConflictDetector",
     "ConflictInfo",
@@ -60,6 +64,7 @@ __all__ = [
     "FileImportPreview",
     "ImportPreview",
     "LLMSourceProfiler",
+    "MAX_PDF_UPLOAD_BYTES",
     "MAX_UPLOAD_BYTES",
     "SourceKind",
     "SourceProfile",
@@ -75,6 +80,7 @@ __all__ = [
     "execute_import_action",
     "extract_text_from_uploaded_file",
     "import_tracked_source_entries",
+    "is_pdf_file",
     "profile_source_url",
     "profile_uploaded_file",
     "refresh_tracked_source",

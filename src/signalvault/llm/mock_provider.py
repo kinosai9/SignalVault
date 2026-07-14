@@ -459,3 +459,9 @@ class MockLLMProvider(LLMProvider):
         if no_evidence_views:
             uncertain.append(f"{len(no_evidence_views)} 条观点未给出明确证据类型，为规则引擎推断")
         return uncertain
+
+    def translate_text(self, text: str, source_lang: str = "en", target_lang: str = "zh") -> str:
+        """Mock translation — returns original text with a marker."""
+        if not text or not text.strip():
+            return text
+        return f"[MOCK 未翻译] {text}"

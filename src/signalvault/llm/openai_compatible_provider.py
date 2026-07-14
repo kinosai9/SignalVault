@@ -124,3 +124,16 @@ class OpenAICompatibleProvider(LLMProvider):
             except json.JSONDecodeError:
                 pass
         raise ValueError(f"无法解析 LLM 输出为 JSON: {text[:200]}")
+
+    def translate_text(self, text: str, source_lang: str = "en", target_lang: str = "zh") -> str:
+        """Translate text using the configured LLM."""
+        if not text or not text.strip():
+            return text
+        system = (
+            "You are a professional translator specializing in investment and technology content. "
+            "Translate the following text accurately while preserving technical terms, company names, "
+            "ticker symbols, and numbers exactly as they are. "
+            "Output ONLY the translation, no explanations or notes."
+        )
+        user = f"Translate from {source_lang} to {target_lang}:\n\n{text}"
+        return self._chat(system, user)

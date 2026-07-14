@@ -58,6 +58,12 @@ class UnifiedSearchResult:
     view_direction: str = ""     # "bullish" | "bearish" | "neutral"
     signal_status: str = ""      # "open" | "triggered" | "resolved"
 
+    # Source Provenance (SourceDocument / SourceSegment)
+    source_doc_id: str = ""
+    segment_id: str = ""
+    segment_type: str = ""       # "timestamp" | "paragraph" | "page" | "topic_body" | "comment"
+    heading_path: str = ""
+
     # Extra metadata
     metadata: dict = field(default_factory=dict)
 
@@ -332,6 +338,93 @@ def _unified_search_like(
                 _dedup_key=key,
             ))
 
+    # 5. Source Documents (by title/url)
+    if "source_document" in types:
+        from signalvault.db.models import SourceDocument as SD
+        rows = (
+            session.query(SD)
+            .filter(
+                or_(
+                    SD.title.like(pattern),
+                    SD.source_url.like(pattern),
+                    SD.canonical_url.like(pattern),
+                )
+            )
+            .order_by(SD.created_at.desc())
+            .limit(limit * 2)
+            .all()
+        )
+        for doc in rows:
+            key = f"source_document:{doc.source_doc_id}"
+            if key in seen:
+                continue
+            seen.add(key)
+            snippet = _clean_snippet(doc.title or doc.source_url or "", keyword)
+            results.append(UnifiedSearchResult(
+                result_type="source_document",
+                title=doc.title or doc.source_url or "",
+                snippet=snippet,
+                relevance_score=0.3,
+                matched_fields=["title"],
+                source_type=doc.source_type,
+                source_path=doc.source_path or "",
+                source_title=doc.title,
+                source_doc_id=doc.source_doc_id,
+                metadata={
+                    "source_doc_id": doc.source_doc_id,
+                    "canonical_url": doc.canonical_url,
+                    "status": doc.status,
+                    "language": doc.language,
+                },
+                _dedup_key=key,
+            ))
+
+    # 6. Source Segments (by text content)
+    if "source_segment" in types:
+        from signalvault.db.models import SourceDocument as SD, SourceSegment as SS
+        rows = (
+            session.query(SS, SD)
+            .join(SD, SS.source_doc_id == SD.source_doc_id)
+            .filter(
+                or_(
+                    SS.text_original.like(pattern),
+                    SS.text_normalized.like(pattern),
+                    SS.text_translated.like(pattern),
+                )
+            )
+            .order_by(SS.sequence_index)
+            .limit(limit * 2)
+            .all()
+        )
+        for seg, doc in rows:
+            key = f"source_segment:{seg.id}"
+            if key in seen:
+                continue
+            seen.add(key)
+            text = seg.text_original or seg.text_normalized or ""
+            snippet = _clean_snippet(text, keyword)
+            results.append(UnifiedSearchResult(
+                result_type="source_segment",
+                title=doc.title or f"Segment #{seg.sequence_index}",
+                snippet=snippet,
+                relevance_score=0.25,
+                matched_fields=["text"],
+                source_type=doc.source_type,
+                source_path=doc.source_path or "",
+                source_doc_id=seg.source_doc_id,
+                segment_id=seg.segment_id,
+                segment_type=seg.segment_type,
+                timestamp=seg.start_time,
+                page_number=seg.page_number,
+                heading_path=seg.heading_path or "",
+                source_quote=text[:200],
+                metadata={
+                    "paragraph_index": seg.paragraph_index,
+                    "translation_status": seg.translation_status,
+                },
+                _dedup_key=key,
+            ))
+
     # Sort by relevance_score descending
     results.sort(key=lambda r: r.relevance_score, reverse=True)
     return results[:limit]
@@ -534,5 +627,9 @@ def serialize_unified_result(r: UnifiedSearchResult) -> dict:
         "entity_type": r.entity_type,
         "view_direction": r.view_direction,
         "signal_status": r.signal_status,
+        "source_doc_id": r.source_doc_id,
+        "segment_id": r.segment_id,
+        "segment_type": r.segment_type,
+        "heading_path": r.heading_path,
         "metadata": r.metadata,
     }

@@ -18,9 +18,12 @@
             <h2>{{ report.title or report.episode_title or ("报告 #" ~ report.id) }}</h2>
             <p>先看证据链和来源保留状态，再进入完整报告正文。</p>
         </div>
-        <form method="post" action="/reports/{{ report.id }}/sync">
+        <form method="post" action="/reports/{{ report.id }}/sync" style="display:inline">
             <button type="submit" class="btn-action" title="将本报告导出到 Obsidian，并更新研究摘要与我的关注。">同步到知识库</button>
         </form>
+        {% if report.evidence_context.has_full_transcript %}
+        <a href="/reports/{{ report.id }}/transcript" class="btn-action btn-secondary" style="margin-left:8px">查看完整原文（中英对照）</a>
+        {% endif %}
     </div>
     <div class="meta-row">
         <span class="tag tag-source {{ report.source_type }}">{{ report.evidence_context.source_label }}</span>

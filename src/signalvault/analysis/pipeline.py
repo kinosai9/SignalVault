@@ -24,6 +24,84 @@ from signalvault.utils.hash import file_hash
 logger = logging.getLogger(__name__)
 
 
+# ── YouTube transcript provenance persistence ───────────────────────────
+
+def _persist_youtube_provenance(transcript: TranscriptResult, pipeline_result: dict) -> None:
+    """Persist a YouTube transcript as SourceDocument + SourceSegments.
+
+    Best-effort: failures are logged but never break the analysis pipeline.
+    """
+    try:
+        from signalvault.db.source_provenance import (
+            compute_content_hash,
+            create_source_document,
+            create_source_segments,
+            upsert_source_document,
+        )
+
+        session = get_session()
+        full_text = " ".join(s.text for s in transcript.segments)
+        content_hash = compute_content_hash(full_text)
+
+        # Upsert: skip if the same transcript is already persisted
+        doc_id, is_new = upsert_source_document(
+            session,
+            source_type="youtube_transcript",
+            content_hash=content_hash,
+            title=transcript.title or transcript.video_id or "",
+            canonical_url=transcript.source_url or "",
+            source_url=transcript.source_url or "",
+            language=transcript.language or "",
+            original_language=transcript.language or "",
+            access_scope="public_web",
+            fetched_at=transcript.fetched_at,
+        )
+
+        if not is_new:
+            logger.debug("SourceDocument already exists for transcript %s", doc_id)
+            return
+
+        # Create segments from transcript
+        seg_dicts = []
+        for i, seg in enumerate(transcript.segments):
+            seg_dicts.append({
+                "segment_id": getattr(seg, "segment_id", f"yt_{i:04d}"),
+                "sequence_index": i,
+                "segment_type": "timestamp",
+                "text_original": seg.text,
+                "start_time": getattr(seg, "start_time", ""),
+                "end_time": getattr(seg, "end_time", ""),
+                "content_hash": compute_content_hash(seg.text),
+            })
+
+        created = create_source_segments(session, doc_id, seg_dicts)
+        logger.info(
+            "Persisted YouTube transcript: doc=%s segments=%d",
+            doc_id, created,
+        )
+
+        # Link Episode to SourceDocument
+        episode_id = pipeline_result.get("episode_id")
+        if episode_id:
+            from signalvault.db.models import Episode
+            ep = session.query(Episode).filter(Episode.id == episode_id).first()
+            if ep is not None:
+                ep.source_doc_id = doc_id
+                session.flush()
+
+        # Link Report to SourceDocument
+        report_id = pipeline_result.get("report_id")
+        if report_id:
+            from signalvault.db.models import Report
+            rp = session.query(Report).filter(Report.id == report_id).first()
+            if rp is not None:
+                rp.source_doc_id = doc_id
+                session.flush()
+
+    except Exception:
+        logger.warning("Failed to persist YouTube transcript provenance", exc_info=True)
+
+
 # P2-A2.1: source_info override 合并优先级映射
 # override key → source_info key（便于扩展）
 _SOURCE_INFO_OVERRIDE_MAP = {
@@ -420,7 +498,7 @@ def analyze_from_transcript(
         "language": transcript.language,
     }
 
-    return _run_pipeline(
+    result = _run_pipeline(
         segments=transcript.segments,
         episode_title=episode_title,
         source_path=source_path,
@@ -434,3 +512,8 @@ def analyze_from_transcript(
         episode_extra=episode_extra,
         chunking_config=chunking_config,
     )
+
+    # Source Provenance: persist full transcript as SourceDocument + SourceSegments
+    _persist_youtube_provenance(transcript, result)
+
+    return result

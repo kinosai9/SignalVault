@@ -405,3 +405,118 @@ class OperationLog(Base):
 
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class SourceDocument(Base):
+    """Source Provenance: a readable original material or derived full-text transcript.
+
+    One row per source material — YouTube transcript, web page, PDF document,
+    ZSXQ topic, uploaded file, or Deep Note.  Does NOT replace Episode/Report;
+    sits beneath them as a stable provenance anchor.
+    """
+
+    __tablename__ = "source_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Identity
+    source_doc_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+        # Stable business ID, usable for cross-table references
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False)
+        # youtube_transcript / web_page / zsxq_topic / pdf_document / uploaded_text / deep_note
+
+    # Display metadata
+    title: Mapped[str] = mapped_column(String(500), default="")
+    canonical_url: Mapped[str] = mapped_column(String(500), default="")
+    source_url: Mapped[str] = mapped_column(String(500), default="")
+    source_path: Mapped[str] = mapped_column(String(500), default="")
+        # Local file or Vault path to the readable text file
+
+    # Content identity
+    content_hash: Mapped[str] = mapped_column(String(64), default="")
+        # Normalized full-text hash for dedup and version detection
+
+    # Language
+    language: Mapped[str] = mapped_column(String(20), default="")
+    original_language: Mapped[str] = mapped_column(String(20), default="")
+    translated_language: Mapped[str] = mapped_column(String(20), default="")
+
+    # Status
+    status: Mapped[str] = mapped_column(String(20), default="available")
+        # available / missing / private / expired / degraded
+
+    # Text file paths (on-disk readable versions)
+    raw_text_path: Mapped[str] = mapped_column(String(500), default="")
+    normalized_text_path: Mapped[str] = mapped_column(String(500), default="")
+    translated_text_path: Mapped[str] = mapped_column(String(500), default="")
+
+    # Source-specific metadata (JSON)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+
+    # Access & retention
+    access_scope: Mapped[str] = mapped_column(String(30), default="public_web")
+        # public_web / private_subscription / uploaded_private / local_only
+    retention_policy: Mapped[str] = mapped_column(String(30), default="keep_full_text")
+        # keep_full_text / metadata_only / redacted_export
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class SourceSegment(Base):
+    """Source Provenance: a locatable, searchable, citable segment of source text.
+
+    One row per timestamp / paragraph / page / comment — maps directly to
+    SubtitleSegment (YouTube), PdfPage (PDF), text paragraphs (web/file/ZSXQ).
+    """
+
+    __tablename__ = "source_segments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Parent document
+    source_doc_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+        # FK to source_documents.source_doc_id
+
+    # Segment identity
+    segment_id: Mapped[str] = mapped_column(String(64), default="")
+        # Source-internal stable segment ID (e.g. "yt_001", "page_3", "para_12")
+    sequence_index: Mapped[int] = mapped_column(Integer, default=0)
+        # Order within the parent document
+    segment_type: Mapped[str] = mapped_column(String(20), default="paragraph")
+        # timestamp / paragraph / page / topic_body / comment / quote
+
+    # Text variants
+    text_original: Mapped[str] = mapped_column(Text, default="")
+    text_normalized: Mapped[str] = mapped_column(Text, default="")
+    text_translated: Mapped[str] = mapped_column(Text, default="")
+
+    # Locators (source-type-specific, only the relevant ones filled)
+    start_time: Mapped[str] = mapped_column(String(20), default="")
+        # Video/audio start time (HH:MM:SS.mmm)
+    end_time: Mapped[str] = mapped_column(String(20), default="")
+        # Video/audio end time
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+        # PDF page number (1-indexed)
+    paragraph_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+        # Paragraph order in web page or text file
+    heading_path: Mapped[str] = mapped_column(String(300), default="")
+        # Heading hierarchy for web/document paragraphs
+    char_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    char_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Source-specific locator (JSON)
+    locator_json: Mapped[str] = mapped_column(Text, default="{}")
+        # CSS selector, topic_id, comment_id, attachment_id, etc.
+
+    # Content hash
+    content_hash: Mapped[str] = mapped_column(String(64), default="")
+
+    # Translation
+    translation_status: Mapped[str] = mapped_column(String(20), default="not_needed")
+        # not_needed / translated / partial / failed
+    translation_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

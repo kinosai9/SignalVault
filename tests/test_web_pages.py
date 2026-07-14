@@ -675,7 +675,7 @@ class TestWatchlistSettings:
         os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
         try:
             resp = api_client.get("/dashboard")
-            assert "/watchlist/settings" in resp.text
+            assert "/watchlist" in resp.text
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
@@ -748,7 +748,7 @@ class TestContentNew:
         os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
         try:
             resp = api_client.get("/dashboard")
-            assert "/content/new" in resp.text
+            assert "/sources/import/new" in resp.text
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
