@@ -299,7 +299,8 @@ def _build_source_document_nodes(session: Session) -> int:
 
 
 def _build_source_segment_nodes(session: Session) -> int:
-    from signalvault.db.models import SourceSegment as SS, SourceDocument as SD
+    from signalvault.db.models import SourceDocument as SD
+    from signalvault.db.models import SourceSegment as SS
     count = 0
     for seg, doc in (
         session.query(SS, SD)

@@ -1033,19 +1033,21 @@ def page_dashboard_brief_fragment(request: Request):
         return HTMLResponse("")
 
     try:
-        from signalvault.workspace.scanner_cache import scan_with_cache
-        from signalvault.workspace.canonicalize import (
-            group_duplicate_claims,
-            group_duplicate_signals,
-        )
         from signalvault.workspace.canonical_view import (
             build_canonical_claim_views,
             build_canonical_signal_views,
         )
+        from signalvault.workspace.canonicalize import (
+            group_duplicate_claims,
+            group_duplicate_signals,
+        )
         from signalvault.workspace.research_brief import generate_brief
+        from signalvault.workspace.scanner_cache import scan_with_cache
         from signalvault.workspace.watchlist import (
             ensure_watchlist_template,
             generate_watchlist_brief,
+        )
+        from signalvault.workspace.watchlist import (
             load_watchlist as _load_wl,
         )
 
@@ -1631,6 +1633,7 @@ def page_tasks(request: Request):
 def action_export_diagnostic_bundle():
     """Generate and download a diagnostic bundle zip."""
     import tempfile
+
     from signalvault.diagnostics.bundle import export_diagnostic_bundle
 
     tmpdir = tempfile.mkdtemp(prefix="sv_diag_")
@@ -2816,13 +2819,13 @@ def _build_import_center_context(vault_path_str: str) -> dict:
             "key": "file",
             "title": "文件导入",
             "subtitle": "文本文件、HTML、PDF 研报",
-            "status": "文本 Web 支持，PDF 后端支持",
-            "body": "Web 已支持 .md/.txt/.html/.htm 预览归档；PDF 已具备预览、提取、分析和页码证据能力。",
+            "status": "文本 / PDF Web 已支持",
+            "body": "Web 支持 .md/.txt/.html/.htm 预览归档；PDF 可直接上传、预览、提取并分析，保留页码证据。",
             "steps": ["上传或选择文件", "预览提取质量", "归档或进入分析"],
             "primary_url": "/sources/files/import",
-            "primary_label": "上传文本文件",
-            "secondary": "PDF Web 原生上传分析待接入；当前保留 CLI/PDF 专用工作流。",
-            "tone": "warning",
+            "primary_label": "上传文件 / PDF",
+            "secondary": "普通文本默认归档；PDF 确认后进入分析流水线。",
+            "tone": "active",
         },
     ]
     return ctx
@@ -4031,7 +4034,10 @@ def page_sources_tracked(request: Request):
     if not vp_str:
         return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
 
-    from signalvault.db.repository import list_tracked_source_entries, list_tracked_sources
+    from signalvault.db.repository import (
+        list_tracked_source_entries,
+        list_tracked_sources,
+    )
 
     session = _get_session()
     try:
@@ -4616,7 +4622,6 @@ async def action_source_file_preview(
         ALLOWED_PDF_EXTENSIONS,
         ALLOWED_TEXT_EXTENSIONS,
         UNSUPPORTED_MESSAGE,
-        is_pdf_file,
     )
 
     ext = Path(file.filename).suffix.lower()

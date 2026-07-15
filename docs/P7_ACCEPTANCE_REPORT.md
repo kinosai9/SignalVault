@@ -86,7 +86,7 @@ Make SignalVault's reliability visible and actionable for non-technical users. W
 | test_recovery_actions.py | 27 |
 | **P7 total** | **137** |
 
-Full suite: ~1,960 tests (with Phase 2 additions), ruff clean.
+Current repository collection baseline (2026-07-15): 2013 tests. P7 module counts above remain the phase acceptance snapshot.
 
 ## 4. Explicitly NOT Done
 

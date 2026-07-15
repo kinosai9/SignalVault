@@ -4,18 +4,18 @@
 
 SignalVault has moved from a YouTube/podcast transcript research tool to a multi-source investment research assistant.
 
-Current verified collection count:
+Current verified collection count (2026-07-15):
 
 ```bash
-python -m pytest --collect-only -q  # 1993 tests collected
+python -m pytest --collect-only -q  # 2013 tests collected
 ```
 
-Backend/CLI capabilities through P7 are implemented. The active product work is now frontend experience alignment:
+Backend/CLI capabilities through P7, the four frontend user flows, and the first SourceDocument/SourceSegment provenance layer are implemented. The active track is Release Engineering closeout:
 
-- Daily change radar
-- Multi-source workbench
-- Guided import flow
-- Unified investment knowledge search
+- documentation and terminology alignment
+- repeatable test/lint/UI verification
+- clean installation and local delivery checks
+- manual checks for real LLM and external connectors
 
 See `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`.
 
@@ -48,13 +48,14 @@ See `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`.
 | P4 | PDF text extraction, PDF analysis, page-level evidence | ✅ |
 | P5 | Unified search + lightweight knowledge graph + MCP tools | ✅ |
 | P6 | ZSXQ read-only subscription import + topic analysis | ✅ |
-| P7 | Error taxonomy, operation logs, diagnostics center, diagnostic bundle, recovery actions, CLI integration | ✅ backend/CLI |
+| P7 | Error taxonomy, operation logs, diagnostics center, diagnostic bundle, recovery actions, CLI + Web integration | ✅ |
+| Provenance-1 | SourceDocument/SourceSegment schema, YouTube/PDF/ZSXQ/file hooks, report transcript, translation, search/graph query support | ✅ |
 
 ## Active
 
 | Track | Description | Status |
 |---|---|---|
-| UI-X | SignalVault frontend experience refactor using four prototypes | ✅ Implemented (Phase 8 validated) |
+| REL-1 | Release Engineering closeout: docs, packaging, regression, delivery checklist | In progress |
 
 ## Implemented Frontend Phases
 

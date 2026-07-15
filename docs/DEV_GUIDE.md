@@ -11,7 +11,7 @@ cp .env.example .env   # edit if using real LLM
 
 ```bash
 python -m pytest tests/ -v              # full suite (mock, no API calls)
-python -m pytest --collect-only -q      # currently collects 1993 tests
+python -m pytest --collect-only -q      # currently collects 2013 tests
 python -m pytest tests/ -x              # stop on first failure
 python -m pytest tests/test_cli.py -v   # specific file
 ```

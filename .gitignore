@@ -15,6 +15,7 @@ build/
 *.token
 .venv/
 venv/
+.release-venv/
 
 # IDE
 .idea/

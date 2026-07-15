@@ -2,7 +2,6 @@
 
 import pytest
 
-
 # ── hash.py ──────────────────────────────────────────────────────────────────
 
 class TestFileHash:
@@ -108,7 +107,7 @@ class TestReadTextSafe:
 
 class TestWriteTextUtf8:
     def test_roundtrip(self, tmp_path):
-        from signalvault.utils.file_io import write_text_utf8, read_text_safe
+        from signalvault.utils.file_io import read_text_safe, write_text_utf8
         f = tmp_path / "test.txt"
         write_text_utf8(f, "hello 中文")
         assert read_text_safe(f) == "hello 中文"
@@ -118,8 +117,8 @@ class TestWriteTextUtf8:
 
 class TestPerf:
     def test_measure_stage_context(self):
-        from signalvault.utils.perf import measure_stage, get_stage_report
         import signalvault.utils.perf as pm
+        from signalvault.utils.perf import get_stage_report, measure_stage
         pm._stage_timings.clear()
         with measure_stage("test_stage"):
             pass
@@ -128,15 +127,15 @@ class TestPerf:
         assert report["test_stage"]["samples"] == 1
 
     def test_get_stage_report_empty(self):
-        from signalvault.utils.perf import get_stage_report
         import signalvault.utils.perf as pm
+        from signalvault.utils.perf import get_stage_report
         pm._stage_timings.clear()
         report = get_stage_report()
         assert report == {}
 
     def test_multiple_samples(self):
-        from signalvault.utils.perf import measure_stage, get_stage_report
         import signalvault.utils.perf as pm
+        from signalvault.utils.perf import get_stage_report, measure_stage
         pm._stage_timings.clear()
         for _ in range(3):
             with measure_stage("multi"):

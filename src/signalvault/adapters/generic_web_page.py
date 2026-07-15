@@ -139,9 +139,8 @@ class GenericWebPageAdapter(ExternalHTMLNotesAdapter):
             # ── Open Graph metadata ────────────────────────────────────
             for og_prop in ["og:title", "og:description", "og:image"]:
                 el = soup.find("meta", property=og_prop)
-                if el and el.get("content") and og_prop == "og:description":
-                    if not result.meta_description:
-                        result.meta_description = self._clean_text(str(el["content"]))
+                if el and el.get("content") and og_prop == "og:description" and not result.meta_description:
+                    result.meta_description = self._clean_text(str(el["content"]))
 
             # ── Find main content container ────────────────────────────
             main_container = (

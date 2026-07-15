@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-
 # ── Large vault generator ────────────────────────────────────────────
 
 def _make_large_vault(tmp_path: Path) -> Path:
@@ -140,8 +139,8 @@ class TestLargeVaultScanCache:
     def test_cache_speedup_on_large_vault(self, large_vault):
         """Cached scan should be at least 10x faster than uncached."""
         from signalvault.workspace.scanner_cache import (
-            scan_with_cache,
             invalidate_cache,
+            scan_with_cache,
         )
         invalidate_cache(large_vault)
 

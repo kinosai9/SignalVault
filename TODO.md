@@ -1,53 +1,33 @@
 # TODO
 
-## 已完成（P2-O · P2-S）
+本文只记录当前仍需执行的工作。已完成阶段见 `docs/ROADMAP.md` 和 `CHANGELOG.md`；明确不做的能力见 `docs/PROJECT_RULES.md`，不重复列为待办。
 
-- [x] P2-O.1: Engineering Stabilization（CI, lint, docs, UI smoke tests）
-- [x] P2-O.2/O.2.1: Runtime Observability & Task Failure UX
-- [x] P2-S.1: External Derived Source Adapter（allin_zh_notes, generic web）
-- [x] P2-S.2: Deep Notes Export & Episode Linking
-- [x] P2-S.2.2: External Fetch Reliability（retry engine + error classification）
-- [x] P2-S.3.1: Generic Web URL Import Preview（adapter, conflict detector, UI）
-- [x] P2-S.3.2: Trackable External Source + Tracked Source service
-- [x] P2-S.3.2.1: Source Profiling & Tracking Eligibility
-- [x] P2-S.3.3: User Text File Upload Preview & Archive
-- [x] P2-S.3.4: Unified Sources Dashboard & Navigation
-- [x] P2-S.3.5: Source Ingestion Consistency & Release Hardening（状态文案/按钮统一、跳过测试修复、文档补齐）
-- [x] 1385 tests, ruff clean
+## Release Engineering
 
-## 待完成
+- [ ] 在全新 Python 3.12+ 虚拟环境完成 `pip install -e ".[dev]"`
+- [x] 2013 项 pytest 全部通过（2006 非浏览器 + 7 UI smoke）
+- [ ] 修复 Ruff 0.15.21 报告的 45 项问题，并统一 CI/本地版本
+- [ ] 完成六条关键页面的桌面/移动端截图验收
+- [ ] 修复或替换损坏的项目 `.venv`，统一开发与发布解释器
+- [ ] 确认 `pyproject.toml` 版本号、release tag 与 CHANGELOG 一致
+- [ ] 清理 `.pytest_tmp_phase8/`、测试截图和本地服务日志等发布外产物
+- [ ] 按 `docs/RELEASE_CHECKLIST.md` 完成安全、文档和仓库门禁
 
-### P0-B 遗留
+## Manual Integration
 
-- [ ] YouTube 视频元数据获取（标题、时长、频道名）— 需 YouTube Data API 或 HTML 解析
-- [ ] YtDlpAdapter（yt-dlp 字幕下载备用方案）
-- [ ] 真实 YouTube 投资访谈视频链接集成验证
+- [ ] 真实 LLM 短视频与长视频 chunking 验证
+- [ ] 真实 YouTube 字幕主路径与 yt-dlp 备用路径验证
+- [ ] 真实文本型 PDF 的 Web/CLI 双入口验证
+- [ ] 知识星球已订阅内容刷新、同步、分析验证
+- [ ] Obsidian export / sync / cleanup 系列命令在真实 Vault 先 dry-run 后 apply
+- [ ] MCP 统一搜索、报告详情、图谱与证据链验证
 
-### P2-B 遗留
+## Product Backlog
 
-- [ ] Partial chunk failure recovery（单个 chunk 失败不中止其它）
-- [ ] Semantic deduplication（embedding 去重，替代 key-based）
-- [ ] Chunk-level evaluation（eval 支持 per-chunk 统计）
-
-### P2-S 遗留
-
-- [ ] P2-S.2.1: validate_deep_notes_import 第 5 个 episode 导入失败的跟进（4/5 成功）
-- [ ] External adapter 扩展（除 All-In Podcast 外的其他中文资讯站点）
-- [ ] GenericWebPageAdapter 正文提取精度优化（当前 best-effort）
-- [ ] 持久化 import queue（替换内存 `_preview_store`）
-- [ ] RSS/Atom Feed Adapter
-
-### 手动验证项
-
-- [ ] P2-C: cleanup-unknown --dry-run + --apply 真实 Vault
-- [ ] P2-C.2: sync-channel-cards --dry-run + 真实 Vault
-- [ ] P2-D: generate-cards --dry-run + 真实 Vault
-- [ ] P2-D.1: cleanup-cards --dry-run + --apply
-- [ ] P2-D.2: consolidate-topics --dry-run + --apply
-- [ ] P2-S.2: Deep Notes 真实 export 验证
-
-### P3：其他增强
-
-- [ ] 真实 LLM provider 完整接入与 prompt 调优
-- [ ] 说话人推断逻辑
-- [ ] 元数据获取（podcasts 表）
+- [ ] 信息源工作台展示全文保留状态
+- [ ] Web 搜索开放 `source_document` / `source_segment` 结果类型
+- [ ] 观点和信号证据卡按 `source_segment_id` 定位原文片段
+- [ ] Partial chunk failure recovery
+- [ ] 网页正文版本记录与抽取精度继续优化
+- [ ] RSS/Atom adapter
+- [ ] 可插拔 OCR provider（默认仍不外传扫描件）

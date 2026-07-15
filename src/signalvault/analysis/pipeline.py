@@ -34,7 +34,6 @@ def _persist_youtube_provenance(transcript: TranscriptResult, pipeline_result: d
     try:
         from signalvault.db.source_provenance import (
             compute_content_hash,
-            create_source_document,
             create_source_segments,
             upsert_source_document,
         )

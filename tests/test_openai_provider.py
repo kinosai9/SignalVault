@@ -1,6 +1,5 @@
 """Tests for OpenAICompatibleProvider — mock HTTP layer, no real API calls."""
 
-import json
 
 import pytest
 

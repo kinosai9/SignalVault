@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Release Engineering Documentation Closeout (2026-07-15)
+
+- Audited implementation facts across CLI, 73 Web routes, 33 Jinja templates, 19 ORM tables, tests, and the Phase 8 rendered-page evidence.
+- Aligned README, ROADMAP, source ingestion, provenance, diagnostics, project rules, TODO, and release checklist with the implemented frontend and SourceDocument/SourceSegment baseline.
+- Added `docs/USER_GUIDE.md`, organized around daily user flows, source-specific import scenarios, evidence review, and recovery actions.
+- Corrected the import center copy: PDF upload, preview, extraction, and analysis are available from Web; advanced real-LLM control remains in CLI.
+- Verified `python -m pytest --collect-only -q`: 2013 tests collected.
+
 ### Documentation Closeout — Current Project State Alignment (2026-07-06)
 
 **Updated:**

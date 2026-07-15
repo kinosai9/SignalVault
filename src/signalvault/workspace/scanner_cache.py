@@ -11,6 +11,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import time
 from pathlib import Path
 
@@ -51,10 +52,8 @@ def _get_vault_mtime_max(vault_path: Path) -> float:
             dir_stat = d.stat()
             max_mtime = max(max_mtime, dir_stat.st_mtime)
             for f in d.glob("*.md"):
-                try:
+                with contextlib.suppress(OSError):
                     max_mtime = max(max_mtime, f.stat().st_mtime)
-                except OSError:
-                    pass
         except OSError:
             pass
     return max_mtime

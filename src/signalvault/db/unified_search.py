@@ -381,7 +381,8 @@ def _unified_search_like(
 
     # 6. Source Segments (by text content)
     if "source_segment" in types:
-        from signalvault.db.models import SourceDocument as SD, SourceSegment as SS
+        from signalvault.db.models import SourceDocument as SD
+        from signalvault.db.models import SourceSegment as SS
         rows = (
             session.query(SS, SD)
             .join(SD, SS.source_doc_id == SD.source_doc_id)

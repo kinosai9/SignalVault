@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from signalvault.db.models import SourceDocument, SourceSegment
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 def compute_content_hash(text: str) -> str:

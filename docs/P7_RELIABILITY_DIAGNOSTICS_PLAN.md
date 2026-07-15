@@ -1,6 +1,6 @@
 # P7 Plan: User-facing Reliability & Diagnostics
 
-> 状态：P7-A/B ✅ | P7-C ✅ | P7-D ✅ | P7-E ✅ | CLI 对接 ✅ | Web/API 页面承接进入 SignalVault 前端体验改造 | 2026-07-06
+> 状态：P7-A/B ✅ | P7-C ✅ | P7-D ✅ | P7-E ✅ | CLI + Web 对接 ✅ | 2026-07-15
 > 前置：P3/P4/P5/P6 全部完成
 > 角色：文档规划阶段，不写业务代码
 
@@ -10,7 +10,7 @@
 
 P7 不新增信息源、不扩展分析能力、不改 prompt。**P7 只做一件事：让非 IT 用户在使用中遇到问题时，能看懂发生了什么、知道下一步该做什么、并能把诊断信息导出给技术支持。**
 
-P7 与 Codex 前端原型设计并行推进：P7 已提供后端错误模型、操作日志、诊断数据结构、恢复动作和 CLI；Web/API 页面承接进入 `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`。
+P7 已提供后端错误模型、操作日志、诊断数据结构、恢复动作和 CLI；Web 诊断中心、操作日志与诊断包入口已合并到 `/tasks`，实现记录见 `docs/P7_ACCEPTANCE_REPORT.md`。
 
 ## 二、当前状态评估
 
@@ -290,7 +290,7 @@ operation_logs
 | **P7-C** | Diagnostics Center — 聚合查询 + summary 输出 | P7-A, P7-B |
 | **P7-D** | Diagnostic Bundle — 导出 + 脱敏 + zip | P7-C |
 | **P7-E** | Recovery Actions — 建议动作注册表 | P7-A |
-| **P7-F** | CLI + backend data structures + Tests；Web/API routes 待前端阶段承接 | P7-C, P7-D |
+| **P7-F** | CLI + Web routes + Tests；诊断、日志和任务统一由 `/tasks` 承接 | P7-C, P7-D |
 | **P7-S** | 收口封板 — 验收报告 + 文档一致性 | P7-F |
 
 ## 十、与 Codex 前端的对接点

@@ -2032,22 +2032,23 @@ class TestVaultSetup:
         assert (vault / "01_Reports").is_dir()
 
     def test_setup_saves_vault_path_to_config(self, api_client, tmp_path, monkeypatch):
-        """POST /setup/vault persists path to user_settings.json."""
-        import signalvault.config_store as cs
-        settings_file = tmp_path / "settings.json"
-        monkeypatch.setattr(cs, "_get_settings_path", lambda: settings_file)
-        monkeypatch.setattr(cs, "_SETTINGS_PATH", settings_file)
+        """POST /setup/vault persists path via ConfigService (C1-B)."""
+        from signalvault.settings.service import get_config_service
 
         vault = tmp_path / "test_vault"
 
-        api_client.post("/setup/vault",
-                        data={"vault_path": str(vault)},
-                        follow_redirects=False)
+        resp = api_client.post("/setup/vault",
+                               data={"vault_path": str(vault)},
+                               follow_redirects=False)
 
-        assert settings_file.exists()
-        import json
-        data = json.loads(settings_file.read_text(encoding="utf-8"))
-        assert data["obsidian_vault_path"] == str(vault)
+        # Should redirect on success
+        assert resp.status_code in (302, 303)
+
+        # Vault path should be persisted in ConfigService
+        svc = get_config_service()
+        cv = svc.get_with_source("obsidian.vault_path")
+        assert cv.value == str(vault)
+        assert cv.source in ("user_config", "runtime_override")
 
     def test_dashboard_with_complete_vault_loads(self, api_client, tmp_path):
         """Dashboard loads normally when vault is complete."""

@@ -7,8 +7,6 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from signalvault.db.source_provenance import get_segments
-
 logger = logging.getLogger(__name__)
 
 

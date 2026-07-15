@@ -2,21 +2,23 @@
 
 将公开播客字幕、网页资料、文本/PDF 文件、知识星球只读主题中的投资观点、标的、风险提示、待验证信号和关键原文引用结构化沉淀，输出 Markdown 报告、SQLite 数据库和 Obsidian 知识库。
 
-> **本项目不提供投资建议。** 所有输出仅为播客内容的结构化整理，不构成买入、卖出、持有等决策建议。
+> **本项目不提供投资建议。** 所有输出仅为输入资料的结构化整理，不构成买入、卖出、持有等决策建议。
 
-## 当前阶段：P7 后端/CLI 已完成，前端体验改造准备中
+## 当前阶段：Release Engineering 封板
 
-P0–P7 后端/CLI 能力已基本完成。当前 `python -m pytest --collect-only -q` 可收集 1993 tests，覆盖多源摄入、PDF 分析、ZSXQ 只读导入、统一搜索、轻量知识图谱、SourceDocument/SourceSegment 原文层、诊断中心与诊断包导出。
+P0–P7、前端体验改造和原文追溯层已基本完成，项目进入发布工程封板。当前 `python -m pytest --collect-only -q` 可收集 2013 tests，覆盖多源摄入、PDF 分析、ZSXQ 只读导入、统一搜索、轻量知识图谱、SourceDocument/SourceSegment 原文层、诊断中心与诊断包导出。
 
-前端当前阶段：依据 `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`，在保持后端数据契约不变的前提下，已实现 SignalVault 的四条主用户动线：变化雷达、信息源工作台、导入向导、知识库搜索，以及报告原文中英对照查看。
+前端已依据 `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md` 完成四条主用户动线：变化雷达、信息源工作台、导入中心、统一知识搜索；报告详情已支持证据链和完整原文中英对照，`/tasks` 已承接诊断中心、操作日志和任务进度。
 
-**P7 用户可靠性 & 诊断**（后端/CLI 已交付，Web 体验待前端阶段承接，详见 `docs/P7_RELIABILITY_DIAGNOSTICS_PLAN.md` 与 `CHANGELOG.md`）：
+非技术用户建议从 [用户使用手册](docs/USER_GUIDE.md) 开始；开发、验收与发布分别参见 [Developer Guide](docs/DEV_GUIDE.md)、[Release Engineering Audit](docs/RELEASE_ENGINEERING_AUDIT.md) 和 [Release Checklist](docs/RELEASE_CHECKLIST.md)。
+
+**P7 用户可靠性 & 诊断**（后端、CLI 与 Web 已交付，详见 `docs/P7_ACCEPTANCE_REPORT.md`）：
 - ✅ P7-A 统一错误分类体系（30+ error_code，11 大类）
 - ✅ P7-B 操作日志（operation_logs 表 + logs CLI）
 - ✅ P7-C 诊断中心（9 子系统健康聚合 + doctor/diagnostics summary）
 - ✅ P7-D 诊断包导出（脱敏 zip）
 - ✅ P7-E 恢复动作建议（RecoveryAction registry）
-- ✅ P7-F CLI 对接完成；Web/API 页面承接纳入前端体验改造
+- ✅ P7-F CLI + Web 对接完成；`/tasks` 聚合诊断、操作日志和任务进度
 
 **P6 知识星球只读导入**（已交付，详见 `docs/P6_ACCEPTANCE_REPORT.md`）：
 - ✅ P6-A1 只读订阅导入 — zsxq-cli wrapper + group registry + ingest_jobs
@@ -249,8 +251,12 @@ python -m signalvault mcp-serve --db-path /path/to/db  # 指定数据库
 | `list_investment_views` | 列出投资观点（target/direction/ai_layer） |
 | `list_tracking_signals` | 列出跟踪信号（target/status） |
 | `list_review_items` | 列出审核事项（type/status/severity） |
+| `unified_search` | 跨报告、观点、信号、实体统一搜索 |
+| `get_entity_neighborhood` | 获取实体邻域与关联节点 |
+| `list_graph_edges` | 查询轻量知识图谱边 |
+| `get_evidence_trail` | 从观点回溯报告、来源和证据 |
 
-详见 `docs/MCP_SERVER_DESIGN.md`。
+P3 的 8 个基础 tool 设计见 `docs/MCP_SERVER_DESIGN.md`；P5 新增的搜索、图谱和证据链 tool 见 `docs/P5_ACCEPTANCE_REPORT.md`。
 
 ## PDF 入库工作流（P4-A + P4-B）
 
@@ -381,25 +387,33 @@ zsxq import-topic → profile → ingest_job → eligibility
 
 ## Web Console
 
-启动 `serve` 后，浏览器可访问的页面：
+启动 `serve` 后，日常操作优先使用以下页面：
 
 | 页面 | 路由 | 说明 |
 |------|------|------|
-| Dashboard | `/dashboard` | Vault 健康概览、统计卡片、快捷操作 |
+| 变化雷达 | `/dashboard` | 关注点变化、待处理来源、诊断状态和今日动作 |
+| 我的关注 | `/watchlist` | 按关注对象查看新证据、观察项和跟踪状态 |
+| 统一知识搜索 | `/search` | 跨报告、观点、信号、实体搜索并回到证据 |
+| 导入中心 | `/sources/import/new` | 按资料类型选择 YouTube、知识星球、网页、固定源、文本或 PDF 入口 |
+| 信息源工作台 | `/sources` | 查看各来源状态、待确认导入和失败项 |
 | 报告库 | `/reports` | 报告列表、筛选 |
-| 报告详情 | `/reports/{id}` | 观点矩阵、信号、原文、全文 |
+| 报告详情 | `/reports/{id}` | 观点、信号、风险和证据链 |
+| 完整原文 | `/reports/{id}/transcript` | 阅读带定位信息的原文和可选中文翻译 |
 | Research Brief | `/briefs/latest` | 最新分析简报 |
-| Watchlist | `/watchlist` | 关注清单简报（证据分级） |
 | Watchlist 设置 | `/watchlist/settings` | 管理关注标的 |
-| 搜索 | `/search` | 全文搜索报告 |
 | 添加内容 | `/content/new` | 提交 YouTube URL 分析 |
-| 任务列表 | `/tasks` | 统一任务队列（分析/同步） |
+| 任务与诊断 | `/tasks` | 系统健康、恢复建议、操作日志和任务队列 |
 | 任务详情 | `/tasks/{id}` | 任务进度、日志、失败诊断 |
 | Patches 列表 | `/patches` | LLM-WIKI Patch 管理 |
 | Patch 详情 | `/patches/{id}` | Patch 审阅 |
+| 知识星球 | `/sources/zsxq` | 刷新已授权星球、同步主题、只读导入或分析 |
+| 网页导入 | `/sources/import` | URL 预览、冲突检测和确认归档 |
+| 固定信息源 | `/sources/tracked` | 管理并刷新反复更新的网页来源 |
+| 文件 / PDF | `/sources/files/import` | 上传文本文件归档；上传 PDF 后提取并分析 |
 | 频道管理 | `/sources/channels` | 关注频道列表、筛选（8 种过滤） |
 | 频道视频 | `/sources/channels/{id}/videos` | 视频候选池、状态管理 |
 | Vault 初始化 | `/setup/vault` | 首次使用引导、Vault 修复 |
+| API 说明 | `/docs` | 本地只读 API 端点和示例 |
 
 ## YouTube 频道管理
 
@@ -629,7 +643,7 @@ python -m signalvault --youtube-url "VIDEO_URL" --focus "AI投资,美股" --no-m
 
 ```
 src/signalvault/
-  cli.py                  # Typer CLI（12 个命令组，~50 个子命令）
+  cli.py                  # Typer CLI 与各能力命令组
   config.py               # .env 加载 + 全局配置
   config_store.py         # 用户设置持久化
   evaluation.py           # 跨频道质量评估
@@ -638,6 +652,7 @@ src/signalvault/
     base.py               # TranscriptAdapter 基类
     youtube_transcript.py # YouTube 字幕（youtube-transcript-api）
     channel_video_adapter.py  # 频道视频元数据（yt-dlp）
+    ytdlp_adapter.py      # yt-dlp 字幕备用适配器
   analysis/               # 分析引擎
     models.py             # Pydantic v2 数据模型
     pipeline.py           # 主分析流水线
@@ -651,23 +666,27 @@ src/signalvault/
     openai_compatible_provider.py  # OpenAI-compatible API
     prompts.py            # Prompt 模板
   db/                     # 数据层
-    models.py             # SQLAlchemy ORM（6 张核心表）
+    models.py             # SQLAlchemy ORM（19 张表，含原文层与 schema 版本）
     session.py            # SQLite session 管理
     repository.py         # 数据查询/写入
     channel_repository.py # 频道/视频 Repository
     fts.py                # FTS5 全文搜索
+    source_provenance.py  # SourceDocument / SourceSegment 原文层
+    unified_search.py     # 报告、观点、信号、实体统一搜索
+    knowledge_graph.py    # SQLite 轻量知识图谱
   api/                    # API 层（FastAPI）
     app.py                # App 工厂
     schemas.py            # Pydantic 响应 schema
     routes/               # health / reports / search
   web/                    # Web Console 层
-    routes.py             # ~33 个页面路由
+    routes.py             # 73 个 Web GET/POST 路由
     templates/            # 33 个 Jinja2 模板
     static/style.css      # CSS
   services/               # 业务服务层
     analyze_service.py    # 视频分析编排
     job_service.py        # 任务队列管理
     sync_service.py       # 知识同步
+    translate_service.py  # 原文片段批量翻译
     watchlist_matcher.py  # Watchlist 匹配引擎
   exporters/              # 导出层
     obsidian.py           # Obsidian Vault 导出
@@ -698,7 +717,7 @@ src/signalvault/
   utils/                  # 工具函数
   diagnostics/            # 错误分类、操作日志、诊断中心、诊断包
   mcp_server/             # MCP Server（P3/P5）：12 个只读 tool
-tests/                    # 当前可收集 1993 个 pytest 测试
+tests/                    # 当前可收集 2013 个 pytest 测试
 ```
 
 ## 核心原则

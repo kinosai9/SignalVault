@@ -5,9 +5,6 @@ monkeypatches config_store._SETTINGS_PATH. Tests that need to control
 the settings path must use monkeypatch.setattr to match this pattern.
 """
 
-import json
-import pytest
-
 
 # ── config_store.py ──────────────────────────────────────────────────────────
 
@@ -18,31 +15,29 @@ class TestConfigStore:
         monkeypatch.setattr(cs, "_get_settings_path", lambda: path)
 
     def test_get_vault_path_from_settings(self, tmp_path, monkeypatch):
+        """C1-B: save_user_vault_path persists via ConfigService → config.toml."""
         from signalvault.config_store import get_user_vault_path, save_user_vault_path
-        settings_file = tmp_path / "user_settings.json"
-        self._set_settings_path(monkeypatch, settings_file)
         monkeypatch.delenv("OBSIDIAN_VAULT_PATH", raising=False)
 
-        save_user_vault_path(str(tmp_path / "my_vault"))
+        vault_path = str(tmp_path / "my_vault")
+        save_user_vault_path(vault_path)
         result = get_user_vault_path()
-        assert result == str(tmp_path / "my_vault")
+        assert result == vault_path
 
     def test_get_vault_path_fallback_to_env(self, tmp_path, monkeypatch):
         from signalvault.config_store import get_user_vault_path
-        settings_file = tmp_path / "nonexistent.json"
-        self._set_settings_path(monkeypatch, settings_file)
         monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path / "env_vault"))
         result = get_user_vault_path()
         assert result == str(tmp_path / "env_vault")
 
-    def test_get_vault_path_settings_priority_over_env(self, tmp_path, monkeypatch):
+    def test_get_vault_path_env_overrides_user(self, tmp_path, monkeypatch):
+        """C1-B: env var has higher priority than user config (config.toml)."""
         from signalvault.config_store import get_user_vault_path, save_user_vault_path
-        settings_file = tmp_path / "user_settings.json"
-        self._set_settings_path(monkeypatch, settings_file)
+        save_user_vault_path(str(tmp_path / "saved_vault"))
         monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path / "env_vault"))
-        save_user_vault_path(str(tmp_path / "settings_vault"))
         result = get_user_vault_path()
-        assert result == str(tmp_path / "settings_vault")
+        # env overrides user config
+        assert result == str(tmp_path / "env_vault")
 
     def test_get_vault_path_not_configured(self, tmp_path, monkeypatch):
         from signalvault.config_store import get_user_vault_path
@@ -53,32 +48,43 @@ class TestConfigStore:
         assert result == ""
 
     def test_save_and_load_roundtrip(self, tmp_path, monkeypatch):
-        from signalvault.config_store import save_user_vault_path
-        settings_file = tmp_path / "settings.json"
-        self._set_settings_path(monkeypatch, settings_file)
+        """C1-B: save and load via ConfigService."""
+        from signalvault.config_store import get_user_vault_path, save_user_vault_path
+        monkeypatch.delenv("OBSIDIAN_VAULT_PATH", raising=False)
 
         vault = str(tmp_path / "roundtrip_vault")
         save_user_vault_path(vault)
-        assert settings_file.exists()
-        raw = json.loads(settings_file.read_text(encoding="utf-8"))
-        assert raw["obsidian_vault_path"] == vault
+        result = get_user_vault_path()
+        assert result == vault
+        # config.toml should exist
+        from signalvault.config import get_app_paths
+        config_toml = get_app_paths().config_dir / "config.toml"
+        assert config_toml.exists()
 
     def test_corrupt_json_returns_empty(self, tmp_path, monkeypatch):
+        """C1-B: corrupt TOML is handled gracefully."""
         from signalvault.config_store import get_user_vault_path
-        settings_file = tmp_path / "bad.json"
-        settings_file.write_text("not valid json {{{", encoding="utf-8")
-        self._set_settings_path(monkeypatch, settings_file)
         monkeypatch.delenv("OBSIDIAN_VAULT_PATH", raising=False)
+        # Write corrupt config.toml
+        from signalvault.config import get_app_paths
+        config_toml = get_app_paths().config_dir / "config.toml"
+        config_toml.parent.mkdir(parents=True, exist_ok=True)
+        config_toml.write_text("this is not valid toml {{{", encoding="utf-8")
         result = get_user_vault_path()
         assert result == ""
 
     def test_save_creates_parent_dir(self, tmp_path, monkeypatch):
-        from signalvault.config_store import save_user_vault_path
-        deep = tmp_path / "deep" / "nested" / "settings.json"
-        self._set_settings_path(monkeypatch, deep)
+        """C1-B: saving creates config directory automatically."""
+        from signalvault.config_store import get_user_vault_path, save_user_vault_path
+        monkeypatch.delenv("OBSIDIAN_VAULT_PATH", raising=False)
+
+        from signalvault.config import get_app_paths
+        config_dir = get_app_paths().config_dir
+        # Dir should be auto-created by ConfigService on write
         save_user_vault_path("/some/vault")
-        assert deep.exists()
-        assert deep.parent.exists()
+        result = get_user_vault_path()
+        assert result == "/some/vault"
+        assert config_dir.exists()
 
 
 # ── logging_config.py ────────────────────────────────────────────────────────
@@ -87,8 +93,9 @@ class TestLoggingConfig:
     def test_creates_log_directory(self, tmp_path, monkeypatch):
         """Verify setup_logging creates the log directory. Does not test handler
         attachment to avoid pytest stderr capture conflicts."""
-        from signalvault.logging_config import setup_logging
         import logging
+
+        from signalvault.logging_config import setup_logging
         log_dir = tmp_path / "new_logs"
         monkeypatch.setattr("signalvault.logging_config.LOG_DIR", log_dir)
 

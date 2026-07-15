@@ -1,16 +1,16 @@
 # Source Provenance Persistence Design
 
-> **状态 (2026-07-14):** Schema + CRUD 已实现，YouTube/PDF/ZSXQ hook 已接入，Unified Search 和 Knowledge Graph 已集成。Web/文件上传 hook、报告详情页原文展示、翻译服务已完成。原文层已部分落地，后续继续补齐搜索和前端交互。
+> **状态 (2026-07-15):** 第一阶段已实现。Schema + CRUD、YouTube/PDF/ZSXQ/上传文件 hook、报告完整原文页、翻译服务，以及 Unified Search/Knowledge Graph 底层查询支持均已落地。Web 搜索仍只开放报告、观点、信号、实体四类结果；来源保留状态和证据片段直达仍待后续产品化。
 
 ## 结论
 
 投资研究知识库的核心不是一次性生成答案，而是让用户能沿着检索结果回到原始材料、证据片段、报告结论和信号变化之间的链条。
 
-当前系统已经具备报告、观点、信号、实体、操作日志和部分来源字段，但还缺少统一的“可阅读原文层”。后续应新增 `SourceDocument` 与 `SourceSegment` 两层持久化抽象，保留视频完整带时间戳已翻译逐字稿、网页原文稿、知识星球全文稿、PDF 页文本和上传文本的可阅读版本，并让报告详情页、Unified Knowledge Search、诊断中心都能复用同一套溯源锚点。
+系统已经新增 `SourceDocument` 与 `SourceSegment` 两层持久化抽象，用于保留视频带时间戳逐字稿、PDF 页文本、知识星球主题和上传文本的可阅读版本。报告详情页已经复用这套溯源锚点；当前缺口主要是把原文材料/片段正式开放到 Web 搜索筛选、信息源保留状态和观点/信号证据卡直达。
 
 本设计不替代现有 `Episode` / `Report` / `InvestmentViewRecord` / `TrackingSignalRecord`，而是在其下方补一层更稳定的原文证据地基。
 
-## 当前缺口
+## 实现前缺口与当前剩余边界
 
 现有数据链路可以把“报告级证据”串起来：
 
@@ -214,13 +214,14 @@ Deep Notes 和 SourceArchive 应被视为“用户整理后的派生材料”，
 
 ## 检索与前端动线影响
 
-Unified Knowledge Search 后续应支持五类结果：
+Unified Search 底层已支持六类结果，其中 Web 当前开放前四类：
 
 1. 报告结果：当前已有。
 2. 观点结果：当前已有。
 3. 信号结果：当前已有。
-4. 原文材料结果：新增 `SourceDocument`。
-5. 原文片段结果：新增 `SourceSegment`。
+4. 实体结果：当前 Web 已有。
+5. 原文材料结果：底层已支持 `SourceDocument`，Web 未开放筛选。
+6. 原文片段结果：底层已支持 `SourceSegment`，Web 未开放筛选。
 
 用户动线建议：
 
@@ -279,4 +280,3 @@ Unified Knowledge Search 后续应支持五类结果：
 - 不把私有来源全文导出到诊断包或日志。
 - 不改变当前报告、观点、信号的基础 API 契约。
 - 不把 AI 推断内容伪装成原文。
-

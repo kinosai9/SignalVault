@@ -1,6 +1,5 @@
 """Tests for db/source_provenance.py — SourceDocument + SourceSegment CRUD."""
 
-import pytest
 
 
 # ── compute_content_hash ────────────────────────────────────────────────────
@@ -111,8 +110,8 @@ class TestUpsertSourceDocument:
 
     def test_upsert_existing_same_hash(self, db_session):
         from signalvault.db.source_provenance import (
-            upsert_source_document,
             get_source_document,
+            upsert_source_document,
         )
         doc_id1, is_new1 = upsert_source_document(
             db_session,
@@ -205,8 +204,8 @@ class TestCountSourceDocuments:
 
     def test_count_by_type(self, db_session):
         from signalvault.db.source_provenance import (
-            create_source_document,
             count_source_documents,
+            create_source_document,
         )
         create_source_document(db_session, source_type="youtube_transcript")
         create_source_document(db_session, source_type="youtube_transcript")
@@ -444,9 +443,9 @@ class TestFindSegmentByLocator:
 class TestCountSegments:
     def test_count(self, db_session):
         from signalvault.db.source_provenance import (
+            count_segments,
             create_source_document,
             create_source_segments,
-            count_segments,
         )
         doc_id = create_source_document(db_session, source_type="web_page")
         create_source_segments(db_session, doc_id, [
@@ -458,9 +457,9 @@ class TestCountSegments:
 class TestDeleteSegments:
     def test_delete_all(self, db_session):
         from signalvault.db.source_provenance import (
+            count_segments,
             create_source_document,
             create_source_segments,
-            count_segments,
             delete_segments,
         )
         doc_id = create_source_document(db_session, source_type="web_page")
@@ -485,11 +484,11 @@ class TestProvenanceChain:
         """Simulate a YouTube transcript being stored as SourceDocument + Segments."""
         from signalvault.db.source_provenance import (
             compute_content_hash,
+            count_segments,
             create_source_document,
             create_source_segments,
             get_segments,
             get_source_document,
-            count_segments,
         )
         # 1. Create the SourceDocument
         full_text = "[00:00:01] Welcome\n[00:00:05] Today we discuss AI"

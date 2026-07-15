@@ -1,8 +1,6 @@
 """Tests for services/translate_service.py — batch translation with status tracking."""
 
 import json
-import pytest
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,7 +155,7 @@ class TestTranslateSegments:
 
         progress = []
         provider = FakeProvider()
-        result = translate_segments(
+        translate_segments(
             db_session, doc_id, provider,
             progress_callback=lambda t, total: progress.append((t, total)),
         )

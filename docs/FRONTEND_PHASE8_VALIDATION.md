@@ -2,12 +2,14 @@
 
 ## 结论
 
+> **2026-07-15 封板复核：** Phase 8 之后，PDF Web 上传分析、知识星球 Web 工作台、SourceDocument/SourceSegment 原文层、报告完整原文中英对照和翻译服务已经落地。本文保留 Phase 8 当时的验证证据；下文标为“后续”的事项应以本说明和 `SOURCE_PROVENANCE_PERSISTENCE_DESIGN.md` 当前状态为准。
+
 阶段 8 以“验证与收口”为主，不继续扩展前端能力。
 
 当前前端主路径已经形成闭环：
 
 ```text
-变化雷达 → 信息源工作台 → 导入中心 → Unified Knowledge Search → 报告证据链 → 任务与诊断
+变化雷达 → 信息源工作台 → 导入中心 → 统一知识搜索 → 报告证据链/完整原文 → 任务与诊断
 ```
 
 页面结构、左侧导航、SignalVault 命名、导入中心入口、搜索页、报告详情证据链、诊断中心与操作日志聚合页已经可以支撑非技术用户的日常使用路径。
@@ -82,7 +84,7 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 
 收口建议：
 
-- 后续 Source Document / Source Segment 落地后，应增加“已保留全文 / 仅保留元数据 / 解析失败”的来源保留状态。
+- Source Document / Source Segment 已落地；“已保留全文 / 仅保留元数据 / 解析失败”的来源保留状态仍未进入工作台。
 
 ### 3. 导入中心
 
@@ -94,7 +96,7 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 
 收口建议：
 
-- PDF 和知识星球 Web 动线仍应继续从 CLI 能力向可视化导入补齐。
+- PDF 上传分析和知识星球只读导入/同步/分析已经具备 Web 入口。
 - 导入预览页后续应显示“将保留哪些可追溯材料”。
 
 ### 4. Unified Knowledge Search
@@ -107,7 +109,7 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 
 收口建议：
 
-- Source Provenance 落地后，搜索结果应新增 `source_document` 和 `source_segment` 两类。
+- Source Provenance 底层查询已支持 `source_document` 和 `source_segment`，Web 搜索筛选仍待开放。
 - 搜索结果卡片应显示来源片段的时间戳、页码、段落号和原文/译文状态。
 
 ### 5. 报告详情页证据链
@@ -120,7 +122,7 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 
 收口建议：
 
-- 下一步应接入 `source_segment_id`，让证据卡可以跳到完整逐字稿、网页原文或知识星球全文。
+- 报告已可打开完整原文；观点/信号证据卡按 `source_segment_id` 精确跳转仍待完成。
 
 ### 6. 诊断中心与操作日志
 
@@ -138,13 +140,13 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 ## 当前待收口问题
 
 1. 项目 `.venv` 启动器损坏  
-   `.venv\Scripts\python.exe` 无法启动，底层 uv Python 在当前沙箱下被拒绝执行。建议后续用 `uv sync` 或重建 `.venv` 修复项目环境。
+   `.venv\Scripts\python.exe` 仍无法启动；`.codex-venv\Scripts\python.exe` 可以启动 Web 应用。Release Engineering 需要确定唯一交付环境，并通过干净安装验证替代本机偶然可用状态。
 
 2. Python 解释器路径容易漂移  
    `C:\Python314\python.exe`、`D:\miniconda3\python.exe`、`.venv` 同时存在，依赖集不一致。阶段验证应明确使用项目环境。
 
 3. PNG 截图未完成  
-   HTML 快照已生成，但浏览器截图受限于 `file://` 策略和本地静态服务保活限制。后续可在项目环境修复后运行：
+   HTML 快照是实际 Jinja 模板渲染结果。2026-07-15 复核时应用可在 `127.0.0.1:8765` 启动，但本机 `npx` 安装损坏且项目环境未安装 Python Playwright，新的浏览器 PNG 仍未生成。修复统一环境后运行：
 
    ```bash
    python -m http.server 18768 --bind 127.0.0.1 --directory docs/ui_prototypes/screenshots/implementation
@@ -169,4 +171,3 @@ python -m pytest tests\test_web_pages.py tests\test_ui_smoke.py tests\test_diagn
 
 1. 修复项目运行环境，确保测试、serve、截图验证都使用同一套 Python 环境。
 2. 按 `SOURCE_PROVENANCE_PERSISTENCE_DESIGN.md` 落地原文层后，再回到搜索页和报告详情页补“可打开原文片段”的真实交互。
-

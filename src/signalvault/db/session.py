@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -11,6 +13,9 @@ _SessionLocal = None
 def init_engine(db_path: str | None = None) -> None:
     global _engine, _SessionLocal
     path = db_path or str(DB_PATH)
+    # Ensure parent directory exists — DB_PATH may point to a platform
+    # directory that hasn't been created yet (e.g. first launch).
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     _engine = create_engine(f"sqlite:///{path}", echo=False)
     _SessionLocal = sessionmaker(bind=_engine)
 

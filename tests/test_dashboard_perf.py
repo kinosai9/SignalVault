@@ -15,9 +15,6 @@ from pathlib import Path
 
 import pytest
 
-from signalvault.workspace.scanner import WorkspaceSnapshot
-
-
 # ── Vault builder helpers ──────────────────────────────────────────
 
 def _make_vault(tmp_path: Path) -> Path:
@@ -208,8 +205,8 @@ def mini_vault(tmp_path):
 class TestScannerCache:
     def test_cache_hit_returns_same_data(self, mini_vault):
         from signalvault.workspace.scanner_cache import (
-            scan_with_cache,
             invalidate_cache,
+            scan_with_cache,
         )
         invalidate_cache(mini_vault)
         snap1 = scan_with_cache(mini_vault)
@@ -220,8 +217,8 @@ class TestScannerCache:
 
     def test_cache_invalidated_on_file_change(self, mini_vault):
         from signalvault.workspace.scanner_cache import (
-            scan_with_cache,
             invalidate_cache,
+            scan_with_cache,
         )
         invalidate_cache(mini_vault)
         snap1 = scan_with_cache(mini_vault)
@@ -236,8 +233,8 @@ class TestScannerCache:
 
     def test_cache_performance_improvement(self, mini_vault):
         from signalvault.workspace.scanner_cache import (
-            scan_with_cache,
             invalidate_cache,
+            scan_with_cache,
         )
         invalidate_cache(mini_vault)
         t0 = time.perf_counter()
@@ -256,8 +253,8 @@ class TestScannerCache:
 
     def test_invalidate_cache_clears_all(self, mini_vault):
         from signalvault.workspace.scanner_cache import (
-            scan_with_cache,
             invalidate_cache,
+            scan_with_cache,
         )
         invalidate_cache(mini_vault)
         snap1 = scan_with_cache(mini_vault)
@@ -317,16 +314,15 @@ class TestReviewPriorityOptimization:
     def test_single_pass_produces_same_counts(self, mini_vault):
         """Verify the single-pass priority logic matches the
         original behavior (needs_review, auto_accepted, low_priority)."""
-        from signalvault.workspace.scanner import VaultScanner
         from signalvault.workspace.review_priority import (
             PRIORITY_AUTO_ACCEPTED,
             PRIORITY_CRITICAL,
             PRIORITY_HIGH,
             PRIORITY_LOW,
-            PRIORITY_NORMAL,
             compute_claim_review_priority,
             compute_signal_review_priority,
         )
+        from signalvault.workspace.scanner import VaultScanner
         scanner = VaultScanner(mini_vault)
         snap = scanner.scan()
 
@@ -369,7 +365,6 @@ class TestReviewPriorityOptimization:
 
     def test_single_pass_counts_are_deterministic(self, mini_vault):
         """Running the same logic twice produces identical counts."""
-        from signalvault.workspace.scanner import VaultScanner
         from signalvault.workspace.review_priority import (
             PRIORITY_AUTO_ACCEPTED,
             PRIORITY_CRITICAL,
@@ -378,11 +373,12 @@ class TestReviewPriorityOptimization:
             compute_claim_review_priority,
             compute_signal_review_priority,
         )
+        from signalvault.workspace.scanner import VaultScanner
 
         def run_pass(snap):
             n = 0
             a = 0
-            l = 0
+            low_count = 0
             for cl in snap.claims:
                 p = compute_claim_review_priority(cl, snap, set(), set())
                 if p in (PRIORITY_CRITICAL, PRIORITY_HIGH):
@@ -390,7 +386,7 @@ class TestReviewPriorityOptimization:
                 elif p == PRIORITY_AUTO_ACCEPTED:
                     a += 1
                 elif p == PRIORITY_LOW:
-                    l += 1
+                    low_count += 1
             for s in snap.signals:
                 p = compute_signal_review_priority(s, snap, set(), set())
                 if p in (PRIORITY_CRITICAL, PRIORITY_HIGH):
@@ -398,8 +394,8 @@ class TestReviewPriorityOptimization:
                 elif p == PRIORITY_AUTO_ACCEPTED:
                     a += 1
                 elif p == PRIORITY_LOW:
-                    l += 1
-            return n, a, l
+                    low_count += 1
+            return n, a, low_count
 
         scanner = VaultScanner(mini_vault)
         snap1 = scanner.scan()

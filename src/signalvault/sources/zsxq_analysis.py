@@ -318,7 +318,6 @@ def _persist_zsxq_provenance(profile, analysis_result: dict) -> None:
         from signalvault.db.session import get_session, init_db
         from signalvault.db.source_provenance import (
             compute_content_hash,
-            create_source_document,
             create_source_segments,
             upsert_source_document,
         )

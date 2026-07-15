@@ -1,7 +1,7 @@
 # Project Rules
 
 > 本文档定义 signalvault 项目的工程规范、约束和边界。
-> 所有阶段（P0–P7 及后续前端体验改造）的开发和设计必须遵守这些规则。
+> 所有阶段（P0–P7、前端体验改造、原文层及 Release Engineering）的开发和设计必须遵守这些规则。
 > 与 CLAUDE.md（AI 助手指令）互补：CLAUDE.md 面向 AI 编码助手，本文档面向人类开发者。
 
 ## 架构边界
@@ -36,7 +36,7 @@ mcp_server/ → MCP Server（P3/P5）。只读查询，不修改任何内容。
 
 ```bash
 python -m pytest tests/ -v    # full suite（mock provider）
-python -m pytest --collect-only -q  # 当前可收集 1993 tests
+python -m pytest --collect-only -q  # 当前可收集 2013 tests
 python -m pytest tests/ -q    # 快速模式
 ```
 
@@ -98,6 +98,6 @@ python -m pytest tests/ -q    # 快速模式
 
 ## 许可证
 
-- 当前未声明开源许可证（保留所有权利）
+- 项目使用 MIT License，发布和分发时必须保留 `LICENSE` 中的版权与许可声明
 - 参考项目（nashsu/llm_wiki）使用 GPL v3，代码不混用
 - 设计模式、架构思路可借鉴，但需要独立实现
