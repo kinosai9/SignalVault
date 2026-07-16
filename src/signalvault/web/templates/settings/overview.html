@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}概览{% endblock %}
+{% block page_title %}系统与集成概览{% endblock %}
+
+{% block content %}
+
+<div class="overview-grid">
+
+<!-- AI 服务卡片 -->
+<div class="overview-card">
+  <h3>&#129302; AI 服务</h3>
+  <p>当前：<span class="status-badge {{ ov.ai_status_class }}">{{ ov.ai_status_label }}</span></p>
+  <table class="prop-table">
+    <tr><td>Provider</td><td>{{ ov.ai_provider }}</td></tr>
+    <tr><td>Model</td><td>{{ ov.ai_model }}</td></tr>
+    <tr><td>API Key</td><td>{% if ov.ai_key_source %}已配置 ({{ ov.ai_key_source }}){% else %}未配置{% endif %}</td></tr>
+    {% if ov.ai_last_validation_at %}
+    <tr><td>最后验证</td><td>{{ ov.ai_last_validation_at }}</td></tr>
+    {% endif %}
+  </table>
+  {% if ov.ai_overridden_by_env %}
+  <div class="message-warning">&#9888; 部分配置被环境变量覆盖</div>
+  {% endif %}
+  <a class="card-link" href="/settings/ai">进入 AI 服务 &rarr;</a>
+</div>
+
+<!-- Obsidian 卡片 -->
+<div class="overview-card">
+  <h3>&#128214; Obsidian</h3>
+  <p>状态：<span class="status-badge status-{{ ov.obsidian_state }}">{{ ov.obsidian_state_label }}</span></p>
+  {% if ov.obsidian_vault_path %}
+  <p>Vault：<code class="truncate-path" title="{{ ov.obsidian_vault_path }}">{{ ov.obsidian_vault_path_short or ov.obsidian_vault_path }}</code></p>
+  {% endif %}
+  {% if ov.obsidian_has_metadata %}
+  <p>&#9989; 已检测到 Obsidian 配置</p>
+  {% endif %}
+  <a class="card-link" href="/settings/obsidian">进入 Obsidian 配置 &rarr;</a>
+</div>
+
+<!-- 系统卡片 -->
+<div class="overview-card">
+  <h3>&#9881; 系统</h3>
+  <table class="prop-table">
+    <tr><td>版本</td><td>{{ ov.app_version }} (RC)</td></tr>
+    <tr><td>数据库</td><td>{{ ov.db_status }}</td></tr>
+    <tr><td>数据目录</td><td><code class="truncate-path" title="{{ ov.data_dir }}">{{ ov.data_dir }}</code></td></tr>
+    <tr><td>平台</td><td>{{ ov.platform_info }}</td></tr>
+    <tr><td>服务地址</td><td>{{ ov.web_url }}</td></tr>
+  </table>
+  <a class="card-link" href="/settings/system">查看系统详情 &rarr;</a>
+</div>
+
+<!-- 诊断卡片 -->
+<div class="overview-card">
+  <h3>&#128300; 诊断</h3>
+  <p>整体状态：
+    <span class="status-badge {% if ov.diag_overall_status == 'ok' %}status-ok{% elif ov.diag_overall_status == 'blocked' %}status-blocked{% else %}status-warning{% endif %}">
+    {% if ov.diag_overall_status == 'ok' %}正常{% elif ov.diag_overall_status == 'blocked' %}需处理{% else %}需关注{% endif %}
+    </span>
+  </p>
+  <table class="prop-table">
+    {% if ov.diag_blocked_count %}
+    <tr><td>阻断性问题</td><td>{{ ov.diag_blocked_count }} 个</td></tr>
+    {% endif %}
+    {% if ov.diag_attention_count %}
+    <tr><td>需关注</td><td>{{ ov.diag_attention_count }} 个</td></tr>
+    {% endif %}
+    {% if ov.diag_recent_failures %}
+    <tr><td>最近失败</td><td>{{ ov.diag_recent_failures }} 个任务</td></tr>
+    {% endif %}
+    {% if ov.diag_open_review_count %}
+    <tr><td>待审核</td><td>{{ ov.diag_open_review_count }} 项</td></tr>
+    {% endif %}
+  </table>
+  <a class="card-link" href="/tasks">进入任务与审核 &rarr;</a>
+  &nbsp;
+  <a class="card-link" href="/settings/about">诊断与关于 &rarr;</a>
+</div>
+
+</div>
+
+{% endblock %}

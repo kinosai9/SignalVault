@@ -50,6 +50,7 @@
 
             <div class="nav-label">系统与集成</div>
             <nav class="side-nav side-nav-secondary" aria-label="系统与集成导航">
+                <a href="/settings"{% if current.startswith('/settings') %} class="active"{% endif %}>系统与集成</a>
                 <a href="/tasks"{% if current.startswith('/tasks') or current.startswith('/content/jobs') or current.startswith('/sync/jobs') %} class="active"{% endif %}>任务与诊断</a>
                 <a href="/docs"{% if current.startswith('/docs') %} class="active"{% endif %}>API</a>
                 <a href="/sources/channels"{% if current == '/sources/channels' or current.startswith('/sources/channels/') %} class="active"{% endif %}>YouTube</a>

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Obsidian 集成{% endblock %}
+{% block breadcrumb_tail %}&rsaquo; Obsidian 集成{% endblock %}
+{% block page_title %}Obsidian 集成{% endblock %}
+
+{% block extra_head %}
+<style>
+  .preview-list { margin: 0; padding-left: 20px; font-size: 0.92em; }
+  .preview-list li { margin: 2px 0; }
+  .preview-create { color: #155724; }
+  .preview-exists { color: #888; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Status card -->
+<div class="card">
+  <h2>当前状态：<span class="status-badge status-{{ view.state }}">{{ view.state_label }}</span></h2>
+
+  <!-- Data relationship notice -->
+  <div class="message-info">
+    <strong>&#8505; SQLite 是 SignalVault 主数据源；Obsidian 是可选的知识库浏览、导出和人工编辑层。</strong><br>
+    未配置 Obsidian 时，信息导入、LLM 分析、报告、搜索、证据链均不受影响。
+  </div>
+
+  <!-- State-specific notices -->
+  {% if view.state == 'disabled' %}
+  <div class="message-warning"><strong>Obsidian 集成已禁用。</strong> 所有数据保留在 SQLite 中。可以随时重新启用。</div>
+  {% endif %}
+  {% if view.state == 'not_configured' %}
+  <div class="message-info">Obsidian 尚未配置。在下方设置 Vault 路径以启用集成。</div>
+  {% endif %}
+  {% if view.state == 'path_invalid' %}
+  <div class="message-error"><strong>路径无效：</strong>{{ view.error_message }}</div>
+  {% endif %}
+  {% if view.state == 'manifest_conflict' %}
+  <div class="message-error"><strong>Manifest 冲突：</strong>该目录由 <code>{{ view.manifest_managed_by }}</code> 管理，SignalVault 不会覆盖。</div>
+  {% endif %}
+
+  <!-- Property table (when path is set) -->
+  {% if view.vault_path %}
+  <h3>路径信息</h3>
+  <table class="prop-table">
+    <tr><td>Vault 路径</td><td><code class="truncate-path" title="{{ view.vault_path }}">{{ view.vault_path }}</code><span class="source-tag">({{ view.vault_path_source }})</span></td></tr>
+    <tr><td>路径有效</td><td>{% if view.path_valid %}&#9989; 是{% else %}&#10060; 否{% endif %}</td></tr>
+    <tr><td>是否存在</td><td>{% if view.exists %}&#9989;{% else %}&#10060;{% endif %}</td></tr>
+    <tr><td>是否为目录</td><td>{% if view.is_directory %}&#9989;{% else %}&#10060;{% endif %}</td></tr>
+    <tr><td>可读</td><td>{% if view.readable %}&#9989;{% else %}&#10060;{% endif %}</td></tr>
+    <tr><td>可写</td><td>{% if view.writable %}&#9989;{% else %}&#10060;{% endif %}</td></tr>
+    <tr><td>.obsidian 目录</td><td>{% if view.has_obsidian_metadata %}&#9989; 已检测到 Obsidian 配置{% else %}未检测到（可选安装）{% endif %}</td></tr>
+    <tr><td>SignalVault 已初始化</td><td>{% if view.is_signalvault_initialized %}&#9989;{% else %}&#10060;{% endif %}</td></tr>
+    {% if view.manifest_exists %}
+    <tr><td>Vault Schema 版本</td><td>{{ view.vault_schema_version }}</td></tr>
+    <tr><td>初始化时间</td><td>{{ view.initialized_at or '(未知)' }}</td></tr>
+    <tr><td>最近修复</td><td>{{ view.last_repaired_at or '(未修复)' }}</td></tr>
+    {% endif %}
+  </table>
+  {% endif %}
+
+  <!-- Missing items (needs_repair) -->
+  {% if view.state == 'needs_repair' %}
+  <div class="message-warning">
+    <strong>部分目录或文件缺失</strong>
+    {% if view.missing_directories %}
+    <p>缺失目录：</p><ul class="preview-list">{% for d in view.missing_directories %}<li class="preview-create">{{ d }}/</li>{% endfor %}</ul>
+    {% endif %}
+    {% if view.missing_files %}
+    <p>缺失文件：</p><ul class="preview-list">{% for f in view.missing_files %}<li class="preview-create">{{ f }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Enable/disable toggle -->
+<div class="card">
+  <h2>集成开关</h2>
+  <form method="POST" action="/settings/obsidian">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="toggle">
+  <input type="hidden" name="vault_path" value="{{ view.vault_path }}">
+  <p>当前：<strong>{% if view.enabled %}已启用{% else %}已禁用{% endif %}</strong></p>
+  <div class="btn-group">
+    {% if view.enabled %}
+    <button type="submit" name="enabled" value="false" class="btn btn-warning">禁用集成</button>
+    {% else %}
+    <button type="submit" name="enabled" value="true" class="btn btn-success">启用集成</button>
+    {% endif %}
+  </div>
+  </form>
+  {% if not view.enabled %}
+  <div class="message-info">禁用不会删除 Vault 文件或 SQLite 数据。路径配置保留以便恢复。</div>
+  {% endif %}
+</div>
+
+<!-- Vault path -->
+<div class="card">
+  <h2>Vault 路径</h2>
+  <form method="POST" action="/settings/obsidian">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="save_path">
+  <div class="field-group">
+    <label for="vault_path">Obsidian Vault 路径</label>
+    <input type="text" name="vault_path" id="vault_path"
+           value="{{ view.vault_path }}"
+           placeholder="例如 C:\Users\...\MyInvestmentVault"
+           autocomplete="off">
+    <div class="help">必须是已存在目录的完整绝对路径。建议创建专用 Obsidian Vault。</div>
+  </div>
+  <div class="btn-group">
+    <button type="submit" class="btn btn-primary">保存路径并验证</button>
+    {% if view.vault_path %}
+    <button type="submit" formaction="/settings/obsidian/clear-path" class="btn btn-danger">清除路径</button>
+    {% endif %}
+  </div>
+  </form>
+</div>
+
+<!-- Validate path (when no path saved) -->
+{% if not view.vault_path %}
+<div class="card">
+  <h2>验证路径</h2>
+  <form method="POST" action="/settings/obsidian/validate">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <div class="field-group">
+    <label for="validate_path">输入路径验证（不保存）</label>
+    <input type="text" name="vault_path" id="validate_path"
+           placeholder="例如 C:\Users\...\MyVault">
+  </div>
+  <div class="btn-group"><button type="submit" class="btn btn-secondary">验证路径</button></div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Init & repair -->
+{% if view.path_valid and not view.manifest_conflict %}
+<div class="card">
+  <h2>初始化</h2>
+  {% if not view.is_signalvault_initialized %}
+  <h3>初始化预览</h3>
+  <p>以下是将创建的内容。已存在的文件不会被覆盖。</p>
+  {% if view.preview_will_create_dirs %}
+  <p><strong>将创建的目录：</strong></p>
+  <ul class="preview-list">{% for d in view.preview_will_create_dirs %}<li class="preview-create">{{ d }}/</li>{% endfor %}</ul>
+  {% endif %}
+  {% if view.preview_will_create_files %}
+  <p><strong>将创建的文件：</strong></p>
+  <ul class="preview-list">{% for f in view.preview_will_create_files %}<li class="preview-create">{{ f }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if view.preview_existing_items %}
+  <details><summary>已存在的内容（{{ view.preview_existing_items|length }} 项）</summary>
+  <ul class="preview-list">{% for item in view.preview_existing_items %}<li class="preview-exists">{{ item }}</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+  {% if not view.has_obsidian_metadata %}
+  <div class="message-info"><strong>&#8505; 未检测到 .obsidian 目录。</strong> 初始化后用 Obsidian 打开此目录即可自动创建。</div>
+  {% endif %}
+  <form method="POST" action="/settings/obsidian/initialize" style="margin-top:16px">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="vault_path" value="{{ view.vault_path }}">
+  <div class="btn-group"><button type="submit" class="btn btn-success">初始化 Vault</button></div>
+  </form>
+  {% else %}
+  <div class="message-ok"><strong>&#9989; Vault 已初始化</strong>{% if view.initialized_at %} ({{ view.initialized_at }}){% endif %}</div>
+  {% endif %}
+
+  {% if view.is_signalvault_initialized or view.state == 'needs_repair' %}
+  <h3>修复</h3>
+  <p>修复只补齐缺失项，不覆盖已有内容。</p>
+  <form method="POST" action="/settings/obsidian/repair">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="vault_path" value="{{ view.vault_path }}">
+  <div class="btn-group"><button type="submit" class="btn btn-primary">修复 Vault</button></div>
+  </form>
+  {% endif %}
+
+  <h3>写入测试</h3>
+  <form method="POST" action="/settings/obsidian/test-write">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="vault_path" value="{{ view.vault_path }}">
+  <div class="btn-group"><button type="submit" class="btn btn-secondary">测试写入</button></div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Install help -->
+<div class="card">
+  <h2>&#128214; Obsidian 安装帮助</h2>
+  <p>Obsidian 是可选软件。SignalVault 不捆绑、不自动安装。</p>
+  <ol>
+    <li>访问 <a href="https://obsidian.md" target="_blank" rel="noopener">obsidian.md</a> 下载安装</li>
+    <li>打开 Obsidian &rarr;「打开其他 Vault」&rarr;「打开文件夹作为 Vault」</li>
+    <li>选择上面配置的 Vault 路径</li>
+  </ol>
+  <h3>创建专用 Vault</h3>
+  <ol>
+    <li>在文件管理器创建空文件夹</li>
+    <li>在此页面配置该路径</li>
+    <li>点击「初始化 Vault」创建结构</li>
+    <li>在 Obsidian 中打开</li>
+  </ol>
+</div>
+
+<!-- Danger zone -->
+<div class="card" style="border-color: #dc3545;">
+  <h2 style="color: #dc3545;">&#9888; 危险操作</h2>
+  <h3>禁用集成</h3>
+  <p>禁用不会删除任何数据。Vault 文件和 SQLite 完整保留。可随时重新启用。</p>
+  {% if view.enabled %}
+  <form method="POST" action="/settings/obsidian/disable">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <div class="btn-group"><button type="submit" class="btn btn-warning">禁用集成</button></div>
+  </form>
+  {% endif %}
+
+  <h3>清除保存的路径</h3>
+  <p>清除配置中的路径，不删除 Vault 文件。</p>
+  {% if view.vault_path %}
+  <form method="POST" action="/settings/obsidian/clear-path"
+        onsubmit="return confirm('确定清除路径吗？不会删除文件。');">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <div class="btn-group"><button type="submit" class="btn btn-danger">清除路径</button></div>
+  </form>
+  {% endif %}
+</div>
+
+{% endblock %}

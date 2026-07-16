@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+### C2-C: Settings Center & Navigation (2026-07-16)
+
+- **Settings overview** (`/settings`): AI, Obsidian, System, Diagnostics cards with live status
+- **System page** (`/settings/system`): read-only app/paths/DB/service info with classification tags
+- **About page** (`/settings/about`): version, privacy, disclaimer, license, diagnostics entry
+- **Shared settings layout**: `templates/settings/base.html` with sub-navigation
+- **Settings overview service**: unified aggregation (reuses ai_settings_service, obsidian_settings_service, diagnostics summary, AppPaths)
+- **Main navigation**: "系统与集成" entry in sidebar
+- **Version single source**: `signalvault.__version__` via `importlib.metadata` (from pyproject.toml)
+- **CSRF no-Origin boundary**: 403 when no Origin, no Referer, and no/invalid CSRF token
+- 2359 tests collected, 2351 passed, 1 Windows skip, 7 UI smoke, Ruff clean
+
+### C2-B: Obsidian Integration Settings Page (2026-07-16)
+
+- **Obsidian settings service** (`services/obsidian_settings_service.py`): unified backend for HTML + JSON API
+- **Obsidian settings page** (`/settings/obsidian`): status card, enable/disable, path config, validation, init preview, init/repair, write test, install help, danger zone
+- **8 state model**: disabled | not_configured | path_invalid | path_valid_not_obsidian | path_valid_not_initialized | initialized | needs_repair | manifest_conflict
+- **Vault operations**: idempotent init, non-destructive repair, test-write with cleanup, disable preserves data, clear-path does not delete vault
+- **Path safety**: rejects system roots, home roots, site-packages; uses pathlib only
+- **CSRF cookie fix**: form token and cookie token now match (same token passed to both)
+- **secret_revision fingerprint**: Key A→Key B replacement invalidates old validation via monotonic counter
+
+### C2-A: AI Settings Page & CSRF Protection (2026-07-16)
+
+- **AI settings service** (`services/ai_settings_service.py`): unified backend for HTML + JSON API
+- **AI settings page** (`/settings/ai`): Provider select, Base URL/Model fields, API Key (type=password), test connection, advanced config, validation persistence
+- **CSRF protection** (`web/csrf.py`): double-submit cookie with HMAC signing, Origin/Referer check
+- **Validation state**: persisted to `_internal.llm_validation` in config.toml; stale detection on config change
+- **Config fingerprint**: non-sensitive hash; secret_revision counter for key changes
+- **Origin/Referer security**: URL host comparison (not string contains); rejects `127.0.0.1.attacker.com`, `null`, `https://`; allows IPv6 `[::1]`
+
+### C1-C: LLM Runtime, SetupStatus, Validators, Vault Manifest (2026-07-15)
+
+- **LLM Runtime Config** (`settings/llm_runtime.py`): frozen snapshot from ConfigService; single `create_llm_provider()` factory
+- **SetupStatus** (`settings/setup_status.py`): composite health model (core/llm/obsidian); mock-aware llm_ready
+- **LLM Validator** (`settings/llm_validator.py`): 10 error classifications for connectivity test
+- **Obsidian Validator** (`settings/obsidian_validator.py`): path validation; `has_obsidian_metadata` separate from `path_valid`
+- **Vault Manifest** (`settings/vault_manifest.py`): atomic JSON write, idempotent init, conflict protection, repair
+
+### C1-B: ConfigService & SecretStore (2026-07-15)
+
+- **ConfigSchema** (`settings/schema.py`): all runtime config items with metadata, defaults, env vars, validators
+- **ConfigService** (`settings/service.py`): 5-layer priority chain (runtime → CLI → env → user_config → defaults); source tracking; public snapshot
+- **SecretStore** (`settings/secret_store.py`): local file with 0600 permissions (Unix); API keys never in config.toml, logs, or diagnostics
+- **Backward compat**: `config_store.py` migrates legacy JSON vault path to ConfigService
+
+### C1-A: AppPaths (2026-07-15)
+
+- **AppPaths** (`settings/app_paths.py`): cross-platform path resolution (Windows/macOS/Linux)
+- SIGNALVAULT_HOME env var support; legacy DATA_DIR/LOG_DIR/DB_PATH overrides
+
 ### Release Engineering Documentation Closeout (2026-07-15)
 
 - Audited implementation facts across CLI, 73 Web routes, 33 Jinja templates, 19 ORM tables, tests, and the Phase 8 rendered-page evidence.

@@ -39,6 +39,11 @@ def create_app() -> FastAPI:
 
     app.include_router(web_router)
 
+    # C1-C: Settings & integration JSON API routes
+    from signalvault.web.routes_settings import router as settings_router
+
+    app.include_router(settings_router)
+
     # Static files
     static_dir = Path(__file__).parent.parent / "web" / "static"
     if static_dir.exists():

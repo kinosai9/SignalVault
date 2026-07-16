@@ -272,21 +272,20 @@ def _generate_real_patch_body(
     model: str,
 ) -> str:
     """Generate a real patch body using OpenAI-compatible API (without frontmatter)."""
-    # Import here to avoid circular dependency
-    from signalvault.llm.openai_compatible_provider import OpenAICompatibleProvider
+    from signalvault.settings.llm_runtime import LLMRuntimeConfig, create_llm_provider
 
     if not api_key:
         raise ValueError("api_key is required for real LLM mode")
     if not base_url:
         raise ValueError("base_url is required for real LLM mode")
 
-    provider = OpenAICompatibleProvider(
+    config = LLMRuntimeConfig(
+        provider="openai-compatible",
         base_url=base_url,
         api_key=api_key,
         model=model,
-        max_retries=2,
-        timeout=120.0,
     )
+    provider = create_llm_provider(config)
 
     # Build user prompt
     source_reports_context = build_source_reports_context(topic_context.source_reports)
@@ -510,20 +509,20 @@ def _generate_real_company_patch_body(
     model: str,
 ) -> str:
     """Generate a real company patch body using OpenAI-compatible API."""
-    from signalvault.llm.openai_compatible_provider import OpenAICompatibleProvider
+    from signalvault.settings.llm_runtime import LLMRuntimeConfig, create_llm_provider
 
     if not api_key:
         raise ValueError("api_key is required for real LLM mode")
     if not base_url:
         raise ValueError("base_url is required for real LLM mode")
 
-    provider = OpenAICompatibleProvider(
+    config = LLMRuntimeConfig(
+        provider="openai-compatible",
         base_url=base_url,
         api_key=api_key,
         model=model,
-        max_retries=2,
-        timeout=120.0,
     )
+    provider = create_llm_provider(config)
 
     source_reports_context = build_source_reports_context(company_context.source_reports)
     user_prompt = GENERATE_COMPANY_PATCH_USER.format(

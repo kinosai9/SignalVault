@@ -16,7 +16,7 @@ from signalvault.analysis.pipeline import analyze as run_analyze
 from signalvault.analysis.pipeline import (
     analyze_from_transcript as run_analyze_from_transcript,
 )
-from signalvault.config import LLM_PROVIDER, TRANSCRIPT_CACHE_DIR, ensure_dirs
+from signalvault.config import TRANSCRIPT_CACHE_DIR, ensure_dirs
 from signalvault.logging_config import setup_logging
 
 console = Console()
@@ -93,7 +93,8 @@ def main(
     elif mock is False:
         provider = "openai-compatible"
     else:
-        provider = LLM_PROVIDER
+        from signalvault.settings.service import get_config_service
+        provider = str(get_config_service().get("llm.provider"))
 
     # P2-B: chunking config
     chunking_config = {}
@@ -3292,11 +3293,12 @@ def zsxq_analyze(
     """导入并分析单个知识星球主题（fetch → eligibility → LLM analysis）。"""
     from signalvault.db.session import init_db
     from signalvault.diagnostics.operation_log import OperationLogManager
+    from signalvault.settings.service import get_config_service
     from signalvault.sources.zsxq_analysis import import_and_analyze
 
     init_db()
     focus_areas = [f.strip() for f in focus.split(",") if f.strip()] if focus else None
-    provider = "mock" if mock else LLM_PROVIDER
+    provider = "mock" if mock else str(get_config_service().get("llm.provider"))
 
     console.print("\n[bold]ZSXQ Analyze[/bold]")
     console.print(f"  Group: {group_id}")

@@ -7,9 +7,10 @@
 - [x] P0-P7 后端/CLI 验收完成
 - [x] 四条前端主用户动线完成，Phase 8 已验证
 - [x] SourceDocument / SourceSegment 第一阶段落地
+- [x] C1-C2 配置体系封板（AppPaths、ConfigService、SecretStore、AI/Obsidian 设置页、CSRF、Manifest）
 - [x] MIT `LICENSE` 存在
 - [x] 用户手册、README、ROADMAP、架构与来源文档已统一
-- [x] `python -m pytest --collect-only -q` 收集 2013 tests（2026-07-15）
+- [x] `python -m pytest --collect-only -q` 收集 2359 tests（2026-07-16）
 
 ## 2. Clean Install Gate
 
@@ -38,8 +39,8 @@ ruff check src/ tests/
 python -m pytest tests/test_web_pages.py tests/test_ui_smoke.py -q
 ```
 
-- [x] 全部 2013 tests 通过：2006 项非浏览器测试分四组运行，7 项 UI smoke 单独运行
-- [ ] Ruff clean（Ruff 0.15.21 当前有 45 项存量问题）
+- [x] 全部 2359 tests 通过：2351 项非浏览器测试，7 项 UI smoke，1 项 Windows 平台 skip
+- [x] Ruff clean — 全量 `src/` 和 `tests/` 零 lint 问题
 - [x] Web 页面与 UI smoke tests 通过
 - [x] 默认测试只使用 mock provider，不产生真实 API 费用
 - [x] 测试使用隔离 fixture 和工作区 `--basetemp`，未写入真实 `data/` 或 Obsidian Vault
@@ -70,7 +71,66 @@ python -m pytest tests/test_web_pages.py tests/test_ui_smoke.py -q
 - [ ] UI 与文档均保留“不是投资建议”边界
 - [ ] MCP Server 仍为只读，不存在写入型 tool
 
-## 6. Manual Integration Gate
+## 6. Configuration Center Gate (C2)
+
+Web Console 配置页面验证（`python -m signalvault serve` 后）：
+
+### AI 服务页面 (`/settings/ai`)
+- [x] Provider 下拉选择（mock / openai-compatible）
+- [x] Base URL / Model 字段随 Provider 切换显隐
+- [x] API Key 通过 type=password 输入，不回显，不在页面源码中
+- [x] 保存配置持久化到 config.toml
+- [x] API Key 存储到 SecretStore（不进 config.toml）
+- [x] 测试连接（Mock 模式即时通过）
+- [x] 验证状态持久化，配置变更后自动失效
+- [x] 环境变量覆盖警告
+
+### Obsidian 页面 (`/settings/obsidian`)
+- [x] 启用/禁用开关
+- [x] 路径保存、验证（拒绝相对路径和系统根目录）
+- [x] 初始化预览（将创建的目录/文件清单）
+- [x] 初始化 Vault（幂等，不覆盖已有文件）
+- [x] Manifest 创建和 conflict 保护
+- [x] 修复（只补齐缺失，不覆盖）
+- [x] 写入测试（创建临时文件并清理）
+- [x] 禁用保留路径，不删除文件
+- [x] 清除路径不删除 Vault
+- [x] SQLite 独立于 Obsidian
+
+### 设置中心概览 (`/settings`)
+- [x] AI 卡片（Provider、Model、Key 来源、验证时间）
+- [x] Obsidian 卡片（状态、缩略路径、.obsidian 检测）
+- [x] 系统卡片（版本、DB 状态、数据目录、平台、服务地址）
+- [x] 诊断卡片（健康状态、问题计数、入口链接）
+- [x] 不含 API Key
+
+### 系统页面 (`/settings/system`)
+- [x] 只读展示应用/路径/数据库/服务信息
+- [x] 路径分类标签（必须备份/可重建/可清理）
+- [x] ORM 和 FTS 表数量
+
+### About 页面 (`/settings/about`)
+- [x] 版本、RC 标识、系统环境
+- [x] 隐私说明、免责声明、开源许可
+- [x] `/tasks` 诊断入口
+- [x] 不含 API Key
+
+### CSRF 与 Origin
+- [x] 所有 POST 端点 CSRF 保护（double-submit cookie）
+- [x] Origin/Referer 校验（URL host 比较，拒绝 127.0.0.1.attacker.com）
+- [x] 无 Origin 无 Referer 无 CSRF → 403
+- [x] 无 Origin 无 Referer 有效 CSRF → 允许（JSON API）
+
+### SecretStore
+- [x] `secrets` 文件独立存储，不进 config.toml
+- [x] 替换 Key 后旧验证失效（secret_revision 计数器）
+- [x] 删除 Key 后回退 env 值，验证仍失效
+
+### 普通用户路径
+- [x] 普通用户无需编辑 `.env`
+- [x] README 不把编辑 `.env` 作为首要配置步骤
+
+## 7. Manual Integration Gate
 
 以下检查需要用户自己的凭证或真实资料，结果记录在发布验收记录中，不进入 CI：
 

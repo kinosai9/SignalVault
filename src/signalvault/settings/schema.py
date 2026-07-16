@@ -224,6 +224,20 @@ RUNTIME_SCHEMA: dict[str, ConfigItem] = {
         description="Last completed migration step",
         web_editable=False, restart_required=False,
     ),
+    "_internal.llm_validation": ConfigItem(
+        key="_internal.llm_validation",
+        type=str, default="",
+        category=ConfigCategory.META,
+        description="Persisted LLM validation state (JSON, non-sensitive)",
+        web_editable=False, restart_required=False,
+    ),
+    "_internal.llm_secret_revision": ConfigItem(
+        key="_internal.llm_secret_revision",
+        type=int, default=0,
+        category=ConfigCategory.META,
+        description="Monotonic counter incremented on every API key set/delete; used to invalidate cached validation",
+        web_editable=False, restart_required=False,
+    ),
 }
 
 

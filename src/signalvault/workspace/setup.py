@@ -123,12 +123,28 @@ def initialize_vault(path: Path) -> VaultSetupResult:
     if "99_System/Watchlist.yaml" in result.created_files:
         _write_watchlist_template(wl_path)
 
+    # C1-C: Write/update vault manifest
+    try:
+        from signalvault.settings.vault_manifest import ensure_manifest
+        ensure_manifest(path)
+    except Exception:
+        pass  # best-effort, don't block vault init on manifest failure
+
     return result
 
 
 def repair_vault(path: Path) -> VaultSetupResult:
-    """Repair a vault: same as initialize but always shows repair context."""
-    return initialize_vault(path)
+    """Repair a vault: same as initialize but updates last_repaired_at."""
+    result = initialize_vault(path)
+
+    # C1-C: Update manifest last_repaired_at
+    try:
+        from signalvault.settings.vault_manifest import repair_manifest
+        repair_manifest(path)
+    except Exception:
+        pass  # best-effort
+
+    return result
 
 
 def _create_file(full_path: Path, rel_path: str) -> None:

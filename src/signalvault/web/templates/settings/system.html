@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}数据与系统{% endblock %}
+{% block breadcrumb_tail %}&rsaquo; 数据与系统{% endblock %}
+{% block page_title %}数据与系统{% endblock %}
+
+{% block content %}
+
+<div class="message-info">
+  <strong>&#8505; 本页面为只读展示。</strong> 当前版本不支持在页面中修改路径、host 或 port。
+</div>
+
+<!-- 应用信息 -->
+<div class="card">
+  <h2>&#128187; 应用</h2>
+  <table class="prop-table">
+    <tr><td>SignalVault 版本</td><td>{{ info.app_version }}</td></tr>
+    {% if info.build_commit %}
+    <tr><td>Build Commit</td><td><code>{{ info.build_commit }}</code></td></tr>
+    {% endif %}
+    <tr><td>发布通道</td><td>{{ info.release_channel }}</td></tr>
+    <tr><td>Python</td><td>{{ info.python_version }}</td></tr>
+    <tr><td>操作系统</td><td>{{ info.os_name }}</td></tr>
+    <tr><td>架构</td><td>{{ info.architecture }}</td></tr>
+  </table>
+</div>
+
+<!-- 路径 -->
+<div class="card">
+  <h2>&#128193; 路径</h2>
+  <table class="prop-table">
+    <tr>
+      <td>应用根目录</td>
+      <td><code>{{ info.app_support_dir }}</code>
+        <span class="path-type path-must-backup">必须备份</span>
+      </td>
+    </tr>
+    <tr>
+      <td>配置目录</td>
+      <td><code>{{ info.config_dir }}</code>
+        <span class="path-type path-must-backup">必须备份</span>
+        <span class="path-type path-no-edit">不建议手工修改</span>
+      </td>
+    </tr>
+    <tr>
+      <td>数据目录</td>
+      <td><code>{{ info.data_dir }}</code>
+        <span class="path-type path-must-backup">必须备份</span>
+      </td>
+    </tr>
+    <tr>
+      <td>数据库文件</td>
+      <td><code>{{ info.db_path }}</code>
+        <span class="path-type path-must-backup">必须备份</span>
+      </td>
+    </tr>
+    <tr>
+      <td>日志目录</td>
+      <td><code>{{ info.log_dir }}</code>
+        <span class="path-type path-cleanable">可清理</span>
+      </td>
+    </tr>
+    <tr>
+      <td>缓存目录</td>
+      <td><code>{{ info.cache_dir }}</code>
+        <span class="path-type path-rebuildable">可重建</span>
+        <span class="path-type path-cleanable">可清理</span>
+      </td>
+    </tr>
+    <tr>
+      <td>备份目录</td>
+      <td><code>{{ info.backup_dir }}</code>
+        <span class="path-type path-cleanable">可备份后清理</span>
+      </td>
+    </tr>
+    <tr>
+      <td>诊断目录</td>
+      <td><code>{{ info.diagnostics_dir }}</code>
+        <span class="path-type path-cleanable">可清理</span>
+      </td>
+    </tr>
+  </table>
+
+  <details>
+    <summary>图例说明</summary>
+    <table>
+      <tr><td><span class="path-type path-must-backup">必须备份</span></td><td>丢失将导致数据不可恢复</td></tr>
+      <tr><td><span class="path-type path-rebuildable">可重建</span></td><td>删除后系统自动重建</td></tr>
+      <tr><td><span class="path-type path-cleanable">可清理</span></td><td>可安全删除以释放空间</td></tr>
+      <tr><td><span class="path-type path-no-edit">不建议手工修改</span></td><td>手动编辑可能导致配置损坏</td></tr>
+    </table>
+  </details>
+</div>
+
+<!-- 数据库 -->
+<div class="card">
+  <h2>&#128451; 数据库</h2>
+  <table class="prop-table">
+    <tr><td>状态</td><td>{{ info.db_status }}</td></tr>
+    <tr><td>Schema 版本</td><td>{{ info.db_schema_version }}</td></tr>
+    <tr><td>ORM 表数量</td><td>{{ info.db_table_count }}</td></tr>
+    <tr><td>FTS 虚拟表数量</td><td>{{ info.db_fts_table_count }}</td></tr>
+    <tr><td>文件大小</td><td>{{ info.db_file_size }}</td></tr>
+    {% if info.db_last_updated %}
+    <tr><td>最近更新</td><td>{{ info.db_last_updated }}</td></tr>
+    {% endif %}
+    <tr><td>可写</td><td>{% if info.db_writable %}&#9989; 是{% else %}&#10060; 否{% endif %}</td></tr>
+  </table>
+</div>
+
+<!-- 服务 -->
+<div class="card">
+  <h2>&#127760; 服务</h2>
+  <table class="prop-table">
+    <tr><td>Host</td><td><code>{{ info.web_host }}</code></td></tr>
+    <tr><td>Port</td><td>{{ info.web_port }}</td></tr>
+    <tr><td>仅本机访问</td><td>{% if info.web_local_only %}&#9989; 是{% else %}&#9888; 否（可被局域网内其他设备访问）{% endif %}</td></tr>
+    <tr><td>Web URL</td><td><a href="{{ info.web_url }}">{{ info.web_url }}</a></td></tr>
+    <tr><td>自动重载</td><td>{% if info.web_reload %}已开启（开发模式）{% else %}已关闭{% endif %}</td></tr>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,11 +1,15 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from signalvault.config import LOG_DIR, LOG_LEVEL
+from signalvault.config import LOG_DIR
 
 
 def setup_logging(level: str | None = None) -> None:
-    lvl = (level or LOG_LEVEL).upper()
+    # Resolve LOG_LEVEL at call time (not import time) via ConfigService
+    if level is None:
+        from signalvault.settings.service import get_config_service
+        level = str(get_config_service().get("logging.level"))
+    lvl = level.upper()
     log_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
     root = logging.getLogger()

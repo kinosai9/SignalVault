@@ -16,7 +16,6 @@ from signalvault.db.repository import (
 )
 from signalvault.db.session import get_session, init_db
 from signalvault.llm.base import LLMProvider
-from signalvault.llm.mock_provider import MockLLMProvider
 from signalvault.subtitles.cleaner import clean_segments
 from signalvault.subtitles.parser import parse_subtitle
 from signalvault.utils.hash import file_hash
@@ -129,21 +128,31 @@ def _merge_source_info_override(source_info: dict, override: dict) -> None:
 
 
 def get_llm_provider(provider_name: str) -> LLMProvider:
-    if provider_name == "mock":
-        return MockLLMProvider()
-    if provider_name in ("openai-compatible", "openai_compatible"):
-        from signalvault.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
-        from signalvault.llm.openai_compatible_provider import (
-            OpenAICompatibleProvider,
+    """Create an LLM provider, resolving config at call time via ConfigService.
+
+    The *provider_name* parameter overrides the configured default for
+    backward compatibility (e.g. CLI ``--mock`` / ``--no-mock`` flags).
+    All other settings (model, api_key, timeout, etc.) come from ConfigService.
+    """
+    from signalvault.settings.llm_runtime import LLMRuntimeConfig, create_llm_provider
+    from signalvault.settings.service import get_config_service
+
+    svc = get_config_service()
+    config = LLMRuntimeConfig.from_config_service(svc)
+
+    # Override provider if explicitly requested
+    if provider_name in ("openai-compatible", "openai_compatible", "mock"):
+        config = LLMRuntimeConfig(
+            provider=provider_name,
+            model=config.model,
+            base_url=config.base_url,
+            api_key=config.api_key,
+            timeout=config.timeout,
+            max_retries=config.max_retries,
+            temperature=config.temperature,
         )
-        if not LLM_API_KEY:
-            raise ValueError("openai-compatible provider 需要配置 LLM_API_KEY（见 .env）")
-        return OpenAICompatibleProvider(
-            base_url=LLM_BASE_URL,
-            api_key=LLM_API_KEY,
-            model=LLM_MODEL,
-        )
-    raise ValueError(f"不支持的 LLM provider: {provider_name}，可选: mock, openai-compatible")
+
+    return create_llm_provider(config)
 
 
 def _validate_report_language(report_md: str, episode_title: str) -> None:

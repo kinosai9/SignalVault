@@ -173,9 +173,8 @@ def _audit_db_reports(result: QualityAuditResult, db_path: str | None) -> None:
         from signalvault.db.session import get_session, init_db, reset_engine
 
         if db_path:
-            import signalvault.config as cfg
-            from signalvault.config import DB_PATH
-            cfg.DB_PATH = Path(db_path) if isinstance(db_path, str) else db_path
+            # Reset engine so init_db rebuilds with the explicit db_path
+            # (no longer mutates cfg.DB_PATH — C1-C cleanup)
             reset_engine()
 
         init_db(db_path)

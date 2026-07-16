@@ -41,12 +41,14 @@ class OpenAICompatibleProvider(LLMProvider):
         model: str = "gpt-4o-mini",
         max_retries: int = 2,
         timeout: float = 120.0,
+        temperature: float = 0.1,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.max_retries = max_retries
         self.timeout = timeout
+        self.temperature = temperature
 
     def _chat(self, system: str, user: str) -> str:
         url = f"{self.base_url}/chat/completions"
@@ -60,7 +62,7 @@ class OpenAICompatibleProvider(LLMProvider):
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "temperature": 0.1,
+            "temperature": self.temperature,
         }
 
         for attempt in range(1, self.max_retries + 1):

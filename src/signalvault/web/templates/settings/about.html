@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}诊断与关于{% endblock %}
+{% block breadcrumb_tail %}&rsaquo; 诊断与关于{% endblock %}
+{% block page_title %}诊断与关于{% endblock %}
+
+{% block content %}
+
+<!-- 关于 -->
+<div class="card">
+  <h2>&#8505; 关于 SignalVault</h2>
+  <table class="prop-table">
+    <tr><td>版本</td><td>{{ about.app_version }} ({{ about.release_channel }})</td></tr>
+    {% if about.build_commit %}
+    <tr><td>Build</td><td><code>{{ about.build_commit }}</code></td></tr>
+    {% endif %}
+    <tr><td>Python</td><td>{{ about.python_version }}</td></tr>
+    <tr><td>操作系统</td><td>{{ about.os_name }} ({{ about.architecture }})</td></tr>
+  </table>
+</div>
+
+<!-- 环境总览 -->
+<div class="card">
+  <h2>&#128269; 环境总览</h2>
+  <table class="prop-table">
+    <tr><td>数据库</td><td><code>{{ about.db_path }}</code></td></tr>
+    <tr><td>AI 服务</td><td>
+      <span class="status-badge status-{{ about.ai_status }}">{{ about.ai_status }}</span>
+      {{ about.ai_provider }}
+      {% if about.ai_key_configured %}(Key 已配置){% else %}(Key 未配置){% endif %}
+    </td></tr>
+    <tr><td>Obsidian</td><td>
+      <span class="status-badge status-{{ about.obsidian_state }}">{{ about.obsidian_state_label }}</span>
+    </td></tr>
+    <tr><td>系统健康</td><td>
+      {% if about.diagnostics_ok %}
+      <span class="status-badge status-ok">正常</span>
+      {% else %}
+      <span class="status-badge status-warning">需关注</span>
+      {% endif %}
+    </td></tr>
+  </table>
+</div>
+
+<!-- 诊断入口 -->
+<div class="card">
+  <h2>&#128300; 诊断</h2>
+  <p>诊断功能通过任务与审核中心提供。包含：</p>
+  <ul>
+    <li>摄入任务状态与重试</li>
+    <li>审核队列处理</li>
+    <li>操作日志查看</li>
+    <li>知识库健康检查</li>
+    <li>诊断包导出（已自动脱敏）</li>
+  </ul>
+  <div class="btn-group">
+    <a href="/tasks" class="btn btn-primary">前往任务与审核</a>
+  </div>
+</div>
+
+<!-- 隐私说明 -->
+<div class="card">
+  <h2>&#128274; 隐私说明</h2>
+  <ul>
+    <li>所有数据存储在本地 SQLite 数据库和配置文件中。</li>
+    <li>API Key 单独加密存储，不进日志、不进诊断包。</li>
+    <li>诊断包自动脱敏，不包含密钥、原文内容或个人信息。</li>
+    <li>SignalVault 不上传任何数据到云端。</li>
+    <li>LLM API 调用只传输分析所需的文本内容。</li>
+  </ul>
+</div>
+
+<!-- 免责声明 -->
+<div class="card" style="border-color: #dc3545;">
+  <h2 style="color: #dc3545;">&#9888; 免责声明</h2>
+  <p><strong>SignalVault 不是投资建议工具。</strong></p>
+  <p>本软件仅帮助用户结构化整理公开投资信息。所有分析结果基于 AI 模型对公开内容的提取，不代表投资建议。投资决策请自行判断，风险自担。</p>
+</div>
+
+<!-- 开源许可 -->
+<div class="card">
+  <h2>&#128220; 开源许可</h2>
+  <p>SignalVault 使用以下开源组件：</p>
+  <ul>
+    <li>FastAPI, SQLAlchemy, Jinja2 — 后端框架与模板引擎</li>
+    <li>yt-dlp — YouTube 字幕提取</li>
+    <li>Playwright — 浏览器自动化测试</li>
+  </ul>
+</div>
+
+{% endblock %}

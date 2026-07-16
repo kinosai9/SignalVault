@@ -3,6 +3,71 @@
 > 基于 `docs/CONFIGURATION_AUDIT.md` 的事实发现  
 > 规划 C1–C4 实施路径，最小化风险，最大化复用现有代码
 
+## 实施状态（2026-07-16）
+
+| 阶段 | 状态 | 内容 |
+|------|------|------|
+| C1-A | ✅ 已交付 | AppPaths — 跨平台路径解析 |
+| C1-B | ✅ 已交付 | ConfigSchema、ConfigService、SecretStore |
+| C1-C | ✅ 已交付 | LLM Runtime Factory、SetupStatus、LLM/Obsidian Validators、Vault Manifest |
+| C2-A | ✅ 已交付 | AI 服务配置页面、CSRF/Origin 保护 |
+| C2-B | ✅ 已交付 | Obsidian 集成配置页面、Vault 初始化/修复/Manifest |
+| C2-C | ✅ 已交付 | 设置中心概览、系统页面、About 页面、导航、版本单一来源 |
+| C3 | 🔜 计划中 | 首次使用向导 |
+| C4 | 🔜 计划中 | 多 Provider、Keychain、原生目录选择器 |
+
+### 实际架构
+
+```
+src/signalvault/
+├── settings/
+│   ├── app_paths.py          # AppPaths — 平台路径
+│   ├── schema.py             # ConfigSchema — 运行时配置项
+│   ├── service.py            # ConfigService — 5 层优先级链
+│   ├── secret_store.py       # SecretStore — 密钥独立文件
+│   ├── llm_runtime.py        # LLMRuntimeConfig + create_llm_provider()
+│   ├── llm_validator.py      # LLM 连接验证
+│   ├── obsidian_validator.py # Vault 路径验证
+│   ├── vault_manifest.py     # Vault Manifest CRUD
+│   ├── setup_status.py       # SetupStatus 聚合
+│   └── __init__.py
+├── services/
+│   ├── ai_settings_service.py      # AI 页面 + JSON API 后端
+│   ├── obsidian_settings_service.py # Obsidian 页面 + JSON API 后端
+│   └── settings_overview_service.py # 概览/系统/About 聚合
+├── web/
+│   ├── csrf.py               # CSRF double-submit cookie + Origin 校验
+│   ├── routes.py             # HTML 页面路由（settings + obsidian POST）
+│   ├── routes_settings.py    # JSON API 路由
+│   └── templates/settings/
+│       ├── base.html         # 共享设置布局 + 二级导航
+│       ├── overview.html     # 概览四卡片
+│       ├── ai.html           # AI 配置表单
+│       ├── obsidian.html     # Obsidian 配置
+│       ├── system.html       # 系统状态（只读）
+│       └── about.html        # 关于 / 诊断
+└── __init__.py               # __version__ via importlib.metadata
+```
+
+### 测试基线
+
+| 指标 | 值 |
+|------|-----|
+| 收集 | 2359 tests |
+| 通过 | 2351 passed |
+| 跳过 | 1 (Windows 平台限制) |
+| UI smoke | 7 passed |
+| Ruff | Clean |
+
+### 已知限制
+
+- Web 页面不支持在线修改 host/port/路径
+- 无原生目录选择器（C4 规划）
+- 无 Keychain 集成（C4 规划）
+- 无多 Provider 支持（C4 规划）
+- Build commit 在 wheel 部署时显示为空（C3/C4 构建时注入）
+- 不修改 host/port 或路径的重启自动生效
+
 ## 1. 目标架构概览
 
 ```

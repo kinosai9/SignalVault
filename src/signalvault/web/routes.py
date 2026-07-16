@@ -4882,3 +4882,392 @@ def _cleanup_temp_file(path: Path | None) -> None:
             path.unlink()
         except OSError:
             pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# C2-A: Settings pages (AI Service configuration)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _render_settings(template_name: str, request: Request, **ctx) -> HTMLResponse:
+    """Render a settings page template with CSRF token injected.
+
+    The same CSRF token is embedded in the form AND set as a signed cookie.
+    The double-submit cookie pattern requires they match.
+    """
+    from signalvault.web.csrf import generate_csrf_token, set_csrf_cookie
+
+    _templates = Environment(
+        loader=FileSystemLoader(Path(__file__).parent / "templates" / "settings")
+    )
+    tmpl = _templates.get_template(template_name)
+    csrf_token = generate_csrf_token()
+    html = tmpl.render(request=request, csrf_token=csrf_token, **ctx)
+    resp = HTMLResponse(html)
+    # Pass the SAME token to the cookie — cookie and form must match
+    set_csrf_cookie(resp, token=csrf_token)
+    return resp
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_index(request: Request):
+    """Settings overview page with AI, Obsidian, System, and Diagnostics cards."""
+    from signalvault.services.settings_overview_service import get_settings_overview
+    ov = get_settings_overview()
+    return _render_settings("overview.html", request, ov=ov, nav_current="overview")
+
+
+@router.get("/settings/ai", response_class=HTMLResponse)
+async def settings_ai_page(request: Request):
+    """AI service configuration page."""
+    from signalvault.services.ai_settings_service import get_ai_settings_view
+    view = get_ai_settings_view()
+    return _render_settings("ai.html", request, view=view, nav_current="ai")
+
+
+@router.post("/settings/ai", response_class=HTMLResponse)
+async def settings_ai_save(request: Request):
+    """Save AI settings from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_ai_view()
+        return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.ai_settings_service import update_ai_settings
+    fields = {}
+    for key in ("provider", "model", "base_url", "timeout", "max_retries", "temperature"):
+        val = form.get(key, "")
+        if val:
+            fields[key] = val
+    result = update_ai_settings(fields)
+
+    view = _get_ai_view()
+    if result.get("ok"):
+        return _render_settings("ai.html", request, view=view, nav_current="ai",
+                                message='配置已保存。修改了连接相关字段，如需验证请点击「测试连接」。')
+    return _render_settings("ai.html", request, view=view, nav_current="ai", error=result.get("error", "保存失败"))
+
+
+@router.post("/settings/ai/test", response_class=HTMLResponse)
+async def settings_ai_test(request: Request):
+    """Test LLM connection from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_ai_view()
+        return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.ai_settings_service import test_llm_connection
+    result = test_llm_connection(
+        provider=form.get("provider", ""),
+        base_url=form.get("base_url", ""),
+        model=form.get("model", ""),
+        api_key=form.get("api_key", ""),
+    )
+
+    view = _get_ai_view()
+    if result.get("ok"):
+        return _render_settings("ai.html", request, view=view, nav_current="ai",
+                                message=f"连接测试成功 ({result.get('latency_ms', 0)} ms)")
+    return _render_settings("ai.html", request, view=view, nav_current="ai",
+                            error=result.get("user_message") or result.get("error", "测试连接失败"))
+
+
+@router.post("/settings/ai/secret", response_class=HTMLResponse)
+async def settings_ai_secret_save(request: Request):
+    """Save API key from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_ai_view()
+        return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.ai_settings_service import replace_llm_secret
+    api_key = form.get("api_key", "")
+    replace_llm_secret(api_key)
+
+    view = _get_ai_view()
+    if api_key and api_key.strip():
+        return _render_settings("ai.html", request, view=view, nav_current="ai", message="API Key 已安全保存。")
+    return _render_settings("ai.html", request, view=view, nav_current="ai", message="API Key 已删除。")
+
+
+@router.post("/settings/ai/secret/delete", response_class=HTMLResponse)
+async def settings_ai_secret_delete(request: Request):
+    """Delete stored API key."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_ai_view()
+        return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+    from signalvault.services.ai_settings_service import delete_llm_secret
+    delete_llm_secret()
+    view = _get_ai_view()
+    return _render_settings("ai.html", request, view=view, nav_current="ai", message="API Key 已删除。")
+
+
+def _get_ai_view():
+    from signalvault.services.ai_settings_service import get_ai_settings_view
+    return get_ai_settings_view()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# C2-B: Obsidian settings pages
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.get("/settings/obsidian", response_class=HTMLResponse)
+async def settings_obsidian_page(request: Request):
+    """Obsidian integration configuration page."""
+    from signalvault.services.obsidian_settings_service import (
+        get_obsidian_settings_view,
+    )
+    view = get_obsidian_settings_view()
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian")
+
+
+@router.post("/settings/obsidian", response_class=HTMLResponse)
+async def settings_obsidian_save(request: Request):
+    """Save obsidian settings from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import update_obsidian_settings
+
+    fields: dict = {}
+
+    if "vault_path" in form and form.get("vault_path", ""):
+        fields["vault_path"] = form.get("vault_path", "")
+    if "enabled" in form:
+        fields["enabled"] = form.get("enabled", "")
+
+    result = update_obsidian_settings(fields)
+
+    view = _get_obsidian_view()
+    if result.get("ok"):
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                                message="配置已保存。")
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                            error=result.get("error", "保存失败"))
+
+
+@router.post("/settings/obsidian/validate", response_class=HTMLResponse)
+async def settings_obsidian_validate(request: Request):
+    """Validate a vault path from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import validate_obsidian_path
+    vault_path = form.get("vault_path", "")
+    result = validate_obsidian_path(vault_path)
+
+    view = _get_obsidian_view()
+    if result.get("path_valid"):
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                                message=f"路径有效: {result['path']}")
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                            error=result.get("error_message", "路径无效"))
+
+
+@router.post("/settings/obsidian/initialize", response_class=HTMLResponse)
+async def settings_obsidian_initialize(request: Request):
+    """Initialize a vault from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import initialize_obsidian_vault
+    vault_path = form.get("vault_path", "")
+    result = initialize_obsidian_vault(vault_path)
+
+    view = _get_obsidian_view()
+    if result.get("ok"):
+        created = len(result.get("created_dirs", [])) + len(result.get("created_files", []))
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                                message=f"Vault 初始化完成，创建了 {created} 个项目。")
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                            error=result.get("error", "初始化失败"))
+
+
+@router.post("/settings/obsidian/repair", response_class=HTMLResponse)
+async def settings_obsidian_repair(request: Request):
+    """Repair a vault from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import repair_obsidian_vault
+    vault_path = form.get("vault_path", "")
+    result = repair_obsidian_vault(vault_path)
+
+    view = _get_obsidian_view()
+    if result.get("ok"):
+        created = len(result.get("created_dirs", [])) + len(result.get("created_files", []))
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                                message=f"修复完成，补齐了 {created} 个项目。" if created else "Vault 完整，无需修复。")
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian",
+                            error=result.get("error", "修复失败"))
+
+
+@router.post("/settings/obsidian/test-write", response_class=HTMLResponse)
+async def settings_obsidian_test_write(request: Request):
+    """Test write to vault from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import test_obsidian_write
+    vault_path = form.get("vault_path", "")
+    result = test_obsidian_write(vault_path)
+
+    view = _get_obsidian_view()
+    if result.get("ok"):
+        msg = result.get("message", "写入测试成功")
+        if result.get("warning"):
+            return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", message=msg, warning=result["warning"])
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", message=msg)
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error=result.get("error", "写入测试失败"))
+
+
+@router.post("/settings/obsidian/disable", response_class=HTMLResponse)
+async def settings_obsidian_disable(request: Request):
+    """Disable Obsidian integration from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import (
+        disable_obsidian_integration,
+    )
+    result = disable_obsidian_integration()
+
+    view = _get_obsidian_view()
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", message=result.get("message", "集成已禁用"))
+
+
+@router.post("/settings/obsidian/clear-path", response_class=HTMLResponse)
+async def settings_obsidian_clear_path(request: Request):
+    """Clear saved vault path from form submission."""
+    err = _check_settings_origin(request)
+    if err:
+        return err
+    try:
+        form = await request.form()
+    except Exception:
+        view = _get_obsidian_view()
+        return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
+    if not _check_settings_csrf_token(request, form):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+
+    from signalvault.services.obsidian_settings_service import clear_vault_path
+    result = clear_vault_path()
+
+    view = _get_obsidian_view()
+    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", message=result.get("message", "路径已清除"))
+
+
+def _get_obsidian_view():
+    from signalvault.services.obsidian_settings_service import (
+        get_obsidian_settings_view,
+    )
+    return get_obsidian_settings_view()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# C2-C: System & About pages (read-only)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.get("/settings/system", response_class=HTMLResponse)
+async def settings_system_page(request: Request):
+    """System status page — read-only paths, DB, service info."""
+    from signalvault.services.settings_overview_service import get_system_info
+    info = get_system_info()
+    return _render_settings("system.html", request, info=info, nav_current="system")
+
+
+@router.get("/settings/about", response_class=HTMLResponse)
+async def settings_about_page(request: Request):
+    """About page — version, license, diagnostics entry."""
+    from signalvault.services.settings_overview_service import get_about_info
+    about = get_about_info()
+    return _render_settings("about.html", request, about=about, nav_current="about")
+
+
+def _check_settings_origin(request: Request):
+    """Check Origin/Referer for settings POST. Returns error page or None."""
+    from signalvault.web.csrf import check_origin
+    if not check_origin(request):
+        return HTMLResponse("<h1>403 Forbidden</h1><p>非本地来源的请求被拒绝</p>", status_code=403)
+    return None
+
+
+def _check_settings_csrf_token(request: Request, form_data) -> bool:
+    """Validate CSRF token from form data. Call AFTER reading the form body."""
+    from signalvault.web.csrf import validate_csrf
+    token = form_data.get("_csrf_token", "")
+    return bool(token) and validate_csrf(request, token)

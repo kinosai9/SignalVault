@@ -85,9 +85,23 @@ python -m signalvault mcp-serve
 
 ## 快速开始
 
+### 桌面用户（推荐）
+
 ```bash
 # 安装
 pip install -e ".[dev]"
+
+# 启动 Web Console
+python -m signalvault serve
+```
+
+浏览器打开 `http://127.0.0.1:8000/`，然后：
+
+1. **系统与集成** → AI 服务 → 选择 Provider、保存 API Key、测试连接
+2. **系统与集成** → Obsidian → 设置 Vault 路径 → 初始化（可选）
+3. 返回变化雷达，开始导入和分析
+
+### CLI 用户
 
 # mock 模式分析本地字幕文件
 python -m signalvault --subtitle-file data/subtitles/sample.srt
@@ -617,7 +631,20 @@ python -m signalvault obsidian workspace watchlist-brief \
 
 ## 真实 LLM 使用
 
-项目默认使用 mock provider（关键词规则引擎），真实 LLM 需显式 `--no-mock`：
+### 桌面用户（推荐）
+
+通过 **Web Console → 系统与集成 → AI 服务** 页面：
+
+1. Provider 选择 `openai-compatible`
+2. 填写 Base URL 和 Model
+3. 输入 API Key 并保存
+4. 点击「测试连接」验证
+
+配置自动持久化到 `config.toml` 和 SecretStore。
+
+### 开发者和高级用户
+
+项目默认使用 mock provider（关键词规则引擎），真实 LLM 需显式配置。通过 `.env`（开发者/部署覆盖方式）：
 
 ```bash
 # 1. 配置 .env（从 .env.example 复制）
@@ -628,9 +655,11 @@ cp .env.example .env
 #   LLM_BASE_URL=https://your-api-endpoint/v1
 #   LLM_MODEL=your-model
 
-# 2. 真实 LLM 分析
+# 2. CLI 真实 LLM 分析
 python -m signalvault --youtube-url "VIDEO_URL" --focus "AI投资,美股" --no-mock
 ```
+
+`.env` 中的值会被 Web 页面配置覆盖（Web 优先生效）。
 
 **Mock Provider 定位：**
 - 基于中文关键词匹配的规则引擎，**仅用于工程闭环测试**

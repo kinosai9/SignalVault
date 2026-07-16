@@ -174,22 +174,41 @@ class ConfigService:
     def get_secret(self, key: str) -> str | None:
         """Return a secret value.  Never logged or exported.
 
-        Priority: SecretStore > env var (backward compat fallback).
+        Priority: runtime override > SecretStore > env var > none.
         """
-        item = RUNTIME_SCHEMA.get(key)
+        # 0. Runtime override (highest priority, like get_with_source)
+        if key in self._runtime:
+            return str(self._runtime[key])
         # 1. SecretStore (explicitly saved)
         stored = self._secret_store.get_for_internal_use(key)
         if stored:
             return stored
-        # 2. Environment variable (backward compat — .env, os.environ)
+        # 2. Environment variable (backward compat — merged env layer)
+        item = RUNTIME_SCHEMA.get(key)
         if item and item.env_var:
             env_val = self._env_get(item.env_var, "")
             if env_val:
                 return env_val
         return None
 
+    def get_secret_with_source(self, key: str) -> dict[str, str]:
+        """Return secret status with provenance — NEVER the value itself.
+
+        Returns ``{"configured": "true"/"false", "source": "..."}``.
+        Safe for public snapshots and API responses.
+        """
+        # Check each layer without returning the actual secret
+        if key in self._runtime:
+            return {"configured": "true", "source": Source.RUNTIME}
+        if self._secret_store.is_set(key):
+            return {"configured": "true", "source": "secret_store"}
+        item = RUNTIME_SCHEMA.get(key)
+        if item and item.env_var and self._env_has(item.env_var):
+            return {"configured": "true", "source": Source.ENV}
+        return {"configured": "false", "source": Source.DEFAULT}
+
     def is_secret_set(self, key: str) -> bool:
-        """True if the secret is configured (env or store)."""
+        """True if the secret is configured (runtime, env, or store)."""
         return self.get_secret(key) is not None
 
     # ── Write API ────────────────────────────────────────────────────────

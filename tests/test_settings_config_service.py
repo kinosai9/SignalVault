@@ -267,6 +267,52 @@ class TestSecretIntegration:
         svc.set_secret("llm.api_key", "")  # empty → delete
         assert svc.is_secret_set("llm.api_key") is False
 
+    def test_runtime_override_wins_over_store(self, tmp_path):
+        """Runtime override should be highest priority in get_secret()."""
+        svc = _make_svc(tmp_path, env={"LLM_API_KEY": "sk-from-env"})
+        svc.set_secret("llm.api_key", "sk-from-store")
+        svc.set_runtime_override("llm.api_key", "sk-runtime")
+        assert svc.get_secret("llm.api_key") == "sk-runtime"
+
+    def test_runtime_override_wins_without_store(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        svc.set_runtime_override("llm.api_key", "sk-runtime-only")
+        assert svc.get_secret("llm.api_key") == "sk-runtime-only"
+
+    def test_get_secret_with_source_configured(self, tmp_path):
+        svc = _make_svc(tmp_path, env={"LLM_API_KEY": "sk-from-env"})
+        result = svc.get_secret_with_source("llm.api_key")
+        assert result["configured"] == "true"
+        assert result["source"] == Source.ENV
+
+    def test_get_secret_with_source_not_configured(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        result = svc.get_secret_with_source("llm.api_key")
+        assert result["configured"] == "false"
+        assert result["source"] == Source.DEFAULT
+
+    def test_get_secret_with_source_runtime(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        svc.set_runtime_override("llm.api_key", "sk-runtime")
+        result = svc.get_secret_with_source("llm.api_key")
+        assert result["configured"] == "true"
+        assert result["source"] == Source.RUNTIME
+
+    def test_get_secret_with_source_store(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        svc.set_secret("llm.api_key", "sk-store")
+        result = svc.get_secret_with_source("llm.api_key")
+        assert result["configured"] == "true"
+        assert result["source"] == "secret_store"
+
+    def test_get_secret_with_source_never_returns_value(self, tmp_path):
+        """get_secret_with_source must NEVER return the actual secret value."""
+        svc = _make_svc(tmp_path)
+        svc.set_secret("llm.api_key", "sk-very-secret-value-12345")
+        result = svc.get_secret_with_source("llm.api_key")
+        assert "sk-very-secret-value-12345" not in str(result)
+        assert "value" not in result  # no raw value field
+
 
 # ═════════════════════════════════════════════════════════════════════════
 # Source tracking

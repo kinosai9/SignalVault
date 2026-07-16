@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}AI 服务{% endblock %}
+{% block breadcrumb_tail %}&rsaquo; AI 服务{% endblock %}
+{% block page_title %}AI 服务{% endblock %}
+
+{% block extra_head %}
+<style>
+  .status-area table { width: 100%; max-width: 560px; }
+  .status-area td { padding: 4px 8px; }
+  .status-area td:first-child { font-weight: 600; }
+  .readonly-field { padding: 8px; background: #f5f5f5; border-radius: 4px; }
+  .env-override-warning { background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin: 10px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Status area -->
+<div class="card">
+  <h2>当前状态：<span class="status-badge {{ view.status_class }}">{{ view.status_label }}</span></h2>
+  <table class="prop-table">
+    <tr><td>Provider</td><td>{{ view.provider }}<span class="source-tag">({{ view.provider_source }})</span></td></tr>
+    <tr><td>Model</td><td>{{ view.model }}<span class="source-tag">({{ view.model_source }})</span></td></tr>
+    <tr><td>Base URL</td><td>{{ view.base_url or '(未设置)' }}<span class="source-tag">({{ view.base_url_source }})</span></td></tr>
+    <tr><td>API Key</td>
+      <td>{% if view.api_key_configured %}已配置{% else %}未配置{% endif %}
+      <span class="source-tag">({{ view.api_key_source }})</span></td></tr>
+    {% if view.last_validation_at %}
+    <tr><td>最近验证</td><td>{{ view.last_validation_at }}
+      {% if view.last_validation_ok %}&#9989;{% else %}&#10060; {{ view.last_validation_error }}{% endif %}
+      {% if view.validation_stale %}<span class="source-tag">(配置已变更，需重新验证)</span>{% endif %}</td></tr>
+    {% endif %}
+  </table>
+</div>
+
+<!-- Env override warning -->
+{% if view.overridden_by_env %}
+<div class="env-override-warning">
+  <strong>&#9888; 配置被环境变量覆盖</strong><br>
+  当前值由环境变量覆盖。页面保存的新值已记录，但在环境变量移除前不会生效。
+</div>
+{% endif %}
+
+<!-- Mock mode notice -->
+{% if view.provider == 'mock' %}
+<div class="message-info">
+  <strong>Mock 模式</strong> — 仅用于验证流程，不具备真实语义分析能力。
+</div>
+{% endif %}
+
+<!-- Basic config form -->
+<div class="card">
+  <h2>基本配置</h2>
+  <form method="POST" action="/settings/ai">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+  <div class="field-group">
+    <label for="provider">Provider</label>
+    <select name="provider" id="provider">
+      <option value="mock" {% if view.provider == 'mock' %}selected{% endif %}>Mock（测试用）</option>
+      <option value="openai-compatible" {% if view.provider == 'openai-compatible' %}selected{% endif %}>OpenAI Compatible</option>
+    </select>
+  </div>
+
+  <div id="openai-fields" {% if view.provider == 'mock' %}style="display:none"{% endif %}>
+  <div class="field-group">
+    <label for="base_url">Base URL</label>
+    <input type="text" name="base_url" id="base_url"
+           value="{{ view.base_url }}"
+           placeholder="https://api.openai.com/v1">
+    <div class="help">OpenAI-compatible API 地址</div>
+  </div>
+
+  <div class="field-group">
+    <label for="model">Model</label>
+    <input type="text" name="model" id="model"
+           value="{{ view.model }}"
+           placeholder="gpt-4o-mini">
+    <div class="help">模型名称</div>
+  </div>
+  </div>
+
+  <div class="btn-group">
+    <button type="submit" class="btn btn-primary">保存配置</button>
+  </div>
+  </form>
+</div>
+
+<!-- API Key section -->
+<div class="card">
+  <h2>API Key</h2>
+
+  <form method="POST" action="/settings/ai/secret">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+  <div class="field-group">
+    <label for="api_key">
+      API Key
+      {% if view.api_key_configured %}
+      <span class="source-tag">({{ view.api_key_source }})</span>
+      {% endif %}
+    </label>
+    <input type="password" name="api_key" id="api_key"
+           value=""
+           placeholder="{% if view.api_key_configured %}已配置，输入新值以替换{% else %}输入 API Key{% endif %}"
+           autocomplete="off">
+    <div class="help">
+      {% if view.api_key_configured %}
+      当前已配置 API Key。Key 内容不回显。
+      {% else %}
+      未配置 API Key。
+      {% endif %}
+      Key 不进 URL、不进日志、不进页面源码。
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button type="submit" class="btn btn-primary">{% if view.api_key_configured %}替换 Key{% else %}保存 Key{% endif %}</button>
+    {% if view.api_key_configured %}
+    <button type="submit" formaction="/settings/ai/secret/delete" class="btn btn-danger">删除应用保存的 Key</button>
+    {% endif %}
+  </div>
+  </form>
+</div>
+
+<!-- Test connection -->
+<div class="card">
+  <h2>测试连接</h2>
+  <p>使用当前表单值测试 LLM 连接。测试失败不会删除已有配置。</p>
+
+  <form method="POST" action="/settings/ai/test">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="provider" value="{{ view.provider }}">
+  <input type="hidden" name="base_url" value="{{ view.base_url }}">
+  <input type="hidden" name="model" value="{{ view.model }}">
+
+  <div class="field-group">
+    <label for="test_api_key">API Key（用于本次测试）</label>
+    <input type="password" name="api_key" id="test_api_key" value="" autocomplete="off"
+           placeholder="留空则使用已保存的 Key">
+  </div>
+
+  <div class="btn-group">
+    <button type="submit" class="btn btn-test">测试连接</button>
+  </div>
+  </form>
+</div>
+
+<!-- Advanced config -->
+<div class="card">
+  <details>
+  <summary>高级配置</summary>
+
+  <form method="POST" action="/settings/ai">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="provider" value="{{ view.provider }}">
+  <input type="hidden" name="model" value="{{ view.model }}">
+  <input type="hidden" name="base_url" value="{{ view.base_url }}">
+
+  <div class="field-group">
+    <label for="timeout">Timeout (秒)<span class="source-tag">({{ view.timeout_source }})</span></label>
+    <input type="number" name="timeout" id="timeout" step="1" min="5" max="600"
+           value="{{ view.timeout }}">
+    <div class="help">请求超时时间（5-600 秒）</div>
+  </div>
+
+  <div class="field-group">
+    <label for="max_retries">Max Retries<span class="source-tag">({{ view.max_retries_source }})</span></label>
+    <input type="number" name="max_retries" id="max_retries" step="1" min="0" max="10"
+           value="{{ view.max_retries }}">
+    <div class="help">失败重试次数（0-10）</div>
+  </div>
+
+  <div class="field-group">
+    <label for="temperature">Temperature<span class="source-tag">({{ view.temperature_source }})</span></label>
+    <input type="number" name="temperature" id="temperature" step="0.1" min="0" max="2"
+           value="{{ view.temperature }}">
+    <div class="help">采样温度（0.0-2.0）</div>
+  </div>
+
+  <div class="btn-group">
+    <button type="submit" class="btn btn-primary">保存高级配置</button>
+  </div>
+  </form>
+  </details>
+</div>
+
+<script>
+document.getElementById('provider').addEventListener('change', function() {
+  var fields = document.getElementById('openai-fields');
+  fields.style.display = this.value === 'openai-compatible' ? '' : 'none';
+});
+</script>
+
+{% endblock %}
