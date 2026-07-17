@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}请求已失效 — SignalVault{% endblock %}
+
+{% block content %}
+<section class="page-shell csrf-error-page" aria-labelledby="csrf-error-title">
+  <div class="csrf-error-card" role="alert">
+    <div class="csrf-error-code" aria-hidden="true">403</div>
+    <div class="csrf-error-copy">
+      <div class="eyebrow">安全保护</div>
+      <h1 id="csrf-error-title">请求已失效</h1>
+      <p>为保护本地配置，本次操作没有执行。请刷新页面后重新操作。</p>
+      <div class="csrf-error-actions">
+        <a class="btn btn-primary" href="{{ return_url }}">返回{{ return_label }}</a>
+        <a class="btn btn-secondary" href="/settings">前往设置中心</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

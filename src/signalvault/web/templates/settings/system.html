@@ -1,9 +1,10 @@
-{% extends "base.html" %}
-{% block title %}数据与系统{% endblock %}
-{% block breadcrumb_tail %}&rsaquo; 数据与系统{% endblock %}
+{% extends "settings/base.html" %}
+{% block settings_title %}数据与系统{% endblock %}
+{% block breadcrumb_tail %}<span aria-hidden="true">›</span><span>数据与系统</span>{% endblock %}
 {% block page_title %}数据与系统{% endblock %}
+{% block page_description %}核对应用版本、数据位置、数据库与本地服务状态。{% endblock %}
 
-{% block content %}
+{% block settings_content %}
 
 <div class="message-info">
   <strong>&#8505; 本页面为只读展示。</strong> 当前版本不支持在页面中修改路径、host 或 port。

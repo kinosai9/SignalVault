@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SignalVault{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=phase9-responsive-qa8">
+    <link rel="stylesheet" href="/static/style.css?v=c2-settings-qa1">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <header class="mobile-topbar" aria-label="移动端导航">
@@ -48,8 +49,8 @@
                 <a href="/reports"{% if current.startswith('/reports') %} class="active"{% endif %}>报告库</a>
             </nav>
 
-            <div class="nav-label">系统与集成</div>
-            <nav class="side-nav side-nav-secondary" aria-label="系统与集成导航">
+            <div class="nav-label">配置中心</div>
+            <nav class="side-nav side-nav-secondary" aria-label="配置中心导航">
                 <a href="/settings"{% if current.startswith('/settings') %} class="active"{% endif %}>系统与集成</a>
                 <a href="/tasks"{% if current.startswith('/tasks') or current.startswith('/content/jobs') or current.startswith('/sync/jobs') %} class="active"{% endif %}>任务与诊断</a>
                 <a href="/docs"{% if current.startswith('/docs') %} class="active"{% endif %}>API</a>
@@ -74,5 +75,6 @@
         </div>
     </div>
     <script src="/static/app.js?v=20260714"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

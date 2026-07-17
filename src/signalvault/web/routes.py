@@ -4897,15 +4897,42 @@ def _render_settings(template_name: str, request: Request, **ctx) -> HTMLRespons
     from signalvault.web.csrf import generate_csrf_token, set_csrf_cookie
 
     _templates = Environment(
-        loader=FileSystemLoader(Path(__file__).parent / "templates" / "settings")
+        loader=FileSystemLoader(Path(__file__).parent / "templates")
     )
-    tmpl = _templates.get_template(template_name)
+    tmpl = _templates.get_template(f"settings/{template_name}")
     csrf_token = generate_csrf_token()
     html = tmpl.render(request=request, csrf_token=csrf_token, **ctx)
     resp = HTMLResponse(html)
     # Pass the SAME token to the cookie — cookie and form must match
     set_csrf_cookie(resp, token=csrf_token)
     return resp
+
+
+def _render_settings_forbidden(request: Request) -> HTMLResponse:
+    """Render a safe HTML 403 without reflecting request or secret data."""
+    safe_returns = {
+        "/settings/ai": ("/settings/ai", "AI 服务"),
+        "/settings/obsidian": ("/settings/obsidian", "Obsidian 设置"),
+    }
+    request_path = request.url.path
+    section_path = next(
+        (path for path in safe_returns if request_path.startswith(path)),
+        "/settings",
+    )
+    return_url, return_label = safe_returns.get(
+        section_path,
+        ("/settings", "设置中心"),
+    )
+    templates = Environment(
+        loader=FileSystemLoader(Path(__file__).parent / "templates")
+    )
+    template = templates.get_template("settings/csrf_error.html")
+    html = template.render(
+        request=request,
+        return_url=return_url,
+        return_label=return_label,
+    )
+    return HTMLResponse(html, status_code=403)
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -4936,7 +4963,7 @@ async def settings_ai_save(request: Request):
         view = _get_ai_view()
         return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.ai_settings_service import update_ai_settings
     fields = {}
@@ -4965,7 +4992,7 @@ async def settings_ai_test(request: Request):
         view = _get_ai_view()
         return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.ai_settings_service import test_llm_connection
     result = test_llm_connection(
@@ -4995,7 +5022,7 @@ async def settings_ai_secret_save(request: Request):
         view = _get_ai_view()
         return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.ai_settings_service import replace_llm_secret
     api_key = form.get("api_key", "")
@@ -5019,7 +5046,7 @@ async def settings_ai_secret_delete(request: Request):
         view = _get_ai_view()
         return _render_settings("ai.html", request, view=view, nav_current="ai", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
     from signalvault.services.ai_settings_service import delete_llm_secret
     delete_llm_secret()
     view = _get_ai_view()
@@ -5058,7 +5085,7 @@ async def settings_obsidian_save(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import update_obsidian_settings
 
@@ -5091,7 +5118,7 @@ async def settings_obsidian_validate(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import validate_obsidian_path
     vault_path = form.get("vault_path", "")
@@ -5117,7 +5144,7 @@ async def settings_obsidian_initialize(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import initialize_obsidian_vault
     vault_path = form.get("vault_path", "")
@@ -5144,7 +5171,7 @@ async def settings_obsidian_repair(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import repair_obsidian_vault
     vault_path = form.get("vault_path", "")
@@ -5171,7 +5198,7 @@ async def settings_obsidian_test_write(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import test_obsidian_write
     vault_path = form.get("vault_path", "")
@@ -5198,7 +5225,7 @@ async def settings_obsidian_disable(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import (
         disable_obsidian_integration,
@@ -5221,7 +5248,7 @@ async def settings_obsidian_clear_path(request: Request):
         view = _get_obsidian_view()
         return _render_settings("obsidian.html", request, view=view, nav_current="obsidian", error="无法解析表单数据")
     if not _check_settings_csrf_token(request, form):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>CSRF token 无效</p>", status_code=403)
+        return _render_settings_forbidden(request)
 
     from signalvault.services.obsidian_settings_service import clear_vault_path
     result = clear_vault_path()
@@ -5262,7 +5289,7 @@ def _check_settings_origin(request: Request):
     """Check Origin/Referer for settings POST. Returns error page or None."""
     from signalvault.web.csrf import check_origin
     if not check_origin(request):
-        return HTMLResponse("<h1>403 Forbidden</h1><p>非本地来源的请求被拒绝</p>", status_code=403)
+        return _render_settings_forbidden(request)
     return None
 
 

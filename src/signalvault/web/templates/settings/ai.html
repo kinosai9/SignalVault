@@ -1,19 +1,10 @@
-{% extends "base.html" %}
-{% block title %}AI 服务{% endblock %}
-{% block breadcrumb_tail %}&rsaquo; AI 服务{% endblock %}
+{% extends "settings/base.html" %}
+{% block settings_title %}AI 服务{% endblock %}
+{% block breadcrumb_tail %}<span aria-hidden="true">›</span><span>AI 服务</span>{% endblock %}
 {% block page_title %}AI 服务{% endblock %}
+{% block page_description %}配置模型服务、管理 Key，并在保存后验证连接。{% endblock %}
 
-{% block extra_head %}
-<style>
-  .status-area table { width: 100%; max-width: 560px; }
-  .status-area td { padding: 4px 8px; }
-  .status-area td:first-child { font-weight: 600; }
-  .readonly-field { padding: 8px; background: #f5f5f5; border-radius: 4px; }
-  .env-override-warning { background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin: 10px 0; }
-</style>
-{% endblock %}
-
-{% block content %}
+{% block settings_content %}
 
 <!-- Status area -->
 <div class="card">

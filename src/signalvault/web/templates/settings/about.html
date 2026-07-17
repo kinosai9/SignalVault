@@ -1,9 +1,10 @@
-{% extends "base.html" %}
-{% block title %}诊断与关于{% endblock %}
-{% block breadcrumb_tail %}&rsaquo; 诊断与关于{% endblock %}
+{% extends "settings/base.html" %}
+{% block settings_title %}诊断与关于{% endblock %}
+{% block breadcrumb_tail %}<span aria-hidden="true">›</span><span>诊断与关于</span>{% endblock %}
 {% block page_title %}诊断与关于{% endblock %}
+{% block page_description %}查看运行环境、隐私边界、诊断入口与版本信息。{% endblock %}
 
-{% block content %}
+{% block settings_content %}
 
 <!-- 关于 -->
 <div class="card">
@@ -24,7 +25,7 @@
   <table class="prop-table">
     <tr><td>数据库</td><td><code>{{ about.db_path }}</code></td></tr>
     <tr><td>AI 服务</td><td>
-      <span class="status-badge status-{{ about.ai_status }}">{{ about.ai_status }}</span>
+      <span class="status-badge {% if about.ai_status == 'Mock 模式' %}status-mock{% elif about.ai_status == '配置不完整' %}status-incomplete{% elif about.ai_status == '已配置，尚未验证' %}status-unvalidated{% elif about.ai_status == '连接正常' %}status-ok{% elif about.ai_status == '连接失败' %}status-error{% elif about.ai_status == '配置被环境变量覆盖' %}status-overridden{% endif %}">{{ about.ai_status }}</span>
       {{ about.ai_provider }}
       {% if about.ai_key_configured %}(Key 已配置){% else %}(Key 未配置){% endif %}
     </td></tr>

@@ -184,3 +184,30 @@ def test_search_page_loads(page, server):
     resp = page.goto(f"{server}/search")
     assert resp.status == 200
     assert page.locator("aside.app-sidebar").is_visible()
+
+
+def test_settings_csrf_error_mobile_has_no_horizontal_overflow(page, server):
+    """Expired HTML form requests render the branded 403 safely on mobile."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    resp = page.goto(f"{server}/settings/ai")
+    assert resp.status == 200
+
+    with page.expect_navigation() as navigation:
+        page.evaluate(
+            """() => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/settings/ai';
+                document.body.appendChild(form);
+                form.submit();
+            }"""
+        )
+
+    assert navigation.value.status == 403
+    assert page.locator("#csrf-error-title").inner_text() == "请求已失效"
+    assert page.locator(".app-shell").count() == 1
+    assert page.locator('[name="_csrf_token"]').count() == 0
+    overflow = page.evaluate(
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
+    assert overflow <= 0

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### C2 Frontend Completeness QA & Minimal Polish (2026-07-17)
+
+- Completed 5 settings pages × 6 required viewports, AI/Obsidian state matrices, operation flows, CSRF, refresh/back, duplicate submission, scrolling, and mobile sidebar QA.
+- Reconnected all settings pages to the shared SignalVault app shell, mobile navigation, design tokens, and responsive layout.
+- Fixed mobile path/property readability, overview API Key status, About AI badge classes, and mobile drawer header overlap.
+- Renamed the new sidebar category to "配置中心" while retaining "系统与集成" as the page entry, removing the duplicated label.
+- Replaced bare HTML settings CSRF failures with a responsive, branded 403 page; JSON APIs retain structured JSON 403 responses and no CSRF/security mechanism changed.
+- Added `docs/C2_FRONTEND_QA_REPORT.md` with severity, evidence, allowed-file boundary, backend impact, and remaining blockers.
+- Remaining release blocker: real Provider connection testing fails with missing `nest_asyncio`; backend runtime behavior was intentionally not changed in this frontend pass.
+- Verification: 2374 tests collected; C2/web 304 passed + 1 skipped; 68 settings-center tests passed; 8 UI smoke passed; Ruff clean. Final CSRF closeout captured 18 screenshots across 6 pages and 3 viewports with zero overflow or sensitive-data leaks. Final non-browser run reached 2364 passed + 1 skipped with one SQLite duplicate-table setup error in an existing web test; that test passed immediately in isolation and the full web-pages file had already passed in the C2 suite. Backend test semantics were not changed.
+
 ### C2-C: Settings Center & Navigation (2026-07-16)
 
 - **Settings overview** (`/settings`): AI, Obsidian, System, Diagnostics cards with live status

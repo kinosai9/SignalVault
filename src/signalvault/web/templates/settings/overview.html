@@ -1,8 +1,9 @@
-{% extends "base.html" %}
-{% block title %}概览{% endblock %}
+{% extends "settings/base.html" %}
+{% block settings_title %}概览{% endblock %}
 {% block page_title %}系统与集成概览{% endblock %}
+{% block page_description %}先确认关键服务是否可用，再进入对应页面处理配置。{% endblock %}
 
-{% block content %}
+{% block settings_content %}
 
 <div class="overview-grid">
 
@@ -13,7 +14,7 @@
   <table class="prop-table">
     <tr><td>Provider</td><td>{{ ov.ai_provider }}</td></tr>
     <tr><td>Model</td><td>{{ ov.ai_model }}</td></tr>
-    <tr><td>API Key</td><td>{% if ov.ai_key_source %}已配置 ({{ ov.ai_key_source }}){% else %}未配置{% endif %}</td></tr>
+    <tr><td>API Key</td><td>{% if ov.ai_key_source and ov.ai_key_source != 'default' %}已配置 ({{ ov.ai_key_source }}){% else %}未配置{% endif %}</td></tr>
     {% if ov.ai_last_validation_at %}
     <tr><td>最后验证</td><td>{{ ov.ai_last_validation_at }}</td></tr>
     {% endif %}

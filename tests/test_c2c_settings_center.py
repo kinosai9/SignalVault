@@ -18,6 +18,8 @@ Covers:
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -102,6 +104,85 @@ class TestCSRFNoOriginNoReferer:
         assert check_origin(mock_req) is False
 
 
+class TestSettingsHTMLCSRFError:
+    """HTML settings forms use the safe, branded 403 response."""
+
+    def test_html_post_without_csrf_uses_friendly_error_page(self, client):
+        resp = client.post("/settings/ai", data={"provider": "mock"})
+
+        assert resp.status_code == 403
+        assert resp.headers["content-type"].startswith("text/html")
+        assert "请求已失效" in resp.text
+        assert "请刷新页面后重新操作" in resp.text
+        assert 'class="app-shell"' in resp.text
+        assert 'href="/settings/ai"' in resp.text
+        assert 'href="/settings"' in resp.text
+
+    def test_html_post_with_invalid_csrf_returns_403(self, client):
+        client.get("/settings/ai")
+        invalid_token = "invalid-csrf-value-that-must-not-be-reflected"
+        resp = client.post(
+            "/settings/ai/test",
+            data={"_csrf_token": invalid_token, "provider": "mock"},
+        )
+
+        assert resp.status_code == 403
+        assert "请求已失效" in resp.text
+        assert invalid_token not in resp.text
+
+    def test_json_post_without_csrf_stays_structured_json(self, client):
+        resp = client.post("/api/settings/llm", json={"provider": "mock"})
+
+        assert resp.status_code == 403
+        assert resp.headers["content-type"].startswith("application/json")
+        assert resp.json()["error_type"] == "csrf"
+
+    def test_error_page_contains_no_csrf_token_or_field(self, client):
+        resp = client.post("/settings/obsidian", data={"vault_path": "D:/private"})
+
+        assert resp.status_code == 403
+        assert 'name="_csrf_token"' not in resp.text
+        assert "signalvault_csrf" not in resp.text
+        assert "D:/private" not in resp.text
+
+    def test_error_page_contains_no_api_key(self, client):
+        secret = "sk-sensitive-value-that-must-not-leak"
+        _get_svc().set_secret("llm.api_key", secret)
+        resp = client.post(
+            "/settings/ai/secret",
+            data={"api_key": secret},
+        )
+
+        assert resp.status_code == 403
+        assert secret not in resp.text
+        assert "API Key" not in resp.text
+
+    def test_error_page_reuses_desktop_application_context(self, client):
+        resp = client.post("/settings/obsidian/validate", data={})
+
+        assert resp.status_code == 403
+        assert 'class="app-shell"' in resp.text
+        assert 'class="app-sidebar"' in resp.text
+        assert "data-nav-toggle" in resp.text
+        assert "配置中心" in resp.text
+
+    def test_valid_csrf_form_submission_does_not_regress(self, client):
+        page = client.get("/settings/ai")
+        token_match = re.search(
+            r'name="_csrf_token" value="([^"]+)"',
+            page.text,
+        )
+        assert token_match is not None
+
+        resp = client.post(
+            "/settings/ai",
+            data={"_csrf_token": token_match.group(1), "provider": "mock"},
+        )
+
+        assert resp.status_code == 200
+        assert "配置已保存" in resp.text
+
+
 # ══════════════════════════════════════════════════════════════════════
 # Settings overview page
 # ══════════════════════════════════════════════════════════════════════
@@ -129,6 +210,11 @@ class TestSettingsOverview:
         resp = client.get("/settings")
         assert "AI 服务" in resp.text
         assert "Mock 模式" in resp.text
+
+    def test_overview_default_api_key_is_not_configured(self, client):
+        resp = client.get("/settings")
+        assert "已配置 (default)" not in resp.text
+        assert "API Key</td><td>未配置" in resp.text
 
     def test_overview_obsidian_card(self, client):
         resp = client.get("/settings")
@@ -256,6 +342,10 @@ class TestAboutPage:
         resp = client.get("/settings/about")
         assert "环境总览" in resp.text or "环境" in resp.text or "AI" in resp.text
 
+    def test_about_page_maps_mock_status_to_css_class(self, client):
+        resp = client.get("/settings/about")
+        assert 'class="status-badge status-mock"' in resp.text
+
 
 # ══════════════════════════════════════════════════════════════════════
 # Sub-navigation
@@ -289,7 +379,26 @@ class TestMainNav:
     def test_main_nav_has_settings_link(self, client):
         resp = client.get("/dashboard")
         assert 'href="/settings"' in resp.text
+        assert "配置中心" in resp.text
         assert "系统与集成" in resp.text
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/settings",
+            "/settings/ai",
+            "/settings/obsidian",
+            "/settings/system",
+            "/settings/about",
+        ],
+    )
+    def test_settings_pages_reuse_main_app_shell(self, client, path):
+        resp = client.get(path)
+        assert resp.status_code == 200
+        assert 'class="app-shell"' in resp.text
+        assert 'class="app-sidebar"' in resp.text
+        assert "data-nav-toggle" in resp.text
+        assert 'src="/static/app.js?v=20260714"' in resp.text
 
 
 # ══════════════════════════════════════════════════════════════════════
