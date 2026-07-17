@@ -50,7 +50,7 @@
 
 | # | 配置项 | 当前名称 | 当前来源 | 默认值 | 读取位置 | 写入位置 | CLI 覆盖 | Web 配置 | 敏感 | 用户级别 | RC 建议来源 |
 |---|--------|---------|---------|--------|---------|---------|---------|---------|------|---------|------------|
-| 9 | Vault 路径 | `OBSIDIAN_VAULT_PATH` | user_settings.json → env / .env | `""` | `config_store.py:59-62` | `/setup/vault` POST → `config_store.save_user_vault_path()` | `--vault` (所有 obsidian 子命令) | `/setup/vault` 表单 | 否 | C-可选 | ConfigService |
+| 9 | Vault 路径 | `OBSIDIAN_VAULT_PATH` | user_settings.json → env / .env | `""` | `config_store.py:59-62` | `/setup/obsidian` → `obsidian_settings_service.update_obsidian_settings()` | `--vault` (所有 obsidian 子命令) | `/setup/obsidian` 表単 | 否 | C-可选 | ConfigService |
 | 10 | Vault 导出开关 | `OBSIDIAN_EXPORT_ENABLED` | env / .env | `"false"` | `config.py:27` | 无 | 无 | 无 | 否 | C-可选 | ConfigService |
 | 11 | Vault 子目录名 | — | 硬编码 | `"SignalVault"` (未使用) / 直接写 Vault 根 | 见下方说明 | 无 | 无 | 无 | 否 | D-高级 | ConfigService |
 
@@ -67,7 +67,7 @@
 | 16 | 字幕缓存 | `SUBTITLE_DIR` | 派生 | `<DATA_DIR>/subtitles` | `config.py:14` | 无 | 无 | 无 | 否 | A-系统 | AppPaths |
 | 17 | 报告目录 | `REPORT_DIR` | 派生 | `<DATA_DIR>/reports` | `config.py:15` | 无 | 无 | 无 | 否 | A-系统 | AppPaths |
 | 18 | Transcript 缓存 | `TRANSCRIPT_CACHE_DIR` | 派生 | `<DATA_DIR>/transcripts/youtube` | `config.py:16` | 无 | 无 | 无 | 否 | A-系统 | AppPaths |
-| 19 | 用户设置文件 | — | 硬编码 | `<cwd>/data/user_settings.json` | `config_store.py:23` | `config_store.py:_save()` | 无 (测试用 `_override_settings_path`) | 通过 `/setup/vault` | 否 | A-系统 | AppPaths.config_dir |
+| 19 | 用户设置文件 | — | 硬编码 | `<cwd>/data/user_settings.json` | `config_store.py:23` | `config_store.py:_save()` | 无 (测试用 `_override_settings_path`) | 通过 `/setup/obsidian` | 否 | A-系统 | AppPaths.config_dir |
 | 20 | 诊断包临时目录 | — | 按需创建 | `tempfile.mkdtemp(prefix="sv_diag_")` | `routes.py:1636` | 无 | 无 | 无 | 否 | A-系统 | AppPaths.temp_dir |
 | 21 | 备份目录 | — | 仓库 `.gitignore` 引用 | `<project_root>/backup/` | `.gitignore:30` | 无 | 无 | 无 | 否 | A-系统 | AppPaths.backup_dir |
 
@@ -235,21 +235,24 @@ POST /api/llm/test-connection
 
 ## 5. Obsidian 配置专项审计
 
-### 5.1 `/setup/vault` 当前行为
+### 5.1 `/setup/obsidian` 当前行为（C3）
 
-1. **GET** `/setup/vault` — 显示 Vault 配置页面
-   - 读取 `config_store.get_user_vault_path()` 获取已保存路径
-   - 若路径存在则显示「已配置」状态
-   - 若路径不存在则引导用户输入
+旧 `/setup/vault` 路由已迁移到 C3 首次使用向导的 `/setup/obsidian`。
+旧 URL 返回 301 永久重定向到新端点。详细迁移计划见 `docs/C3_VAULT_SETUP_MIGRATION_PLAN.md`。
 
-2. **POST** `/setup/vault` — 保存 Vault 路径
-   - 验证路径非空、非相对路径
-   - 调用 `initialize_vault()` 创建目录结构和模板文件
-   - 调用 `config_store.save_user_vault_path()` 持久化到 `data/user_settings.json`
-   - **幂等**：initialize_vault 只创建缺失项，不覆盖已有文件
+1. **GET** `/setup/obsidian` — 显示向导第 3 步 Obsidian 配置页
+   - 读取 `obsidian_settings_service.get_obsidian_settings_view()` 获取状态
+   - 支持验证预览、初始化、修复和跳过
+   - CSRF + Origin 校验
 
-3. **POST** `/setup/vault/repair` — 修复 Vault
-   - 重新调用 `initialize_vault()` 补齐缺失项
+2. **POST** `/setup/obsidian` — 保存 Vault 路径或跳过
+   - 调用 `validate_obsidian_path()` + `update_obsidian_settings()`
+
+3. **POST** `/setup/obsidian/initialize` — 初始化 Vault
+   - 调用 `initialize_obsidian_vault()`，幂等创建目录和文件
+
+4. **POST** `/setup/obsidian/repair` — 修复不完整 Vault
+   - 调用 `repair_obsidian_vault()`，补齐缺失项，不覆盖已有文件
 
 ### 5.2 Vault 路径读取优先级
 
@@ -412,7 +415,7 @@ class AppPaths:
 
 当前 `setup_completed` 概念隐含在以下检查中：
 - `OBSIDIAN_VAULT_PATH` 是否非空 → Vault 是否配置
-- `/setup/vault` 页面检查 Vault 路径是否存在 → Vault 是否初始化
+- `/setup/obsidian` 页面检查 Vault 路径是否存在 → Vault 是否初始化
 - Dashboard 在无 Vault 时显示「尚未配置知识库」
 
 **没有统一的状态机或枚举。**

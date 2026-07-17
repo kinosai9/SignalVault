@@ -6059,6 +6059,22 @@ main.container {
   margin: 0;
 }
 
+.input-with-button {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.input-with-button input {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-with-button .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .setup-panel .btn {
   display: inline-flex;
   align-items: center;

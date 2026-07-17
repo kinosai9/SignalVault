@@ -15,8 +15,11 @@
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <div class="field-group">
       <label for="setup-vault-path">Vault 路径</label>
-      <input id="setup-vault-path" name="vault_path" value="{{ vault_path }}" placeholder="例如 D:\\Notes\\MyVault" autocomplete="off">
-      <div class="help">请输入完整目录路径。验证只读取目录状态，不会创建或修改文件。</div>
+      <div class="input-with-button">
+        <input id="setup-vault-path" name="vault_path" value="{{ vault_path }}" placeholder="例如 D:\\Notes\\MyVault" autocomplete="off">
+        <button type="button" id="btn-browse-folder" class="btn btn-secondary">浏览文件夹</button>
+      </div>
+      <div class="help">请输入完整目录路径，或点击「浏览文件夹」选择。验证只读取目录状态，不会创建或修改文件。</div>
     </div>
     <div class="setup-actions">
       <button class="btn btn-primary" type="submit">验证并预览</button>
@@ -60,4 +63,26 @@
     </form>
   </div>
 </section>
+
+<script>
+  document.getElementById('btn-browse-folder').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-browse-folder');
+    btn.disabled = true;
+    btn.textContent = '选择中…';
+    try {
+      const resp = await fetch('/api/browse-folder');
+      const data = await resp.json();
+      if (data.path) {
+        document.getElementById('setup-vault-path').value = data.path;
+      } else if (data.error) {
+        alert('无法打开文件夹选择器：' + data.error + '\n\n请手动输入路径。');
+      }
+    } catch (e) {
+      alert('文件夹选择器不可用（' + e.message + '），请手动输入路径。');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '浏览文件夹';
+    }
+  });
+</script>
 {% endblock %}

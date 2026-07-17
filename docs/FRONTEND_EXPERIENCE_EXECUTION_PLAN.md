@@ -32,7 +32,7 @@ The immediate priority is to make everyday entry points smooth before adding spe
 | Tasks | `/tasks`, `/tasks/{id}`, `/tasks/{id}/logs` | Background task status and logs | Failure guidance can reuse P7 recovery actions |
 | Watchlist | `/watchlist`, `/watchlist/settings` | User focus areas | Should feed the daily radar and search filters |
 | LLM-WIKI patches | `/patches`, `/patches/{id}` | Patch review lifecycle | Should remain specialist, surfaced via review queue |
-| Setup | `/setup/vault` | First-run Vault initialization | Should keep current behavior |
+| Setup | `/setup/obsidian` | First-run Vault initialization | C3 wizard step 3 |
 
 ### 2.2 Implemented Backend/CLI Capabilities Not Fully Reflected in Web
 

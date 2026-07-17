@@ -12,6 +12,20 @@
 - Added 33 C3 route/service/security tests and 3 responsive browser smoke tests. Visual acceptance produced 9 screenshots at 1440×900, 1366×768, and 390×844 with no horizontal overflow.
 - Verification: 2416 tests collected; C3 33 passed; C2+C3 targeted 206 passed + 1 existing Windows skip; UI smoke 11 passed; Ruff and `git diff --check` clean. Two repository-wide combined runs exposed existing background-thread timing/SQLite setup races; every affected test passed unchanged in isolation (see `docs/C3_ACCEPTANCE_REPORT.md`).
 
+### C3 Post-review Hardening & Vault Route Migration (2026-07-17)
+
+- **P0 — Dashboard onboarding guard**: `page_dashboard()` now checks `should_enter_onboarding()` and redirects to `/setup/welcome`, closing the direct `/dashboard` bypass. 8 dashboard tests updated with `complete_onboarding()`.
+- **P1 — ConfigService TOML resilience**: `_normalise_toml()` now recursively flattens nested dicts, so user-edited config.toml with unquoted dotted keys (`onboarding.version = 1`) is correctly read instead of silently dropped. Added quoting warning in the config.toml header comment.
+- **Phase A–F — Old `/setup/vault` migration complete** (see `docs/C3_VAULT_SETUP_MIGRATION_PLAN.md`):
+  - A: 37 guard redirects unified to `_redirect_vault_required()` → `/setup/obsidian`
+  - B: `POST /setup/obsidian/repair` endpoint added, calls existing `repair_obsidian_vault()`
+  - C: Old routes → 301 permanent redirects; dashboard repair button updated; `sync_service.py` error message updated
+  - D: `/api/browse-folder` endpoint restored as general utility; folder picker button + JS added to C3 Obsidian page; `.input-with-button` CSS layout
+  - E: `TestVaultSetup` rewritten for 301 redirect verification; deep behavior covered by C3 tests
+  - F: 5 docs updated (README, USER_GUIDE, CONFIGURATION_AUDIT, FRONTEND_EXPERIENCE_EXECUTION_PLAN, CONFIGURATION_ARCHITECTURE_PLAN); dead `setup_vault.html` template deleted
+- All 5 C3 review items addressed: route audit (clean), TOML hardening (done), dashboard guard (done), thread races (independent legacy), vault migration (6/6 phases done).
+- Verification: 195 tests passed (C3 + web pages + ConfigService); Ruff clean.
+
 ### C2 Backend QA Closeout: async/sync boundary, LLM error classification, ScannerCache, Obsidian toggle removal (2026-07-17)
 
 - **C2-QA-001 resolved**: `test_llm_connection()` is now `async def` — directly `await`s `validate_llm_config()` instead of nesting `asyncio.run()` inside a running event loop. Removed the undeclared `nest_asyncio` workaround. Route callers use `await`; test callers wrap in `asyncio.run()`.

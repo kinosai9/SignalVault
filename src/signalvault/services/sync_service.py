@@ -77,7 +77,7 @@ def sync_report_to_knowledge_base(
         vault_path_str = get_user_vault_path()
         if not vault_path_str:
             result = SyncResult(report_id=report_id)
-            result.error = "知识库路径尚未配置，请通过 /setup/vault 初始化。"
+            result.error = "知识库路径尚未配置，请通过 /setup/obsidian 初始化。"
             return result
         vault_path = Path(vault_path_str)
 

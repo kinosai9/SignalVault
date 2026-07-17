@@ -367,7 +367,7 @@ python -m signalvault mcp-serve
 确认运行 `python -m signalvault serve`，再访问 `http://127.0.0.1:8000/`。
 
 **提示 Vault 未配置或目录不完整**  
-进入 `/setup/vault` 重新选择目录，或使用页面提供的修复动作。
+进入 `/setup/obsidian` 重新选择目录，或使用页面提供的修复动作。
 
 **YouTube 没有字幕**  
 先在测试模式验证；确认视频有可用字幕。主适配器失败时可进一步检查 yt-dlp 备用路径和任务日志。

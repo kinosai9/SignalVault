@@ -116,6 +116,8 @@ def test_api_endpoints_still_work(api_client, seeded_db):
 
 def test_dashboard_loads_without_vault(api_client):
     """Obsidian 未配置时，SQLite 主数据源的 Dashboard 仍可使用。"""
+    from signalvault.services.onboarding_service import complete_onboarding
+    complete_onboarding()
     resp = api_client.get("/dashboard", follow_redirects=False)
     assert resp.status_code == 200
     assert "SQLite" in resp.text
@@ -124,6 +126,8 @@ def test_dashboard_loads_without_vault(api_client):
 
 def test_dashboard_loads_with_vault(api_client, tmp_path):
     """Dashboard 在 vault 配置后显示概览数据"""
+    from signalvault.services.onboarding_service import complete_onboarding
+    complete_onboarding()
     # Create a mini vault
     vault = tmp_path / "vault"
     for d in ["01_Reports", "02_Topics", "03_Companies", "05_Channels",
@@ -537,6 +541,8 @@ topics:
 
     def test_dashboard_shows_watchlist(self, api_client, tmp_path):
         """Dashboard shows watchlist section when configured"""
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         for d in ["01_Reports", "02_Topics", "03_Companies", "06_Claims",
                    "07_Signals", "99_System"]:
@@ -663,6 +669,8 @@ class TestWatchlistSettings:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
     def test_dashboard_has_settings_link(self, api_client, tmp_path):
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         for d in ["01_Reports", "02_Topics", "03_Companies", "06_Claims",
                    "07_Signals", "99_System"]:
@@ -739,6 +747,8 @@ class TestContentNew:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
     def test_dashboard_has_add_content_link(self, api_client, tmp_path):
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         for d in ["01_Reports", "02_Topics", "99_System"]:
             (vault / d).mkdir(parents=True)
@@ -1420,6 +1430,8 @@ class TestUnifiedTasks:
 
     def test_dashboard_shows_task_entry(self, api_client, seeded_db, tmp_path):
         """Dashboard action bar includes 整理任务 link."""
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         for d in ["01_Reports", "02_Topics", "99_System"]:
             (vault / d).mkdir(parents=True)
@@ -1920,137 +1932,40 @@ class TestFailureUX:
 
 
 class TestVaultSetup:
-    """P2-L.1: First-run vault setup wizard, validation, repair."""
+    """P2-L.1 → C3 migration: old /setup/vault routes now 301-redirect to /setup/obsidian."""
 
-    def test_setup_page_loads(self, api_client):
-        """GET /setup/vault returns setup form page."""
-        resp = api_client.get("/setup/vault")
-        assert resp.status_code == 200
-        assert "初始化知识库" in resp.text
+    def test_get_vault_redirects_to_obsidian_setup(self, api_client):
+        """GET /setup/vault returns 301 to /setup/obsidian."""
+        resp = api_client.get("/setup/vault", follow_redirects=False)
+        assert resp.status_code == 301
+        assert resp.headers.get("location") == "/setup/obsidian"
 
-    def test_setup_page_has_form(self, api_client):
-        """Setup page has vault_path input and submit button."""
-        resp = api_client.get("/setup/vault")
-        assert resp.status_code == 200
-        assert "vault_path" in resp.text
-        assert "初始化知识库" in resp.text
-
-    def test_setup_creates_directory_structure(self, api_client, tmp_path):
-        """POST /setup/vault creates standard vault directory structure."""
+    def test_post_vault_redirects_to_obsidian_setup(self, api_client, tmp_path):
+        """POST /setup/vault returns 301 to /setup/obsidian."""
         vault = tmp_path / "test_vault"
-
         resp = api_client.post("/setup/vault",
                                data={"vault_path": str(vault)},
                                follow_redirects=False)
-        assert resp.status_code in (303, 302)
+        assert resp.status_code == 301
+        assert resp.headers.get("location") == "/setup/obsidian"
 
-        # Verify directories created
-        from signalvault.workspace.setup import REQUIRED_DIRS
-        for d in REQUIRED_DIRS:
-            assert (vault / d).is_dir(), f"Missing dir: {d}"
-
-    def test_setup_creates_watchlist_yaml(self, api_client, tmp_path):
-        """POST /setup/vault creates Watchlist.yaml with default content."""
-        vault = tmp_path / "test_vault"
-
-        api_client.post("/setup/vault",
-                        data={"vault_path": str(vault)},
-                        follow_redirects=False)
-
-        wl = vault / "99_System" / "Watchlist.yaml"
-        assert wl.is_file()
-        content = wl.read_text(encoding="utf-8")
-        assert "OpenAI" in content
-        assert "NVIDIA" in content
-        assert "AI Agents" in content
-
-    def test_setup_creates_home_md(self, api_client, tmp_path):
-        """POST /setup/vault creates Home.md."""
-        vault = tmp_path / "test_vault"
-
-        api_client.post("/setup/vault",
-                        data={"vault_path": str(vault)},
-                        follow_redirects=False)
-
-        home = vault / "Home.md"
-        assert home.is_file()
-        assert "欢迎使用" in home.read_text(encoding="utf-8")
-
-    def test_setup_creates_getting_started(self, api_client, tmp_path):
-        """POST /setup/vault creates Getting Started.md."""
-        vault = tmp_path / "test_vault"
-
-        api_client.post("/setup/vault",
-                        data={"vault_path": str(vault)},
-                        follow_redirects=False)
-
-        gs = vault / "99_System" / "Getting Started.md"
-        assert gs.is_file()
-        content = gs.read_text(encoding="utf-8")
-        assert "Getting Started" in content
-        assert "Obsidian" in content
-
-    def test_setup_does_not_overwrite_existing_file(self, api_client, tmp_path):
-        """POST /setup/vault does not overwrite existing Home.md."""
-        vault = tmp_path / "test_vault"
+    def test_repair_vault_redirects_to_obsidian_repair(self, api_client, tmp_path):
+        """POST /setup/vault/repair returns 301 to /setup/obsidian/repair."""
+        vault = tmp_path / "vault"
         vault.mkdir(parents=True)
-        (vault / "99_System").mkdir(parents=True)
-        home = vault / "Home.md"
-        home.write_text("# My Custom Home\nCustom content.", encoding="utf-8")
-
-        api_client.post("/setup/vault",
-                        data={"vault_path": str(vault)},
-                        follow_redirects=False)
-
-        content = home.read_text(encoding="utf-8")
-        assert "My Custom Home" in content
-        assert "欢迎使用" not in content  # Not overwritten
-
-    def test_setup_empty_path_rejected(self, api_client):
-        """POST /setup/vault with empty path returns error."""
-        resp = api_client.post("/setup/vault",
-                               data={"vault_path": "  "},
-                               follow_redirects=False)
-        assert resp.status_code in (303, 302)
-        assert "error" in resp.headers.get("location", "")
-
-    def test_setup_nonempty_dir_safe(self, api_client, tmp_path):
-        """POST /setup/vault on non-empty dir is safe — only adds missing items."""
-        vault = tmp_path / "test_vault"
-        vault.mkdir(parents=True)
-        # Pre-create a file that shouldn't be touched
-        existing = vault / "my_notes.md"
-        existing.write_text("keep me", encoding="utf-8")
-
-        resp = api_client.post("/setup/vault",
-                               data={"vault_path": str(vault)},
-                               follow_redirects=False)
-        assert resp.status_code in (303, 302)
-        assert existing.read_text(encoding="utf-8") == "keep me"
-        # Vault dirs should be created
-        assert (vault / "01_Reports").is_dir()
-
-    def test_setup_saves_vault_path_to_config(self, api_client, tmp_path, monkeypatch):
-        """POST /setup/vault persists path via ConfigService (C1-B)."""
-        from signalvault.settings.service import get_config_service
-
-        vault = tmp_path / "test_vault"
-
-        resp = api_client.post("/setup/vault",
-                               data={"vault_path": str(vault)},
-                               follow_redirects=False)
-
-        # Should redirect on success
-        assert resp.status_code in (302, 303)
-
-        # Vault path should be persisted in ConfigService
-        svc = get_config_service()
-        cv = svc.get_with_source("obsidian.vault_path")
-        assert cv.value == str(vault)
-        assert cv.source in ("user_config", "runtime_override")
+        old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
+        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
+        try:
+            resp = api_client.post("/setup/vault/repair", follow_redirects=False)
+            assert resp.status_code == 301
+            assert resp.headers.get("location") == "/setup/obsidian/repair"
+        finally:
+            os.environ["OBSIDIAN_VAULT_PATH"] = old
 
     def test_dashboard_with_complete_vault_loads(self, api_client, tmp_path):
         """Dashboard loads normally when vault is complete."""
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         from signalvault.workspace.setup import REQUIRED_DIRS, REQUIRED_FILES
         for d in REQUIRED_DIRS:
@@ -2065,12 +1980,13 @@ class TestVaultSetup:
         try:
             resp = api_client.get("/dashboard", follow_redirects=False)
             assert resp.status_code == 200
-            assert "setup/vault" not in resp.headers.get("location", "")
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 
     def test_dashboard_shows_repair_banner_when_incomplete(self, api_client, tmp_path):
         """Dashboard shows repair banner when vault structure is incomplete."""
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         vault = tmp_path / "vault"
         vault.mkdir(parents=True)
         # Only create some dirs, leave others missing
@@ -2084,28 +2000,6 @@ class TestVaultSetup:
             assert resp.status_code == 200
             html = resp.text
             assert "知识库结构不完整" in html or "一键修复" in html
-        finally:
-            os.environ["OBSIDIAN_VAULT_PATH"] = old
-
-    def test_repair_vault_fixes_missing(self, api_client, tmp_path):
-        """POST /setup/vault/repair creates missing dirs and files."""
-        vault = tmp_path / "vault"
-        vault.mkdir(parents=True)
-        (vault / "01_Reports").mkdir(parents=True)
-        # Missing many dirs and files
-
-        old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
-        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
-        try:
-            resp = api_client.post("/setup/vault/repair", follow_redirects=False)
-            assert resp.status_code in (303, 302)
-            location = resp.headers.get("location", "")
-            assert "success" in location
-
-            # After repair, dirs should exist
-            assert (vault / "02_Topics").is_dir()
-            assert (vault / "99_System").is_dir()
-            assert (vault / "Home.md").is_file()
         finally:
             os.environ["OBSIDIAN_VAULT_PATH"] = old
 

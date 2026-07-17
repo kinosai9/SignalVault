@@ -90,7 +90,7 @@
                 {% if missing_dirs %}缺失目录: {{ missing_dirs[:3]|join(', ') }}{% if missing_dirs|length > 3 %} 等 {{ missing_dirs|length }} 个{% endif %}{% endif %}
                 {% if missing_files %}{% if missing_dirs %}；{% endif %}缺失文件: {{ missing_files[:3]|join(', ') }}{% if missing_files|length > 3 %} 等 {{ missing_files|length }} 个{% endif %}{% endif %}
             </span>
-            <form method="post" action="/setup/vault/repair">
+            <form method="post" action="/setup/obsidian/repair">
                 <button type="submit" class="btn-sm btn-sm-ok">一键修复</button>
             </form>
         </div>

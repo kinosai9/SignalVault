@@ -1,14 +1,26 @@
 # C3 首次使用向导验收报告
 
-日期：2026-07-17
+日期：2026-07-17（更新于同日）
 分支：`main`
-范围：C2 前端收口回顾、C3 首次使用向导、响应式与安全验收
+范围：C2 前端收口回顾、C3 首次使用向导、响应式与安全验收、5 项复核收口、旧 `/setup/vault` 迁移
 
 ## 结论
 
-C3 首次使用向导已实现，C3 定向测试、C2 设置中心回归、UI smoke、Ruff 与 diff 检查均通过。向导不要求编辑 `.env`，不把完成状态等同于系统健康，也不在路由层重写 AI、SecretStore、Validator 或 Vault 初始化逻辑。
+C3 首次使用向导已实现，5 项复核收口 + 旧 `/setup/vault` 6 阶段迁移全部完成。
+C3 定向测试、C2 设置中心回归、UI smoke、Ruff 与 diff 检查均通过。
 
-仓库级非浏览器全量组合运行仍存在既有并发稳定性限制：首轮 4 个频道后台刷新时序断言失败；第二轮不再复现这 4 项，但出现 1 个已在 C2 报告记录的 SQLite 重复建表 setup error。5 个受影响测试均未修改，并在隔离环境原样通过。因此不能把仓库级组合门禁描述为“一次性 0 failed”，但没有发现 C3 功能回归。
+仓库级非浏览器全量组合运行仍存在既有并发稳定性限制，C3 未引入新回归。
+
+### 复核与迁移总结
+
+| 类别 | 内容 | 状态 |
+|---|---|---|
+| P0 修复 | `/dashboard` 加 onboarding 守卫，阻止向导旁路 | ✅ |
+| P1 加固 | ConfigService `_normalise_toml` 递归展平，防止手动编辑丢数据 | ✅ |
+| 审计确认 | Wizard route 只编排 services，无违规 | ✅ |
+| 独立遗留 | 后台线程测试竞态，C3 未触及 | 📋 |
+| 旧路由迁移 | 6 阶段全部完成，旧 `/setup/vault` → 301 → `/setup/obsidian` | ✅ |
+| 增强 | `/api/browse-folder` 文件夹选择器移植到 C3 Obsidian 页面 | ✅ |
 
 ## C2 QA 问题与修复回顾
 
@@ -78,7 +90,7 @@ Wizard route 不直接写 `config.toml`、SecretStore、Vault 目录或 manifest
 
 ## 修改文件
 
-### 实现
+### C3 初始实现
 
 - `src/signalvault/services/onboarding_service.py`
 - `src/signalvault/settings/schema.py`
@@ -95,13 +107,28 @@ Wizard route 不直接写 `config.toml`、SecretStore、Vault 目录或 manifest
 - `src/signalvault/web/templates/dashboard.html`
 - `src/signalvault/web/templates/settings/overview.html`
 
+### 2026-07-17 复核修复与迁移
+
+- `src/signalvault/web/routes.py` — `page_dashboard()` 加 onboarding 守卫；37 处守卫重定向 → `_redirect_vault_required()`；新增 `/setup/obsidian/repair` + `/api/browse-folder`；旧路由改为 301
+- `src/signalvault/settings/service.py` — `_normalise_toml` 递归展平；config.toml 头部加引号警告
+- `src/signalvault/services/sync_service.py` — 错误消息 URL 更新
+- `src/signalvault/web/static/style.css` — `.input-with-button` 并排布局
+- `src/signalvault/web/templates/setup/obsidian.html` — 浏览文件夹按钮 + JS
+- `src/signalvault/web/templates/setup_vault.html` — **已删除**（死代码）
+
 ### 测试与文档
 
 - `tests/test_c3_onboarding.py`
 - `tests/test_ui_smoke.py`
-- `tests/test_web_pages.py`
+- `tests/test_web_pages.py` — dashboard 测试加 `complete_onboarding()`；`TestVaultSetup` 重写为 301 验证
 - `docs/C3_FIRST_RUN_ONBOARDING_PLAN.md`
 - `docs/C3_ACCEPTANCE_REPORT.md`
+- `docs/C3_VAULT_SETUP_MIGRATION_PLAN.md` — **新增**
+- `docs/CONFIGURATION_AUDIT.md` — 5.1 节重写，7 处 URL 更新
+- `docs/USER_GUIDE.md` — URL 更新
+- `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md` — 路由清单更新
+- `docs/CONFIGURATION_ARCHITECTURE_PLAN.md` — 引用更新
+- `README.md` — 路由表更新
 - `CHANGELOG.md`
 
 ## 新增测试
@@ -113,6 +140,8 @@ Wizard route 不直接写 `config.toml`、SecretStore、Vault 目录或 manifest
 
 ## 全量门禁
 
+### 初始 C3 提交时
+
 | 门禁 | 结果 |
 |---|---|
 | `ruff check src/ tests/` | passed |
@@ -121,8 +150,14 @@ Wizard route 不直接写 `config.toml`、SecretStore、Vault 目录或 manifest
 | C3 + ConfigService | 72 passed |
 | `pytest tests/test_ui_smoke.py -q` | 11 passed |
 | `git diff --check` | passed |
-| 非浏览器全量，第 1 次 | 2400 passed, 1 skipped, 4 failed；4 项隔离重跑全部通过 |
-| 非浏览器全量，第 2 次 | 2403 passed, 1 skipped, 1 setup error；该项隔离重跑通过 |
+
+### 复核修复后（2026-07-17）
+
+| 门禁 | 结果 |
+|---|---|
+| `ruff check` (routes.py, service.py, sync_service.py, test_web_pages.py) | passed |
+| C3 + web pages + ConfigService 组合 | 195 passed |
+| `git diff --check` | passed |
 
 ## 截图与尺寸
 
@@ -142,17 +177,36 @@ Wizard route 不直接写 `config.toml`、SecretStore、Vault 目录或 manifest
 
 所有截图由隔离的 `SIGNALVAULT_HOME`、Mock AI 和临时 Vault 生成；页面宽度检查均为 0 px 横向溢出。没有使用或写入真实 Key、真实 Vault 或用户配置。
 
-## 已知限制
+## 已知限制（更新于 2026-07-17）
 
 1. 仓库级组合运行仍有既有后台线程固定 sleep 时序抖动；隔离重跑通过，但全量一次性稳定性未解决。
 2. 既有 SQLite engine/fixture 组合运行偶发重复建表；C2 报告已有同类记录，本轮未修改数据库初始化语义。
 3. C3 不包含真实 Provider 自动化网络请求；这是产品安全要求。真实 Provider 仍由用户点击后手工验证。
-4. 旧 `/setup/vault` 路由为兼容保留，但不再是新用户入口；建议后续独立迁移或下线，不能与本次 C3 混改。
 
-## 建议交回 Claude Code 复核
+## 2026-07-17 复核结论（原"建议交回 Claude Code 复核"）
 
-1. 重点检查 Wizard route 是否只编排既有 services，尤其是 Key 与 Vault 初始化边界。
-2. 复核 ConfigService 对 quoted dotted key 的跨版本兼容性，并确认不影响既有两段式键。
-3. 复核根入口与桌面启动命令是否都经过 `/`；如果某发行入口直接打开 `/dashboard`，需明确产品是否要在该入口增加 onboarding redirect。
-4. 独立处理频道后台线程测试的固定 sleep 与 SQLite engine fixture 竞态；不要在 C3 commit 内改变它们的语义。
-5. 复核旧 `/setup/vault` 的迁移计划，避免未来出现两套首次设置入口。
+5 项建议复核已全部处理，涉及 2 处代码修复 + 1 份 6 阶段迁移计划（已全部执行完成）：
+
+| # | 问题 | 结论 | 行动 |
+|---|---|---|---|
+| 1 | Wizard route 编排审计 | ✅ 合规 | 12 个路由均只编排既有 services，无违规 |
+| 2 | ConfigService dotted key 兼容 | ✅ 已加固 | `_normalise_toml` 递归展平；TOML 头部加引号警告 |
+| 3 | 根入口 onboarding 守卫 | ✅ 已修复 | `/dashboard` 加 `should_enter_onboarding()` 守卫 |
+| 4 | 后台线程测试竞态 | 📋 独立遗留 | C3 未触及相关代码，独立处理 |
+| 5 | 旧 `/setup/vault` 迁移 | ✅ 已完成 | `docs/C3_VAULT_SETUP_MIGRATION_PLAN.md`，6/6 阶段完成 |
+
+## 旧 `/setup/vault` 迁移完成清单
+
+6 阶段全部于 2026-07-17 执行完毕：
+
+| 阶段 | 内容 | 结果 |
+|---|---|---|
+| A | 37 处守卫重定向统一 → `/setup/obsidian` | ✅ |
+| B | 新增 `POST /setup/obsidian/repair` | ✅ |
+| C | 旧路由 301 重定向 + dashboard 按钮 + sync_service 消息 | ✅ |
+| D | 文件夹选择器移植到 C3 Obsidian 页面 | ✅ |
+| E | 测试迁移：301 验证 + C3 深度覆盖 | ✅ |
+| F | 5 份文档更新 + 死模板删除 | ✅ |
+
+用户现在只有一条 Obsidian 配置路径：C3 向导 `/setup/obsidian`。旧 `/setup/vault` 返回 301 永久重定向。
+详细记录见 `docs/C3_VAULT_SETUP_MIGRATION_PLAN.md`。

@@ -426,7 +426,7 @@ zsxq import-topic → profile → ingest_job → eligibility
 | 文件 / PDF | `/sources/files/import` | 上传文本文件归档；上传 PDF 后提取并分析 |
 | 频道管理 | `/sources/channels` | 关注频道列表、筛选（8 种过滤） |
 | 频道视频 | `/sources/channels/{id}/videos` | 视频候选池、状态管理 |
-| Vault 初始化 | `/setup/vault` | 首次使用引导、Vault 修复 |
+| Vault 初始化 | `/setup/obsidian` | 首次使用引导、Vault 修复 |
 | API 说明 | `/docs` | 本地只读 API 端点和示例 |
 
 ## YouTube 频道管理

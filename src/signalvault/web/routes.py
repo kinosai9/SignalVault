@@ -32,6 +32,15 @@ def _get_vault_path() -> str:
     return get_user_vault_path()
 
 
+def _redirect_vault_required(message: str) -> RedirectResponse:
+    """Redirect to Obsidian setup page when vault path is missing or invalid."""
+    from urllib.parse import quote
+    return RedirectResponse(
+        url=f"/setup/obsidian?msg=error:{quote(message)}",
+        status_code=303,
+    )
+
+
 def _flash(request: Request) -> dict:
     """Extract flash messages from query params: ?msg=type:content"""
     msg = request.query_params.get("msg", "")
@@ -1206,6 +1215,37 @@ async def setup_obsidian_initialize(request: Request):
     )
 
 
+@router.post("/setup/obsidian/repair", response_class=HTMLResponse)
+async def setup_obsidian_repair(request: Request):
+    """Repair an incomplete vault from the Obsidian setup page (C3)."""
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.obsidian_settings_service import repair_obsidian_vault
+
+    vault_path = str(form.get("vault_path", "")).strip()
+    if not vault_path:
+        return _render_setup_obsidian(
+            request, error="请输入知识库路径",
+        )
+    result = repair_obsidian_vault(vault_path)
+    if not result.get("ok"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            error=result.get("error", "修复失败"),
+        )
+    return _render_setup_obsidian(
+        request,
+        vault_path=vault_path,
+        message=f"知识库已修复，补齐了 {len(result.get('created_dirs', [])) + len(result.get('created_files', []))} 项缺失内容。",
+    )
+
+
 @router.get("/setup/complete", response_class=HTMLResponse)
 async def setup_complete_page(request: Request):
     from signalvault.services.onboarding_service import get_completion_summary
@@ -1232,25 +1272,17 @@ async def setup_complete_submit(request: Request):
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-# ── P2-L.1: Vault Setup Wizard ─────────────────────────────────────
+# ── P2-L.1: Vault Setup Wizard (deprecated) ────────────────────────
+# Redirect to C3 /setup/obsidian. Remove these after C4 once bookmarks migrate.
 
 
-@router.get("/setup/vault")
-def page_setup_vault(request: Request):
-    """First-run vault setup page."""
-    vault_path_str = _get_vault_path()
-    ctx = {"request": request, "vault_path": vault_path_str,
-           "vault_missing": not Path(vault_path_str).exists() if vault_path_str else True}
-    ctx.update(_flash(request))
-    return _render("setup_vault.html", ctx)
-
-
-@router.get("/setup/browse-folder")
+@router.get("/api/browse-folder")
 def api_browse_folder():
     """Open a native OS folder picker dialog and return the selected path.
 
-    On Windows: uses PowerShell + .NET FolderBrowserDialog (always on top).
-    On other platforms: falls back to tkinter subprocess.
+    Used by the C3 Obsidian setup page to help users select their vault.
+    On Windows: PowerShell + .NET FolderBrowserDialog.
+    On other platforms: tkinter subprocess fallback.
     """
     import platform
     import subprocess
@@ -1314,68 +1346,32 @@ if path:
         return JSONResponse({"path": "", "error": str(e)})
 
 
+@router.get("/setup/vault")
+def page_setup_vault():
+    """301 redirect to C3 Obsidian setup page."""
+    return RedirectResponse(url="/setup/obsidian", status_code=301)
+
+
 @router.post("/setup/vault")
-def action_setup_vault(request: Request, vault_path: str = Form("")):
-    """Initialize a vault at the given path."""
-    path_str = vault_path.strip()
-    if not path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请输入知识库目录路径", status_code=303)
-
-    target = Path(path_str)
-    if not target.is_absolute():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请输入完整的绝对路径", status_code=303)
-
-    try:
-        from signalvault.workspace.setup import initialize_vault
-        result = initialize_vault(target)
-
-        from signalvault.config_store import save_user_vault_path
-        save_user_vault_path(target)
-
-        created = len(result.created_dirs) + len(result.created_files)
-        if result.warnings:
-            return RedirectResponse(
-                url=f"/dashboard?msg=success:知识库已初始化（{created} 项），{result.warnings[0]}",
-                status_code=303)
-        return RedirectResponse(
-            url=f"/dashboard?msg=success:知识库已初始化，创建了 {created} 个目录和文件",
-            status_code=303)
-    except PermissionError:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:无法在该路径创建文件，请检查权限。", status_code=303)
-    except OSError as e:
-        return RedirectResponse(
-            url=f"/setup/vault?msg=error:无法创建目录: {e}", status_code=303)
-    except Exception as e:
-        return RedirectResponse(
-            url=f"/setup/vault?msg=error:初始化失败: {e}", status_code=303)
+def action_setup_vault():
+    """301 redirect to C3 Obsidian setup page."""
+    return RedirectResponse(url="/setup/obsidian", status_code=301)
 
 
 @router.post("/setup/vault/repair")
-def action_repair_vault(request: Request):
-    """Repair an incomplete vault by creating missing dirs and files."""
-    vault_path_str = _get_vault_path()
-    if not vault_path_str:
-        return RedirectResponse(url="/dashboard", status_code=303)
-
-    target = Path(vault_path_str)
-    try:
-        from signalvault.workspace.setup import repair_vault
-        result = repair_vault(target)
-        created = len(result.created_dirs) + len(result.created_files)
-        return RedirectResponse(
-            url=f"/dashboard?msg=success:知识库已修复，补齐了 {created} 项缺失内容",
-            status_code=303)
-    except Exception as e:
-        return RedirectResponse(
-            url=f"/dashboard?msg=error:修复失败: {e}", status_code=303)
+def action_repair_vault():
+    """301 redirect to C3 Obsidian repair endpoint."""
+    return RedirectResponse(url="/setup/obsidian/repair", status_code=301)
 
 
 @router.get("/dashboard")
 @measure_page("dashboard")
 def page_dashboard(request: Request):
+    from signalvault.services.onboarding_service import should_enter_onboarding
+
+    if should_enter_onboarding():
+        return RedirectResponse(url="/setup/welcome", status_code=302)
+
     vault_path_str = _get_vault_path()
     ctx = {"request": request, "vault_configured": False, "vault_path": vault_path_str,
            "summary": {}, "recommendations": [], "watchlist_items": [],
@@ -3344,9 +3340,7 @@ def page_sources_dashboard(request: Request):
     """P2-S.3.4: Unified source ingestion dashboard."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     ctx = _build_sources_dashboard_context(vault_path_str)
     ctx["request"] = request
     ctx.update(_flash(request))
@@ -3358,9 +3352,7 @@ def page_import_center(request: Request):
     """Guided import center for all source types."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     ctx = _build_import_center_context(vault_path_str)
     ctx["request"] = request
     ctx.update(_flash(request))
@@ -3372,9 +3364,7 @@ def page_sources_zsxq(request: Request):
     """ZSXQ read-only import and analysis workspace."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     ctx = _build_zsxq_context(vault_path_str)
     ctx["request"] = request
     ctx.update(_flash(request))
@@ -3385,9 +3375,7 @@ def page_sources_zsxq(request: Request):
 def action_zsxq_refresh_groups(request: Request):
     """Refresh local ZSXQ group registry via zsxq-cli."""
     if not _get_vault_path():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     try:
         from signalvault.sources.zsxq_cli import list_groups
         from signalvault.sources.zsxq_registry import refresh_registry
@@ -3432,9 +3420,7 @@ def action_zsxq_import_topic(
 ):
     """Import one ZSXQ topic into ingest_jobs without LLM analysis."""
     if not _get_vault_path():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     group_id = group_id.strip()
     topic_id = topic_id.strip()
     if not group_id or not topic_id:
@@ -3473,9 +3459,7 @@ def action_zsxq_sync(
 ):
     """Sync recent topics from a ZSXQ group into ingest_jobs."""
     if not _get_vault_path():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     group_id = group_id.strip()
     if not group_id:
         return RedirectResponse(
@@ -3515,9 +3499,7 @@ def action_zsxq_analyze(
 ):
     """Import and analyze one ZSXQ topic via the existing analysis pipeline."""
     if not _get_vault_path():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     group_id = group_id.strip()
     topic_id = topic_id.strip()
     if not group_id or not topic_id:
@@ -3718,7 +3700,7 @@ _TRACKED_ENTRY_STATUS_LABELS = _STATUS_LABELS["tracked_entry"]
 def page_sources_channels(request: Request):
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     ctx = _build_sources_channels_context(vp_str)
     ctx["request"] = request
@@ -3738,7 +3720,7 @@ def page_sources_videos(
 ):
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     ctx = _build_sources_videos_context(
         channel_id, vp_str,
@@ -3772,7 +3754,7 @@ def action_add_channel(
     """Add a YouTube channel."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.models import Channel
     from signalvault.db.repository import upsert_channel
@@ -3856,7 +3838,7 @@ def action_edit_channel(
     """Edit channel name / priority / focus areas."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import update_channel
 
@@ -3896,7 +3878,7 @@ def action_delete_channel(request: Request, channel_id: int):
     """Delete (soft-deactivate) a channel."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import delete_channel
 
@@ -3930,7 +3912,7 @@ def action_refresh_channel(request: Request, channel_id: int):
     """Create a channel_refresh job and redirect to task detail."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import get_channel
     from signalvault.services.job_service import (
@@ -4123,7 +4105,7 @@ def page_rerun_video(request: Request, channel_id: int, video_id: str):
     """Show rerun confirmation page."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import (
         detect_video_import_status,
@@ -4178,7 +4160,7 @@ def action_rerun_video(request: Request, channel_id: int, video_id: str):
     """Execute rerun — archive old, create new full_flow job."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import (
         get_channel_video_by_video_id,
@@ -4258,9 +4240,7 @@ def page_source_import(request: Request):
     """URL import form page."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     ctx = {
         "request": request,
         "vault_configured": True,
@@ -4278,9 +4258,7 @@ def action_source_import_preview(
     """Parse URL and generate import preview. NO writes happen here."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
 
     url = url.strip()
     if not url:
@@ -4342,9 +4320,7 @@ def action_source_import_confirm(
     """Execute the chosen import action. THIS is where writes happen."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
 
     vp = Path(vault_path_str)
 
@@ -4427,7 +4403,7 @@ def page_sources_tracked(request: Request):
     """List all tracked external sources."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import (
         list_tracked_source_entries,
@@ -4465,7 +4441,7 @@ def page_sources_tracked_add(request: Request):
     """Form to add a new tracked source."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     ctx = {
         "request": request,
@@ -4485,7 +4461,7 @@ def action_sources_tracked_profile(
     """P2-S.3.2.1: Profile a URL and show tracking eligibility preview."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     url = homepage_url.strip()
     if not url:
@@ -4541,7 +4517,7 @@ def action_sources_tracked_create(
     """P2-S.3.2.1: Create a tracked source from a validated profile."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     profile = _profile_store.pop(profile_id, None)
     if profile is None:
@@ -4600,7 +4576,7 @@ def page_sources_tracked_detail(request: Request, tracked_source_id: int):
     """Detail page for a single tracked source."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import get_tracked_source
 
@@ -4629,12 +4605,11 @@ def action_sources_tracked_refresh(request: Request, tracked_source_id: int):
     """Refresh a tracked source — discover new entries and generate previews."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     vp = Path(vp_str)
     if not vp.exists():
-        return RedirectResponse(
-            url="/setup/vault?msg=error:知识库目录不存在", status_code=303)
+        return _redirect_vault_required("知识库目录不存在")
 
     from signalvault.sources.tracked_source_service import refresh_tracked_source
 
@@ -4667,7 +4642,7 @@ def page_sources_tracked_entries(
     """List entries for a tracked source with optional status filter."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     from signalvault.db.repository import (
         get_tracked_source,
@@ -4722,7 +4697,7 @@ def action_sources_tracked_import(
     """Batch import selected tracked source entries."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
 
     vp = Path(vp_str)
 
@@ -4798,7 +4773,7 @@ def action_tracked_entry_import_single(
     """Import a single tracked source entry using its stored preview."""
     vp_str = _get_vault_path()
     if not vp_str:
-        return RedirectResponse(url="/setup/vault?msg=error:请先配置知识库", status_code=303)
+        return _redirect_vault_required("请先配置知识库")
     vp = Path(vp_str)
 
     from signalvault.sources.models import ActionEnum
@@ -4976,9 +4951,7 @@ def page_source_file_import(request: Request):
     """File upload form page."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
     ctx = {
         "request": request,
         "vault_configured": True,
@@ -4997,9 +4970,7 @@ async def action_source_file_preview(
     """Receive uploaded file, extract content, and generate preview. NO vault writes."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
 
     if file is None or not file.filename:
         return RedirectResponse(
@@ -5121,9 +5092,7 @@ def action_source_file_confirm(
     """Execute the confirmed file import action. THIS is where vault writes happen."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(
-            url="/setup/vault?msg=error:请先配置知识库目录", status_code=303,
-        )
+        return _redirect_vault_required("请先配置知识库目录")
 
     vp = Path(vault_path_str)
 

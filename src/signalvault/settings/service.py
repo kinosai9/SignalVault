@@ -338,14 +338,36 @@ class ConfigService:
             self._user_config = {}
 
     def _normalise_toml(self, parsed: dict) -> dict[str, Any]:
-        """Convert TOML section-key structure into flat dot-separated keys."""
+        """Convert TOML section-key structure into flat dot-separated keys.
+
+        Handles both forms that can appear in config.toml:
+
+        * Quoted keys — tomllib keeps them flat::
+            ``"onboarding.version" = 1`` → ``{'_internal': {'onboarding.version': 1}}``
+        * Unquoted dotted keys — tomllib nests them::
+            ``onboarding.version = 1`` → ``{'_internal': {'onboarding': {'version': 1}}}``
+
+        Both resolve to ``_internal.onboarding.version`` when the schema key exists.
+        """
         flat: dict[str, Any] = {}
+
+        def _flatten(prefix: str, node: dict) -> None:
+            for k, v in node.items():
+                full_key = f"{prefix}.{k}"
+                if full_key in RUNTIME_SCHEMA:
+                    flat[full_key] = v
+                elif isinstance(v, dict):
+                    _flatten(full_key, v)
+                # Silently skip leaves not in schema
+
         for section, items in parsed.items():
             if isinstance(items, dict):
                 for k, v in items.items():
                     full_key = f"{section}.{k}"
                     if full_key in RUNTIME_SCHEMA:
                         flat[full_key] = v
+                    elif isinstance(v, dict):
+                        _flatten(full_key, v)
         return flat
 
     def _write_user_config(self) -> None:
@@ -379,7 +401,12 @@ class ConfigService:
         # Render TOML
         lines: list[str] = [
             "# SignalVault user configuration",
-            "# Written by ConfigService — do not edit while app is running",
+            "# Written by ConfigService — do not edit while app is running.",
+            "#",
+            "# Keys containing dots (e.g. onboarding.version) MUST be quoted",
+            '# when edited by hand:  "onboarding.version" = 1',
+            "# Without quotes the key is split into nested tables and the",
+            "# value will be silently dropped on next load.",
             "",
         ]
         for section in sorted(sections):

@@ -450,7 +450,7 @@ class ObsidianConfigValidator:
 
 **预计修改文件**：
 - 新建：`src/signalvault/config/obsidian_config_validator.py`
-- 修改：`src/signalvault/web/routes.py`（`/setup/vault` 使用新 validator）
+- 修改：`src/signalvault/web/routes.py`（`/setup/obsidian` 使用新 validator）
 
 **风险**：低。封装现有 `workspace/setup.py` 逻辑，不改变行为。
 
