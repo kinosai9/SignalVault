@@ -1,0 +1,63 @@
+{% extends "setup/base.html" %}
+{% block title %}Obsidian{% endblock %}
+
+{% block setup_content %}
+<section class="setup-panel" aria-labelledby="setup-title">
+  <div class="setup-eyebrow">第 3 步 · 可选集成</div>
+  <h1 id="setup-title">是否连接 Obsidian？</h1>
+  <p class="setup-lead">SQLite 始终是 SignalVault 的主数据源。Obsidian 只用于把研究内容同步到你熟悉的笔记空间。</p>
+
+  <div class="setup-status-line">当前状态：<span class="status-badge status-{{ view.state }}">{{ view.state_label }}</span></div>
+  {% if message %}<div class="message-ok" role="status">{{ message }}</div>{% endif %}
+  {% if error %}<div class="message-error" role="alert">{{ error }}</div>{% endif %}
+
+  <form class="setup-form" method="post" action="/setup/obsidian/validate">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="field-group">
+      <label for="setup-vault-path">Vault 路径</label>
+      <input id="setup-vault-path" name="vault_path" value="{{ vault_path }}" placeholder="例如 D:\\Notes\\MyVault" autocomplete="off">
+      <div class="help">请输入完整目录路径。验证只读取目录状态，不会创建或修改文件。</div>
+    </div>
+    <div class="setup-actions">
+      <button class="btn btn-primary" type="submit">验证并预览</button>
+      {% if validation and validation.path_valid %}
+      <button class="btn btn-secondary" type="submit" formaction="/setup/obsidian">保存并继续</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if preview %}
+  <div class="setup-preview" aria-label="初始化预览">
+    <h2>初始化预览</h2>
+    {% if preview.manifest_conflict %}
+      <div class="message-error">Manifest 冲突：当前 Vault 由其他工具管理，不会执行初始化。</div>
+    {% else %}
+      <p>只补充缺少的 SignalVault 目录和文件，现有内容不会被覆盖。</p>
+      <div class="setup-preview-grid">
+        <div><strong>将创建</strong><span>{{ preview.will_create_dirs|length + preview.will_create_files|length }} 项</span></div>
+        <div><strong>已存在</strong><span>{{ preview.existing_items|length }} 项</span></div>
+      </div>
+      {% if view.is_signalvault_initialized %}
+        <div class="message-ok">Vault 已就绪，无需重复初始化。</div>
+      {% else %}
+        <form method="post" action="/setup/obsidian/initialize">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="vault_path" value="{{ vault_path }}">
+          <button class="btn btn-primary" type="submit">初始化 Vault</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="message-info"><strong>不使用也没关系。</strong>导入、分析、搜索和变化雷达仍使用本地 SQLite 正常工作。</div>
+  <div class="setup-secondary-actions">
+    <a href="/setup/ai">← 返回上一步</a>
+    <form method="post" action="/setup/obsidian">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="intent" value="skip">
+      <button class="link-button" type="submit">稍后配置，查看完成摘要 →</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

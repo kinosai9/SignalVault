@@ -1,0 +1,40 @@
+{% extends "setup/base.html" %}
+{% block title %}设置完成{% endblock %}
+
+{% block setup_content %}
+<section class="setup-panel setup-complete" aria-labelledby="setup-title">
+  <div class="setup-complete-mark" aria-hidden="true">✓</div>
+  <div class="setup-eyebrow">设置摘要</div>
+  <h1 id="setup-title">可以开始使用 SignalVault 了</h1>
+  <p class="setup-lead">这些选择只影响可选能力，不影响本地 SQLite 保存研究数据。</p>
+
+  <div class="setup-summary-grid">
+    <article>
+      <span>AI 服务</span>
+      <strong>{{ summary.ai.status_label }}</strong>
+      <p>{{ summary.ai.provider }}{% if summary.ai.model %} · {{ summary.ai.model }}{% endif %}</p>
+      {% if summary.onboarding.skipped_ai %}<em>本次已跳过</em>{% endif %}
+    </article>
+    <article>
+      <span>Obsidian</span>
+      <strong>{{ summary.obsidian.state_label }}</strong>
+      <p>{% if summary.obsidian.vault_path %}已保存 Vault 路径{% else %}核心功能仍可正常使用{% endif %}</p>
+      {% if summary.onboarding.skipped_obsidian %}<em>本次已跳过</em>{% endif %}
+    </article>
+    <article>
+      <span>本地数据</span>
+      <strong>SQLite 主数据源</strong>
+      <p>数据默认保存在本机，不依赖 Obsidian。</p>
+    </article>
+  </div>
+
+  <div class="message-info">以后可随时从“配置中心 → 系统与集成”重新打开向导或修改单项配置。</div>
+  <div class="setup-actions">
+    <form method="post" action="/setup/complete">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-primary" type="submit">进入变化雷达</button>
+    </form>
+    <a class="btn btn-secondary" href="/setup/obsidian">返回上一步</a>
+  </div>
+</section>
+{% endblock %}

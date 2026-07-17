@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### C3 First-run Onboarding (2026-07-17)
+
+- Added a focused four-page onboarding flow: welcome/local-data disclosure → AI setup or skip → optional Obsidian validation/initialization or skip → completion summary and Dashboard.
+- Added independent persisted onboarding metadata under `_internal.onboarding.*`; completion records a user decision and is intentionally independent from AI/Obsidian health.
+- Reused the existing AI and Obsidian settings services for every configuration, validation, secret, preview, and initialization operation. Onboarding routes do not write config/secrets/vault files or call LLM HTTP directly.
+- Protected every C3 POST with the existing double-submit CSRF and local Origin/Referer checks; focused 403 pages do not reflect tokens, keys, paths, or stack traces.
+- Made Dashboard usable with SQLite when Obsidian is absent, removed `.env` instructions from the empty state, and added a safe wizard reopen entry in Settings.
+- Added 33 C3 route/service/security tests and 3 responsive browser smoke tests. Visual acceptance produced 9 screenshots at 1440×900, 1366×768, and 390×844 with no horizontal overflow.
+- Verification: 2416 tests collected; C3 33 passed; C2+C3 targeted 206 passed + 1 existing Windows skip; UI smoke 11 passed; Ruff and `git diff --check` clean. Two repository-wide combined runs exposed existing background-thread timing/SQLite setup races; every affected test passed unchanged in isolation (see `docs/C3_ACCEPTANCE_REPORT.md`).
+
 ### C2 Backend QA Closeout: async/sync boundary, LLM error classification, ScannerCache, Obsidian toggle removal (2026-07-17)
 
 - **C2-QA-001 resolved**: `test_llm_connection()` is now `async def` — directly `await`s `validate_llm_config()` instead of nesting `asyncio.run()` inside a running event loop. Removed the undeclared `nest_asyncio` workaround. Route callers use `await`; test callers wrap in `asyncio.run()`.

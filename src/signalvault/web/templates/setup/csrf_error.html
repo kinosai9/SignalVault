@@ -1,0 +1,17 @@
+{% extends "setup/base.html" %}
+{% block title %}请求已失效{% endblock %}
+
+{% block setup_content %}
+<section class="setup-panel setup-error" role="alert" aria-labelledby="setup-error-title">
+  <div class="setup-error-code" aria-hidden="true">403</div>
+  <div>
+    <div class="setup-eyebrow">安全保护</div>
+    <h1 id="setup-error-title">请求已失效</h1>
+    <p class="setup-lead">本次操作没有执行。请刷新页面后重新操作。</p>
+    <div class="setup-actions">
+      <a class="btn btn-primary" href="{{ return_url }}">返回{{ return_label }}</a>
+      <a class="btn btn-secondary" href="/setup/welcome">返回向导首页</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

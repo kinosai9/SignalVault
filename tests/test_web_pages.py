@@ -4,11 +4,10 @@ import os
 
 
 def test_index_redirects(api_client):
-    """GET / 返回 302 重定向到 /reports（无 vault 配置时）"""
+    """新用户从根入口自动进入首次使用向导。"""
     resp = api_client.get("/", follow_redirects=False)
     assert resp.status_code == 302
-    # With no vault configured, redirects to /reports
-    assert resp.headers["location"] in ("/reports", "/dashboard")
+    assert resp.headers["location"] == "/setup/welcome"
 
 
 def test_reports_list_ok(api_client, seeded_db):
@@ -116,11 +115,11 @@ def test_api_endpoints_still_work(api_client, seeded_db):
 # ── P2-I.1 Dashboard Tests ──────────────────────────────────────
 
 def test_dashboard_loads_without_vault(api_client):
-    """Dashboard redirects to /setup/vault when no vault is configured."""
+    """Obsidian 未配置时，SQLite 主数据源的 Dashboard 仍可使用。"""
     resp = api_client.get("/dashboard", follow_redirects=False)
-    assert resp.status_code in (301, 302, 303)
-    location = resp.headers.get("location", "")
-    assert "/setup/vault" in location
+    assert resp.status_code == 200
+    assert "SQLite" in resp.text
+    assert "Obsidian 是可选集成" in resp.text
 
 
 def test_dashboard_loads_with_vault(api_client, tmp_path):

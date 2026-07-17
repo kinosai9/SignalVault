@@ -256,7 +256,7 @@ def update_ai_settings(fields: dict[str, Any]) -> dict[str, Any]:
                 svc.set_user_value(key, fields[fname])
                 updated.append(key)
             except (ValueError, KeyError) as e:
-                return {"ok": False, "error": f"Invalid value for {field}: {e}"}
+                return {"ok": False, "error": f"Invalid value for {fname}: {e}"}
 
     # Invalidate old validation if config changed
     if updated:

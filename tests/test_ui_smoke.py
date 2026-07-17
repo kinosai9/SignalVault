@@ -211,3 +211,49 @@ def test_settings_csrf_error_mobile_has_no_horizontal_overflow(page, server):
         "document.documentElement.scrollWidth - document.documentElement.clientWidth"
     )
     assert overflow <= 0
+
+
+# ── C3 First-run Onboarding ──────────────────────────────────────
+
+
+def test_onboarding_welcome_desktop_keeps_primary_action_visible(page, server):
+    """1366×768 keeps the first decision visible without hunting for it."""
+    page.set_viewport_size({"width": 1366, "height": 768})
+    resp = page.goto(f"{server}/setup/welcome")
+    assert resp.status == 200
+    assert page.locator(".setup-progress").is_visible()
+    assert page.locator(".setup-panel h1").inner_text().startswith("把分散的信息")
+    primary = page.locator(".setup-actions .btn-primary")
+    assert primary.is_visible()
+    assert primary.bounding_box()["y"] < 768
+
+
+def test_onboarding_ai_mobile_stacks_actions_without_overflow(page, server):
+    """390×844 uses stacked actions and never exposes an existing key."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    resp = page.goto(f"{server}/setup/ai")
+    assert resp.status == 200
+    assert page.locator('[name="api_key"]').input_value() == ""
+    assert page.locator(".setup-step.is-current strong").inner_text() == "AI 服务"
+    overflow = page.evaluate(
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
+    assert overflow <= 0
+    action_widths = page.locator(".setup-form .setup-actions .btn").evaluate_all(
+        "els => els.map(el => el.getBoundingClientRect().width)"
+    )
+    assert all(width >= 300 for width in action_widths)
+
+
+def test_onboarding_complete_mobile_has_safe_summary(page, server):
+    """The completion summary remains readable at 390×844."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    resp = page.goto(f"{server}/setup/complete")
+    assert resp.status == 200
+    assert page.locator(".setup-summary-grid article").count() == 3
+    assert page.get_by_text("SQLite 主数据源", exact=True).is_visible()
+    assert page.locator(".setup-complete .btn-primary").is_visible()
+    overflow = page.evaluate(
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
+    assert overflow <= 0

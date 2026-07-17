@@ -238,6 +238,41 @@ RUNTIME_SCHEMA: dict[str, ConfigItem] = {
         description="Monotonic counter incremented on every API key set/delete; used to invalidate cached validation",
         web_editable=False, restart_required=False,
     ),
+    "_internal.onboarding.version": ConfigItem(
+        key="_internal.onboarding.version",
+        type=int, default=0,
+        category=ConfigCategory.META,
+        description="Completed first-run onboarding schema version",
+        web_editable=False, restart_required=False,
+    ),
+    "_internal.onboarding.completed": ConfigItem(
+        key="_internal.onboarding.completed",
+        type=bool, default=False,
+        category=ConfigCategory.META,
+        description="Whether the user completed or explicitly skipped onboarding",
+        web_editable=False, restart_required=False,
+    ),
+    "_internal.onboarding.completed_at": ConfigItem(
+        key="_internal.onboarding.completed_at",
+        type=str, default="",
+        category=ConfigCategory.META,
+        description="UTC timestamp for onboarding completion",
+        web_editable=False, restart_required=False,
+    ),
+    "_internal.onboarding.skipped_ai": ConfigItem(
+        key="_internal.onboarding.skipped_ai",
+        type=bool, default=False,
+        category=ConfigCategory.META,
+        description="Whether AI setup was explicitly skipped during onboarding",
+        web_editable=False, restart_required=False,
+    ),
+    "_internal.onboarding.skipped_obsidian": ConfigItem(
+        key="_internal.onboarding.skipped_obsidian",
+        type=bool, default=False,
+        category=ConfigCategory.META,
+        description="Whether Obsidian setup was explicitly skipped during onboarding",
+        web_editable=False, restart_required=False,
+    ),
 }
 
 

@@ -1,0 +1,70 @@
+{% extends "setup/base.html" %}
+{% block title %}AI 服务{% endblock %}
+
+{% block setup_content %}
+<section class="setup-panel" aria-labelledby="setup-title">
+  <div class="setup-eyebrow">第 2 步 · AI 服务</div>
+  <h1 id="setup-title">选择 AI 使用方式</h1>
+  <p class="setup-lead">Mock 可以先体验完整流程；真实 Provider 只会在你点击“保存并测试”后发起连接。</p>
+
+  <div class="setup-status-line">当前状态：<span class="status-badge {{ view.status_class }}">{{ view.status_label }}</span></div>
+  {% if message %}<div class="message-ok" role="status">{{ message }}</div>{% endif %}
+  {% if error %}<div class="message-error" role="alert">{{ error }}</div>{% endif %}
+  {% if view.overridden_by_env %}<div class="message-warning">部分值由运行环境覆盖。向导不会要求你编辑 <code>.env</code>。</div>{% endif %}
+
+  <form class="setup-form" method="post" action="/setup/ai/test">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="field-group">
+      <label for="setup-provider">AI 模式</label>
+      <select id="setup-provider" name="provider">
+        <option value="mock" {% if values.provider == 'mock' %}selected{% endif %}>Mock（先体验流程）</option>
+        <option value="openai-compatible" {% if values.provider == 'openai-compatible' %}selected{% endif %}>OpenAI Compatible</option>
+      </select>
+    </div>
+
+    <div id="setup-real-ai-fields" {% if values.provider == 'mock' %}hidden{% endif %}>
+      <div class="field-group">
+        <label for="setup-base-url">Base URL</label>
+        <input id="setup-base-url" name="base_url" type="url" value="{{ values.base_url }}" placeholder="https://api.example.com/v1">
+        <div class="help">由 AI 服务商提供的 OpenAI-compatible API 地址。</div>
+      </div>
+      <div class="field-group">
+        <label for="setup-model">Model</label>
+        <input id="setup-model" name="model" value="{{ values.model }}" placeholder="模型名称">
+      </div>
+      <div class="field-group">
+        <label for="setup-api-key">API Key</label>
+        <input id="setup-api-key" name="api_key" type="password" value="" autocomplete="off" placeholder="{% if view.api_key_configured %}已配置；留空则继续使用{% else %}输入服务商提供的 Key{% endif %}">
+        <div class="help">Key 将交给 SecretStore 保存；页面不会返回已有内容，失败后也不会回显。</div>
+      </div>
+    </div>
+
+    <div class="setup-actions">
+      <button class="btn btn-primary" type="submit">保存并测试</button>
+      <button class="btn btn-secondary" type="submit" formaction="/setup/ai">保存并继续</button>
+    </div>
+  </form>
+
+  <div class="setup-secondary-actions">
+    <a href="/setup/welcome">← 返回上一步</a>
+    <form method="post" action="/setup/ai">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="intent" value="skip">
+      <button class="link-button" type="submit">稍后配置 →</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var provider = document.getElementById('setup-provider');
+  var fields = document.getElementById('setup-real-ai-fields');
+  if (!provider || !fields) return;
+  provider.addEventListener('change', function () {
+    fields.hidden = provider.value === 'mock';
+  });
+})();
+</script>
+{% endblock %}

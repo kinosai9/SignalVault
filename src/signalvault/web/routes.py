@@ -86,6 +86,67 @@ def _render(name: str, context: dict, status_code: int = 200) -> HTMLResponse:
     return HTMLResponse(template.render(context), status_code=status_code)
 
 
+def _render_setup(
+    template_name: str,
+    request: Request,
+    *,
+    status_code: int = 200,
+    **context,
+) -> HTMLResponse:
+    """Render a focused onboarding page with a double-submit CSRF token."""
+    from signalvault.web.csrf import generate_csrf_token, set_csrf_cookie
+
+    csrf_token = generate_csrf_token()
+    response = _render(
+        f"setup/{template_name}",
+        {"request": request, "csrf_token": csrf_token, **context},
+        status_code=status_code,
+    )
+    set_csrf_cookie(response, token=csrf_token)
+    return response
+
+
+def _render_setup_forbidden(request: Request) -> HTMLResponse:
+    """Return a safe setup-scoped 403 without reflecting request data."""
+    safe_paths = {
+        "/setup/welcome": ("/setup/welcome", "欢迎页"),
+        "/setup/ai": ("/setup/ai", "AI 设置"),
+        "/setup/obsidian": ("/setup/obsidian", "Obsidian 设置"),
+        "/setup/complete": ("/setup/complete", "完成页"),
+    }
+    request_path = request.url.path
+    section_path = next(
+        (path for path in safe_paths if request_path.startswith(path)),
+        "/setup/welcome",
+    )
+    return_url, return_label = safe_paths[section_path]
+    return _render(
+        "setup/csrf_error.html",
+        {
+            "request": request,
+            "return_url": return_url,
+            "return_label": return_label,
+            "current_step": 1,
+        },
+        status_code=403,
+    )
+
+
+def _check_setup_origin(request: Request):
+    from signalvault.web.csrf import check_origin
+
+    if not check_origin(request):
+        return _render_setup_forbidden(request)
+    return None
+
+
+def _check_setup_csrf(request: Request, form_data) -> bool:
+    from signalvault.web.csrf import validate_csrf
+
+    token = form_data.get("_csrf_token", "")
+    return bool(token) and validate_csrf(request, token)
+
+
 def _batch_archive_similar(vault_path: Path, card_id: str, card_type: str, new_status: str) -> int:
     """Auto-archive cards similar to the one the user just handled.
 
@@ -832,9 +893,343 @@ def page_api_docs(request: Request):
 
 @router.get("/")
 def page_index(request: Request):
-    if _get_vault_path():
-        return RedirectResponse(url="/dashboard", status_code=302)
-    return RedirectResponse(url="/reports", status_code=302)
+    from signalvault.services.onboarding_service import should_enter_onboarding
+
+    if should_enter_onboarding():
+        return RedirectResponse(url="/setup/welcome", status_code=302)
+    return RedirectResponse(url="/dashboard", status_code=302)
+
+
+# ── C3: First-run onboarding wizard ───────────────────────────────
+
+
+def _ai_setup_values(view, form=None) -> dict[str, str]:
+    if form is None:
+        return {
+            "provider": view.provider,
+            "base_url": view.base_url,
+            "model": view.model,
+        }
+    provider = str(form.get("provider", "mock"))
+    if provider == "mock":
+        return {"provider": "mock", "base_url": "", "model": "mock-v1"}
+    return {
+        "provider": provider,
+        "base_url": str(form.get("base_url", "")),
+        "model": str(form.get("model", "")),
+    }
+
+
+def _render_setup_ai(request: Request, *, values=None, message="", error=""):
+    from signalvault.services.ai_settings_service import get_ai_settings_view
+
+    view = get_ai_settings_view()
+    return _render_setup(
+        "ai.html",
+        request,
+        current_step=2,
+        view=view,
+        values=values or _ai_setup_values(view),
+        message=message,
+        error=error,
+    )
+
+
+def _render_setup_obsidian(
+    request: Request,
+    *,
+    vault_path: str | None = None,
+    validation=None,
+    preview=None,
+    message="",
+    error="",
+):
+    from signalvault.services.obsidian_settings_service import (
+        get_obsidian_settings_view,
+    )
+
+    view = get_obsidian_settings_view()
+    return _render_setup(
+        "obsidian.html",
+        request,
+        current_step=3,
+        view=view,
+        vault_path=view.vault_path if vault_path is None else vault_path,
+        validation=validation,
+        preview=preview,
+        message=message,
+        error=error,
+    )
+
+
+@router.get("/setup/welcome", response_class=HTMLResponse)
+async def setup_welcome_page(request: Request):
+    return _render_setup("welcome.html", request, current_step=1)
+
+
+@router.post("/setup/welcome")
+async def setup_welcome_continue(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+    return RedirectResponse(url="/setup/ai", status_code=303)
+
+
+@router.post("/setup/skip")
+async def setup_skip_all(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+    from signalvault.services.onboarding_service import skip_onboarding
+
+    skip_onboarding()
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@router.get("/setup/ai", response_class=HTMLResponse)
+async def setup_ai_page(request: Request):
+    return _render_setup_ai(request)
+
+
+@router.post("/setup/ai", response_class=HTMLResponse)
+async def setup_ai_save(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.onboarding_service import set_ai_skipped
+
+    if form.get("intent") == "skip":
+        set_ai_skipped(True)
+        return RedirectResponse(url="/setup/obsidian", status_code=303)
+
+    from signalvault.services.ai_settings_service import (
+        replace_llm_secret,
+        update_ai_settings,
+    )
+
+    values = _ai_setup_values(None, form)
+    result = update_ai_settings(values)
+    if not result.get("ok"):
+        return _render_setup_ai(
+            request, values=values, error=result.get("error", "保存失败")
+        )
+    api_key = str(form.get("api_key", ""))
+    if api_key.strip():
+        replace_llm_secret(api_key)
+    set_ai_skipped(False)
+    return RedirectResponse(url="/setup/obsidian", status_code=303)
+
+
+@router.post("/setup/ai/test", response_class=HTMLResponse)
+async def setup_ai_test(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.ai_settings_service import (
+        replace_llm_secret,
+        test_llm_connection,
+        update_ai_settings,
+    )
+    from signalvault.services.onboarding_service import set_ai_skipped
+
+    values = _ai_setup_values(None, form)
+    saved = update_ai_settings(values)
+    if not saved.get("ok"):
+        return _render_setup_ai(
+            request, values=values, error=saved.get("error", "保存失败")
+        )
+
+    api_key = str(form.get("api_key", ""))
+    if api_key.strip():
+        replace_llm_secret(api_key)
+    set_ai_skipped(False)
+    result = await test_llm_connection(
+        provider=values["provider"],
+        base_url=values["base_url"],
+        model=values["model"],
+    )
+    if result.get("ok"):
+        latency = result.get("latency_ms", 0)
+        return _render_setup_ai(
+            request,
+            values=values,
+            message=f"连接验证成功（{latency} ms）。可以继续下一步。",
+        )
+    return _render_setup_ai(
+        request,
+        values=values,
+        error=result.get("user_message") or result.get("error", "连接验证失败"),
+    )
+
+
+@router.get("/setup/obsidian", response_class=HTMLResponse)
+async def setup_obsidian_page(request: Request):
+    return _render_setup_obsidian(request)
+
+
+@router.post("/setup/obsidian", response_class=HTMLResponse)
+async def setup_obsidian_save(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.onboarding_service import set_obsidian_skipped
+
+    if form.get("intent") == "skip":
+        set_obsidian_skipped(True)
+        return RedirectResponse(url="/setup/complete", status_code=303)
+
+    from signalvault.services.obsidian_settings_service import (
+        update_obsidian_settings,
+        validate_obsidian_path,
+    )
+
+    vault_path = str(form.get("vault_path", "")).strip()
+    validation = validate_obsidian_path(vault_path)
+    if not validation.get("path_valid"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            validation=validation,
+            error=validation.get("error_message", "路径无效"),
+        )
+    result = update_obsidian_settings({"vault_path": vault_path})
+    if not result.get("ok"):
+        return _render_setup_obsidian(
+            request, vault_path=vault_path, error=result.get("error", "保存失败")
+        )
+    set_obsidian_skipped(False)
+    return RedirectResponse(url="/setup/complete", status_code=303)
+
+
+@router.post("/setup/obsidian/validate", response_class=HTMLResponse)
+async def setup_obsidian_validate(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.obsidian_settings_service import (
+        preview_vault_initialization,
+        validate_obsidian_path,
+    )
+
+    vault_path = str(form.get("vault_path", "")).strip()
+    validation = validate_obsidian_path(vault_path)
+    if not validation.get("path_valid"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            validation=validation,
+            error=validation.get("error_message", "路径无效"),
+        )
+    preview = preview_vault_initialization(vault_path)
+    if preview.get("manifest_conflict"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            validation=validation,
+            preview=preview,
+            error="检测到由其他工具管理的 manifest，SignalVault 不会覆盖它。",
+        )
+    return _render_setup_obsidian(
+        request,
+        vault_path=vault_path,
+        validation=validation,
+        preview=preview,
+        message="路径验证通过。请检查下方初始化预览。",
+    )
+
+
+@router.post("/setup/obsidian/initialize", response_class=HTMLResponse)
+async def setup_obsidian_initialize(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+
+    from signalvault.services.obsidian_settings_service import (
+        initialize_obsidian_vault,
+        preview_vault_initialization,
+        update_obsidian_settings,
+        validate_obsidian_path,
+    )
+    from signalvault.services.onboarding_service import set_obsidian_skipped
+
+    vault_path = str(form.get("vault_path", "")).strip()
+    validation = validate_obsidian_path(vault_path)
+    if not validation.get("path_valid"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            validation=validation,
+            error=validation.get("error_message", "路径无效"),
+        )
+    result = initialize_obsidian_vault(vault_path)
+    if not result.get("ok"):
+        return _render_setup_obsidian(
+            request,
+            vault_path=vault_path,
+            validation=validation,
+            preview=preview_vault_initialization(vault_path),
+            error=result.get("error", "初始化失败"),
+        )
+    update_obsidian_settings({"vault_path": vault_path})
+    set_obsidian_skipped(False)
+    return _render_setup_obsidian(
+        request,
+        vault_path=vault_path,
+        validation=validate_obsidian_path(vault_path),
+        preview=preview_vault_initialization(vault_path),
+        message="Obsidian Vault 初始化完成。现有文件未被覆盖。",
+    )
+
+
+@router.get("/setup/complete", response_class=HTMLResponse)
+async def setup_complete_page(request: Request):
+    from signalvault.services.onboarding_service import get_completion_summary
+
+    return _render_setup(
+        "complete.html",
+        request,
+        current_step=4,
+        summary=get_completion_summary(),
+    )
+
+
+@router.post("/setup/complete")
+async def setup_complete_submit(request: Request):
+    err = _check_setup_origin(request)
+    if err:
+        return err
+    form = await request.form()
+    if not _check_setup_csrf(request, form):
+        return _render_setup_forbidden(request)
+    from signalvault.services.onboarding_service import complete_onboarding
+
+    complete_onboarding()
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 
 # ── P2-L.1: Vault Setup Wizard ─────────────────────────────────────
@@ -963,7 +1358,7 @@ def action_repair_vault(request: Request):
     """Repair an incomplete vault by creating missing dirs and files."""
     vault_path_str = _get_vault_path()
     if not vault_path_str:
-        return RedirectResponse(url="/setup/vault", status_code=302)
+        return RedirectResponse(url="/dashboard", status_code=303)
 
     target = Path(vault_path_str)
     try:
@@ -997,7 +1392,7 @@ def page_dashboard(request: Request):
         pass
 
     if not vault_path_str:
-        return RedirectResponse(url="/setup/vault", status_code=302)
+        return _render("dashboard.html", ctx)
 
     vp = Path(vault_path_str)
     if not vp.exists():

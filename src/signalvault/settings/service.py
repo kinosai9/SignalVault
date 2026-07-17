@@ -386,7 +386,11 @@ class ConfigService:
             lines.append(f"[{section}]")
             for name in sorted(sections[section]):
                 val = sections[section][name]
-                lines.append(f"{name} = {_toml_value(val)}")
+                # A quoted TOML key keeps schema names such as
+                # ``_internal.onboarding.completed`` flat after the section.
+                # Without quoting, TOML interprets the remaining dot as a
+                # nested table and ConfigService cannot resolve the exact key.
+                lines.append(f"{_toml_key(name)} = {_toml_value(val)}")
             lines.append("")
 
         payload = "\n".join(lines)
@@ -401,6 +405,14 @@ class ConfigService:
 # ═══════════════════════════════════════════════════════════════════════════
 # TOML helpers (stdlib tomllib reads; manual writer avoids new dependency)
 # ═══════════════════════════════════════════════════════════════════════════
+
+def _toml_key(name: str) -> str:
+    """Quote dotted key names so they remain literal within a TOML section."""
+    if "." not in name:
+        return name
+    escaped = name.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
 
 def _toml_value(val: Any) -> str:
     if isinstance(val, bool):

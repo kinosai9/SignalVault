@@ -7,10 +7,23 @@
 {% endif %}
 
 {% if not vault_configured %}
-<div class="empty-state">
-    <h2>Vault 未配置</h2>
-    <p>请在 <code>.env</code> 中设置 <code>OBSIDIAN_VAULT_PATH</code> 指向 Obsidian Vault 路径。</p>
+<div class="dashboard page-shell">
+  <div class="page-hero dashboard-hero">
+    <div>
+      <p class="eyebrow">今日研究入口</p>
+      <h1>变化雷达</h1>
+      <p>本地 SQLite 已可使用。导入第一份资料后，这里会汇总值得关注的变化。</p>
+    </div>
+    <div class="hero-actions">
+      <a href="/sources/import/new" class="btn-action">导入第一份资料</a>
+      <a href="/settings/obsidian" class="btn-action btn-secondary">可选：配置 Obsidian</a>
+    </div>
+  </div>
+  <div class="empty-state">
+    <h2>还没有可展示的研究内容</h2>
+    <p>Obsidian 是可选集成；不配置时，导入、分析和搜索仍由本地 SQLite 正常工作。</p>
     {% if vault_missing %}<p>当前配置的路径不存在: <code>{{ vault_path }}</code></p>{% endif %}
+  </div>
 </div>
 
 {% elif error %}
