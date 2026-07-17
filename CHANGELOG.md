@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### C2 Backend QA Closeout: async/sync boundary, LLM error classification, ScannerCache, Obsidian toggle removal (2026-07-17)
+
+- **C2-QA-001 resolved**: `test_llm_connection()` is now `async def` — directly `await`s `validate_llm_config()` instead of nesting `asyncio.run()` inside a running event loop. Removed the undeclared `nest_asyncio` workaround. Route callers use `await`; test callers wrap in `asyncio.run()`.
+- **LLM validator classification gaps closed**: HTTP 400 body is now inspected for model-not-found patterns (DeepSeek returns 400, not 404); added `UPSTREAM_UNAVAILABLE` error type for HTTP 502/503/504 with proxy/gateway guidance; new `_looks_like_model_not_found()` detector with strong and weak signal matching.
+- **ScannerCache test reliability**: replaced `scanned_at` timestamp comparisons with Python object identity (`is`/`is not`), eliminating flaky combined-run failures caused by system clock granularity.
+- **Obsidian integration**: removed the separate `export_enabled` toggle. A configured vault path now automatically enables the integration; clearing the path disables it. Removed the "integration toggle" card and DISABLED state from UI. `disable_obsidian_integration()` now clears the path. Aligns `ObsidianSettingsView` with `SetupStatus`.
+- Verification: 332 passed, 1 skipped (C2 + web + dashboard + validator); 17 new/updated validator tests; Ruff clean.
+
 ### C2 Frontend Completeness QA & Minimal Polish (2026-07-17)
 
 - Completed 5 settings pages × 6 required viewports, AI/Obsidian state matrices, operation flows, CSRF, refresh/back, duplicate submission, scrolling, and mobile sidebar QA.
@@ -10,7 +18,6 @@
 - Renamed the new sidebar category to "配置中心" while retaining "系统与集成" as the page entry, removing the duplicated label.
 - Replaced bare HTML settings CSRF failures with a responsive, branded 403 page; JSON APIs retain structured JSON 403 responses and no CSRF/security mechanism changed.
 - Added `docs/C2_FRONTEND_QA_REPORT.md` with severity, evidence, allowed-file boundary, backend impact, and remaining blockers.
-- Remaining release blocker: real Provider connection testing fails with missing `nest_asyncio`; backend runtime behavior was intentionally not changed in this frontend pass.
 - Verification: 2374 tests collected; C2/web 304 passed + 1 skipped; 68 settings-center tests passed; 8 UI smoke passed; Ruff clean. Final CSRF closeout captured 18 screenshots across 6 pages and 3 viewports with zero overflow or sensitive-data leaks. Final non-browser run reached 2364 passed + 1 skipped with one SQLite duplicate-table setup error in an existing web test; that test passed immediately in isolation and the full web-pages file had already passed in the C2 suite. Backend test semantics were not changed.
 
 ### C2-C: Settings Center & Navigation (2026-07-16)

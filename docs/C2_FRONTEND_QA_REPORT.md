@@ -4,7 +4,7 @@
 > 封板基线：`f5b47d9cb4bd34ab987ddd0c80d24b7c34a971fd` (`main`)  
 > QA 范围：`/settings`、`/settings/ai`、`/settings/obsidian`、`/settings/system`、`/settings/about`  
 > 初始 QA 结论：**不满足 Release Candidate 前端门禁。1 个 P0、3 个 P1、3 个 P2。**  
-> 最终前端收口后：C2-QA-002 至 C2-QA-007 已关闭；仅 C2-QA-001 真实 Provider 事件循环缺陷保留为后端 Release Blocker。
+> 最终前端收口后：C2-QA-002 至 C2-QA-007 已关闭。C2-QA-001 于 2026-07-17 后端收口修复，连同 LLM 错误分类缺口和 ScannerCache 测试可靠性一并解决。
 
 ## 1. 执行摘要
 
@@ -238,7 +238,9 @@
 - `git diff --check`：clean。
 - 本轮最终全量非浏览器单次运行：2364 passed，1 skipped，1 setup error。错误为 `test_sync_job_page_loads` 初始化 SQLite 时遇到 `table episodes already exists`；该用例随后隔离复跑 1 passed，且包含它的 `test_web_pages.py` 已在 C2 专项中通过。此前全量运行另出现过 ScannerCache `scanned_at` 时间戳波动并在隔离复跑通过。两类错误均与本轮模板/CSS/HTML 403 改动无代码交集，按授权未修改后端测试语义。
 
-### 仍然开放
+### 后端收口（2026-07-17）
 
-1. **C2-QA-001 / P0**：真实 Provider 测试连接依赖/事件循环边界错误。
-2. **测试可靠性**：ScannerCache 时间戳断言和 `test_web_pages.py` 全量运行中的 SQLite 重复建表均表现为仅组合运行波动、隔离通过；按授权不修改 ScannerCache、数据库生命周期或其测试语义。
+1. **C2-QA-001 / P0 — 已关闭**：`test_llm_connection()` 改为 `async def`，直接 `await validate_llm_config()`，消除 `asyncio.run()` 嵌套事件循环。移除未声明的 `nest_asyncio` 依赖。路由调用方使用 `await`，测试调用方使用 `asyncio.run()`。
+2. **LLM 错误分类缺口 — 已关闭**：HTTP 400 响应体检测模型不存在特征（DeepSeek 返回 400 而非 404）；新增 `UPSTREAM_UNAVAILABLE` 类型覆盖 HTTP 502/503/504，提示代理/网关检查；新增 `_looks_like_model_not_found()` 检测器。
+3. **ScannerCache 测试可靠性 — 已关闭**：`scanned_at` 时间戳比较替换为 Python 对象身份检查（`is`/`is not`），消除系统时钟精度引起的组合运行波动。
+4. **Obsidian 手动开关移除**：删除 `export_enabled` 用户可见开关。路径配置即自动启用，清除路径即停用。`ObsidianSettingsView` 与 `SetupStatus` 语义统一。
