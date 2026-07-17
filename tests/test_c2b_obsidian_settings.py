@@ -62,30 +62,30 @@ def _get_svc():
 
 
 class TestObsidianSettingsView:
-    def test_default_view_disabled(self):
+    def test_default_view_not_configured(self):
+        """Without a vault path, Obsidian is not configured (not 'disabled')."""
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
             get_obsidian_settings_view,
         )
         view = get_obsidian_settings_view()
         assert view.enabled is False
-        assert view.state == ObsidianState.DISABLED
-        assert view.state_label == "已禁用"
+        assert view.state == ObsidianState.NOT_CONFIGURED
+        assert view.state_label == "未配置"
 
-    def test_enabled_but_not_configured(self):
-        svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
+    def test_enabled_derived_from_path_not_toggle(self):
+        """Enabled is derived from path presence, not a separate flag."""
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
             get_obsidian_settings_view,
         )
         view = get_obsidian_settings_view()
-        assert view.enabled is True
+        # No path → not enabled, not configured
+        assert view.enabled is False
         assert view.state == ObsidianState.NOT_CONFIGURED
 
     def test_path_invalid_when_nonexistent(self):
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", "/nonexistent/path/xyz")
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -97,7 +97,6 @@ class TestObsidianSettingsView:
 
     def test_valid_empty_dir_path_valid_not_obsidian(self, tmp_path):
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -111,7 +110,6 @@ class TestObsidianSettingsView:
     def test_with_obsidian_dir(self, tmp_path):
         (tmp_path / ".obsidian").mkdir()
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -125,7 +123,6 @@ class TestObsidianSettingsView:
         """After initialization, state should be INITIALIZED."""
         # Set up
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
 
         from signalvault.services.obsidian_settings_service import (
@@ -149,7 +146,6 @@ class TestObsidianSettingsView:
             json.dumps({"managed_by": "other_tool", "vault_schema_version": 1})
         )
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
 
         from signalvault.services.obsidian_settings_service import (
@@ -166,7 +162,7 @@ class TestUpdateSettings:
         from signalvault.services.obsidian_settings_service import (
             update_obsidian_settings,
         )
-        result = update_obsidian_settings({"vault_path": str(tmp_path), "enabled": True})
+        result = update_obsidian_settings({"vault_path": str(tmp_path)})
         assert result["ok"] is True
         assert "obsidian.vault_path" in result["updated"]
 
@@ -433,21 +429,21 @@ class TestWriteTest:
 
 
 class TestDisableClear:
-    def test_disable_preserves_path(self, tmp_path):
+    def test_disable_clears_path(self, tmp_path):
+        """Disabling Obsidian clears the vault path. Files are not deleted."""
         from signalvault.services.obsidian_settings_service import (
             disable_obsidian_integration,
             update_obsidian_settings,
         )
         # Configure
-        update_obsidian_settings({"vault_path": str(tmp_path), "enabled": True})
-        assert _get_svc().get("obsidian.export_enabled") is True
+        update_obsidian_settings({"vault_path": str(tmp_path)})
+        assert _get_svc().get("obsidian.vault_path") != ""
 
         # Disable
         result = disable_obsidian_integration()
         assert result["ok"] is True
-        assert _get_svc().get("obsidian.export_enabled") is False
-        # Path preserved
-        assert _get_svc().get("obsidian.vault_path") != ""
+        # Path cleared (no separate toggle — path IS the enable/disable)
+        assert _get_svc().get("obsidian.vault_path") == ""
 
     def test_disable_does_not_delete_vault(self, tmp_path):
         """Disabling must not delete vault files."""
@@ -457,7 +453,7 @@ class TestDisableClear:
             update_obsidian_settings,
         )
         initialize_obsidian_vault(str(tmp_path))
-        update_obsidian_settings({"vault_path": str(tmp_path), "enabled": True})
+        update_obsidian_settings({"vault_path": str(tmp_path)})
 
         # Verify vault files exist
         assert (tmp_path / "Home.md").exists()
@@ -476,7 +472,7 @@ class TestDisableClear:
             update_obsidian_settings,
         )
         initialize_obsidian_vault(str(tmp_path))
-        update_obsidian_settings({"vault_path": str(tmp_path), "enabled": True})
+        update_obsidian_settings({"vault_path": str(tmp_path)})
 
         # Verify vault files exist before clear
         assert (tmp_path / "Home.md").exists()
@@ -534,9 +530,9 @@ class TestObsidianPages:
         assert 'name="_csrf_token"' in resp.text
         assert "signalvault_csrf" in resp.headers.get("set-cookie", "")
 
-    def test_obsidian_page_shows_disabled(self, client):
+    def test_obsidian_page_shows_not_configured(self, client):
         resp = client.get("/settings/obsidian")
-        assert "已禁用" in resp.text
+        assert "未配置" in resp.text
 
     def test_obsidian_page_shows_sqlite_notice(self, client):
         resp = client.get("/settings/obsidian")
@@ -555,7 +551,7 @@ class TestObsidianPages:
             update_obsidian_settings,
         )
         initialize_obsidian_vault(str(tmp_path))
-        update_obsidian_settings({"vault_path": str(tmp_path), "enabled": True})
+        update_obsidian_settings({"vault_path": str(tmp_path)})
 
         resp = client.get("/settings/obsidian")
         assert resp.status_code == 200
@@ -637,11 +633,11 @@ class TestObsidianAPI:
         assert "enabled" in data["data"]
         assert "state" in data["data"]
 
-    def test_api_status_when_disabled(self, client):
-        _get_svc().set_user_value("obsidian.export_enabled", False)
+    def test_api_status_when_not_configured(self, client):
+        """Without a vault path, API returns not_configured (not 'disabled')."""
         resp = client.get("/api/obsidian/status")
         data = resp.json()
-        assert data["data"]["state"] == "disabled"
+        assert data["data"]["state"] == "not_configured"
 
     def test_api_validate_path(self, client, tmp_path):
         resp = client.post("/api/obsidian/validate", json={
@@ -710,17 +706,20 @@ class TestObsidianAPI:
 
 
 class TestStateModel:
-    def test_state_disabled(self):
+    def test_state_not_configured_when_no_path(self):
+        """No vault path configured → not_configured. No separate toggle needed."""
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", False)
+        svc.delete_user_value("obsidian.vault_path")
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
             get_obsidian_settings_view,
         )
         view = get_obsidian_settings_view()
-        assert view.state == ObsidianState.DISABLED
+        assert view.state == ObsidianState.NOT_CONFIGURED
+        assert view.enabled is False  # derived from path absence
 
-    def test_state_not_configured(self):
+    def test_state_not_configured_with_export_enabled_irrelevant(self):
+        """Even with export_enabled=True, no path → not_configured."""
         svc = _get_svc()
         svc.set_user_value("obsidian.export_enabled", True)
         svc.delete_user_value("obsidian.vault_path")
@@ -729,11 +728,11 @@ class TestStateModel:
             get_obsidian_settings_view,
         )
         view = get_obsidian_settings_view()
+        # export_enabled no longer controls view.enabled or state
         assert view.state == ObsidianState.NOT_CONFIGURED
 
     def test_state_path_invalid(self, tmp_path):
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path / "no_such_dir"))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -744,7 +743,6 @@ class TestStateModel:
 
     def test_state_path_valid_not_obsidian(self, tmp_path):
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -756,7 +754,6 @@ class TestStateModel:
     def test_state_path_valid_not_initialized(self, tmp_path):
         (tmp_path / ".obsidian").mkdir()
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -771,7 +768,6 @@ class TestStateModel:
         )
         initialize_obsidian_vault(str(tmp_path))
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -789,7 +785,6 @@ class TestStateModel:
         import shutil
         shutil.rmtree(tmp_path / "01_Reports")
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -804,7 +799,6 @@ class TestStateModel:
             json.dumps({"managed_by": "other_tool", "vault_schema_version": 1})
         )
         svc = _get_svc()
-        svc.set_user_value("obsidian.export_enabled", True)
         svc.set_user_value("obsidian.vault_path", str(tmp_path))
         from signalvault.services.obsidian_settings_service import (
             ObsidianState,
@@ -925,18 +919,17 @@ class TestCleanRoomFlow:
         svc2 = _make_isolated_svc(svc2_home, env={"LLM_PROVIDER": "mock"})
         _override_config_service(svc2)
 
-        # Step 1: Clean state, AI is mock
+        # Step 1: Clean state — no path → not configured
         view = get_obsidian_settings_view()
-        assert view.state == ObsidianState.DISABLED
+        assert view.state == ObsidianState.NOT_CONFIGURED
 
         # Step 2: Create temp vault dir
         vault_dir = tmp_path / "test_vault"
         vault_dir.mkdir()
 
-        # Step 3: Save path and enable
+        # Step 3: Save path (enabled is automatic when path is set)
         result = update_obsidian_settings({
             "vault_path": str(vault_dir),
-            "enabled": True,
         })
         assert result["ok"] is True
 
@@ -964,11 +957,11 @@ class TestCleanRoomFlow:
         created = len(result["created_dirs"]) + len(result["created_files"])
         assert created == 0  # Nothing to repair
 
-        # Step 8: Disable
+        # Step 8: Disable (clears path — the only way to "disable")
         result = disable_obsidian_integration()
         assert result["ok"] is True
 
-        # Step 9: Vault files preserved
+        # Step 9: Vault files preserved (path cleared but files stay)
         assert (vault_dir / "99_System" / "signalvault_manifest.json").exists()
         assert (vault_dir / "Home.md").exists()
 
@@ -976,7 +969,8 @@ class TestCleanRoomFlow:
         svc3 = _make_isolated_svc(svc2_home, env={"LLM_PROVIDER": "mock"})
         _override_config_service(svc3)
         view = get_obsidian_settings_view()
-        assert view.enabled is False  # disabled
-        assert view.vault_path != ""  # path preserved
+        assert view.enabled is False  # path is cleared
+        assert view.vault_path == ""  # path cleared
+        assert view.state == ObsidianState.NOT_CONFIGURED
 
         _override_config_service(None)

@@ -25,6 +25,7 @@ class ValidationErrorType(str, Enum):
     AUTH_FAILED = "auth_failed"
     MODEL_NOT_FOUND = "model_not_found"
     BASE_URL_UNREACHABLE = "base_url_unreachable"
+    UPSTREAM_UNAVAILABLE = "upstream_unavailable"
     TIMEOUT = "timeout"
     RATE_LIMITED = "rate_limited"
     QUOTA_EXCEEDED = "quota_exceeded"
@@ -189,12 +190,33 @@ def _classify_http_error(status: int, resp: httpx.Response) -> tuple[str, str, s
     except Exception:
         body = {"error": {}}
     error_msg = ""
+    error_type_str = ""
     if isinstance(body, dict):
         err = body.get("error", {})
         if isinstance(err, dict):
             error_msg = err.get("message", "")
+            error_type_str = err.get("type", "")
         elif isinstance(err, str):
             error_msg = err
+        # Some providers nest under "error" → "metadata" or top-level "message"
+        if not error_msg:
+            error_msg = body.get("message", "")
+
+    if status == 400:
+        # DeepSeek and some OpenAI-compatible providers return HTTP 400
+        # (not 404) when the model name doesn't exist.  Check the body
+        # for model-not-found signals before treating it as a generic error.
+        if _looks_like_model_not_found(error_msg, error_type_str):
+            return (
+                ValidationErrorType.MODEL_NOT_FOUND.value,
+                "模型未找到，请确认模型名称正确。DeepSeek 等提供商对不存在模型返回 400 而非 404。",
+                f"HTTP 400: {_safe_str(error_msg)}",
+            )
+        return (
+            ValidationErrorType.PROTOCOL_INCOMPATIBLE.value,
+            "请求参数有误，请检查 API 配置。",
+            f"HTTP 400: {_safe_str(error_msg)}",
+        )
 
     if status == 401:
         return (
@@ -226,12 +248,46 @@ def _classify_http_error(status: int, resp: httpx.Response) -> tuple[str, str, s
             "API 配额不足或请求参数有误，请检查账户余额。",
             f"HTTP {status}: {_safe_str(error_msg)}",
         )
-    # 5xx
+    if status in (502, 503, 504):
+        label = {502: "Bad Gateway", 503: "Service Unavailable", 504: "Gateway Timeout"}[status]
+        return (
+            ValidationErrorType.UPSTREAM_UNAVAILABLE.value,
+            f"上游服务不可达 (HTTP {status} {label})。如果您使用了代理或网关，请检查其配置和目标地址是否可达。",
+            f"HTTP {status}: {_safe_str(error_msg)}",
+        )
+    # 5xx and other unhandled codes
     return (
         ValidationErrorType.PROTOCOL_INCOMPATIBLE.value,
         f"服务器返回错误 (HTTP {status})，请确认 base_url 正确。",
         f"HTTP {status}: {_safe_str(error_msg)}",
     )
+
+
+def _looks_like_model_not_found(error_msg: str, error_type_str: str) -> bool:
+    """Check whether an HTTP error body looks like a model-not-found response.
+
+    DeepSeek (HTTP 400) and other providers may return messages like:
+      - "The model `deepseek-chat` does not exist"
+      - "model does not exist"
+      - "invalid model"
+      - error type "invalid_request_error" combined with model keywords
+    """
+    msg_lower = error_msg.lower()
+    type_lower = error_type_str.lower()
+
+    # Strong signals: error message mentions model + existence
+    strong_patterns = [
+        "model" in msg_lower and "does not exist" in msg_lower,
+        "model" in msg_lower and "not found" in msg_lower,
+        "model" in msg_lower and "no such" in msg_lower,
+        "invalid model" in msg_lower,
+        "model not available" in msg_lower,
+    ]
+    if any(strong_patterns):
+        return True
+
+    # Weak signal: error type suggests invalid model combined with model keyword
+    return type_lower in ("invalid_request_error", "invalid_parameter") and "model" in msg_lower
 
 
 def _safe_error(exc: Exception) -> str:

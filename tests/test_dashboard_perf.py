@@ -211,7 +211,8 @@ class TestScannerCache:
         invalidate_cache(mini_vault)
         snap1 = scan_with_cache(mini_vault)
         snap2 = scan_with_cache(mini_vault)
-        assert snap1.scanned_at == snap2.scanned_at
+        # Cache hit must return the exact same object (identity, not timestamp)
+        assert snap1 is snap2
         assert len(snap1.claims) == len(snap2.claims)
         assert len(snap1.reports) == len(snap2.reports)
 
@@ -227,7 +228,8 @@ class TestScannerCache:
                     title="New Report")
         invalidate_cache(mini_vault)
         snap2 = scan_with_cache(mini_vault)
-        assert snap1.scanned_at != snap2.scanned_at
+        # Cache invalidation must produce a new snapshot object
+        assert snap1 is not snap2
         # Verify the new report is in the second scan
         assert len(snap2.reports) > len(snap1.reports)
 
@@ -260,7 +262,8 @@ class TestScannerCache:
         snap1 = scan_with_cache(mini_vault)
         invalidate_cache(mini_vault)
         snap2 = scan_with_cache(mini_vault)
-        assert snap1.scanned_at != snap2.scanned_at
+        # Invalidation must produce a new snapshot object
+        assert snap1 is not snap2
 
 
 # ── Claims / Signals count cache tests ───────────────────────────────

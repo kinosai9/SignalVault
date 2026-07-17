@@ -302,7 +302,7 @@ def delete_llm_secret() -> dict[str, Any]:
     return {"ok": True}
 
 
-def test_llm_connection(
+async def test_llm_connection(
     provider: str = "",
     base_url: str = "",
     model: str = "",
@@ -312,6 +312,11 @@ def test_llm_connection(
 
     Uses provided values if given, otherwise reads from ConfigService.
     Does NOT save the API key — only tests with it.
+
+    Async: directly awaits validate_llm_config() so callers inside a
+    running event loop (FastAPI routes) do not need nest_asyncio or
+    nested asyncio.run().  Sync callers (tests, CLI) should use
+    asyncio.run(test_llm_connection(...)).
     """
     svc = _get_svc()
 
@@ -344,21 +349,11 @@ def test_llm_connection(
     if not api_key:
         return {"ok": False, "error": "API Key 未配置", "error_type": ""}
 
-    # Real validation
-    import asyncio
-
+    # Real validation — directly await the async validator
     from signalvault.settings.llm_validator import validate_llm_config
 
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # We're in an async context — create task
-            import nest_asyncio
-            nest_asyncio.apply()
-        result = asyncio.run(validate_llm_config(base_url, api_key, model))
-    except RuntimeError:
-        # No event loop — create one
-        result = asyncio.run(validate_llm_config(base_url, api_key, model))
+        result = await validate_llm_config(base_url, api_key, model)
     except Exception as e:
         return {"ok": False, "error": f"测试失败: {e}", "error_type": "unknown"}
 

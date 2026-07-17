@@ -147,22 +147,22 @@ def get_obsidian_settings_view() -> ObsidianSettingsView:
     """Build the Obsidian settings view model from ConfigService.
 
     Safe for templates — never includes vault document contents.
+
+    Obsidian integration is enabled whenever a vault path is configured.
+    There is no separate enable/disable toggle — clear the path to disable.
     """
     svc = _get_svc()
     view = ObsidianSettingsView()
 
     # Read config
-    view.enabled = bool(svc.get("obsidian.export_enabled"))
     vault_path_cv = svc.get_with_source("obsidian.vault_path")
     view.vault_path = str(vault_path_cv.value) if vault_path_cv.value else ""
     view.vault_path_source = vault_path_cv.source
 
-    # Compute state
-    if not view.enabled:
-        view.state = ObsidianState.DISABLED
-        view.state_label = "已禁用"
-        return view
+    # Enabled = path is configured (automatic; no separate toggle needed)
+    view.enabled = bool(view.vault_path)
 
+    # Compute state
     if not view.vault_path:
         view.state = ObsidianState.NOT_CONFIGURED
         view.state_label = "未配置"
@@ -579,18 +579,18 @@ def test_obsidian_write(path: str) -> dict[str, Any]:
 
 
 def disable_obsidian_integration() -> dict[str, Any]:
-    """Disable Obsidian integration.
+    """Disable Obsidian integration by clearing the vault path.
 
-    - Sets obsidian.export_enabled=false
-    - Preserves vault_path (for later re-enable)
+    - Clears vault_path (no path = integration dormant)
     - Does NOT delete vault files
     - Does NOT modify SQLite
+    - Re-enable by re-configuring a vault path
     """
     svc = _get_svc()
-    svc.set_user_value("obsidian.export_enabled", False)
+    svc.delete_user_value("obsidian.vault_path")
     return {
         "ok": True,
-        "message": "Obsidian 集成已禁用。知识库文件未被删除，SQLite 数据未受影响。",
+        "message": "Obsidian 集成已停用（路径已清除）。知识库文件未被删除，SQLite 数据未受影响。",
     }
 
 

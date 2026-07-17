@@ -164,7 +164,7 @@ async def test_llm_settings(request: Request):
         body = {}
 
     from signalvault.services.ai_settings_service import test_llm_connection
-    result = test_llm_connection(
+    result = await test_llm_connection(
         provider=body.get("provider", ""),
         base_url=body.get("base_url", ""),
         model=body.get("model", ""),

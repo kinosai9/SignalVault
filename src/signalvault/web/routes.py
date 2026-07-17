@@ -4995,7 +4995,7 @@ async def settings_ai_test(request: Request):
         return _render_settings_forbidden(request)
 
     from signalvault.services.ai_settings_service import test_llm_connection
-    result = test_llm_connection(
+    result = await test_llm_connection(
         provider=form.get("provider", ""),
         base_url=form.get("base_url", ""),
         model=form.get("model", ""),
@@ -5093,8 +5093,6 @@ async def settings_obsidian_save(request: Request):
 
     if "vault_path" in form and form.get("vault_path", ""):
         fields["vault_path"] = form.get("vault_path", "")
-    if "enabled" in form:
-        fields["enabled"] = form.get("enabled", "")
 
     result = update_obsidian_settings(fields)
 

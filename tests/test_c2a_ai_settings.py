@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -111,7 +113,7 @@ class TestValidationPersistence:
             update_ai_settings,
         )
         # Mock test — succeeds instantly
-        result = test_llm_connection(provider="mock")
+        result = asyncio.run(test_llm_connection(provider="mock"))
         assert result["ok"] is True
         assert not is_validation_stale(_get_svc())
 
@@ -125,13 +127,13 @@ class TestValidationPersistence:
             test_llm_connection,
             update_ai_settings,
         )
-        test_llm_connection(provider="mock")
+        asyncio.run(test_llm_connection(provider="mock"))
         update_ai_settings({"provider": "openai-compatible"})
         assert is_validation_stale(_get_svc())
 
     def test_mock_test_always_succeeds(self):
         from signalvault.services.ai_settings_service import test_llm_connection
-        result = test_llm_connection(provider="mock")
+        result = asyncio.run(test_llm_connection(provider="mock"))
         assert result["ok"] is True
         assert result.get("latency_ms") == 0
 
@@ -156,7 +158,7 @@ class TestSecretRevision:
         # Set Key A
         replace_llm_secret("sk-key-aaaa")
         # Validate with mock
-        result = test_llm_connection(provider="mock")
+        result = asyncio.run(test_llm_connection(provider="mock"))
         assert result["ok"] is True
         assert not is_validation_stale(svc)
 
@@ -177,7 +179,7 @@ class TestSecretRevision:
         _override_config_service(svc)
 
         replace_llm_secret("sk-key-aaaa")
-        test_llm_connection(provider="mock")
+        asyncio.run(test_llm_connection(provider="mock"))
         assert not is_validation_stale(svc)
 
         delete_llm_secret()
@@ -199,7 +201,7 @@ class TestSecretRevision:
 
         # Save Key A in SecretStore
         replace_llm_secret("sk-key-aaaa")
-        test_llm_connection(provider="mock")
+        asyncio.run(test_llm_connection(provider="mock"))
         assert not is_validation_stale(svc)
 
         # Delete → falls back to env key
@@ -261,7 +263,7 @@ class TestSecretRevision:
 
         # Set base_url with trailing slash
         svc.set_user_value("llm.base_url", "https://api.example.com/v1/")
-        test_llm_connection(provider="mock")
+        asyncio.run(test_llm_connection(provider="mock"))
         assert not is_validation_stale(svc)
 
         # Set same base_url without trailing slash → should NOT be stale

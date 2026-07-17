@@ -17,11 +17,8 @@
   </div>
 
   <!-- State-specific notices -->
-  {% if view.state == 'disabled' %}
-  <div class="message-warning"><strong>Obsidian 集成已禁用。</strong> 所有数据保留在 SQLite 中。可以随时重新启用。</div>
-  {% endif %}
   {% if view.state == 'not_configured' %}
-  <div class="message-info">Obsidian 尚未配置。在下方设置 Vault 路径以启用集成。</div>
+  <div class="message-info"><strong>Obsidian 尚未配置。</strong> 在下方设置 Vault 路径即可启用集成。</div>
   {% endif %}
   {% if view.state == 'path_invalid' %}
   <div class="message-error"><strong>路径无效：</strong>{{ view.error_message }}</div>
@@ -61,27 +58,6 @@
     <p>缺失文件：</p><ul class="preview-list">{% for f in view.missing_files %}<li class="preview-create">{{ f }}</li>{% endfor %}</ul>
     {% endif %}
   </div>
-  {% endif %}
-</div>
-
-<!-- Enable/disable toggle -->
-<div class="card">
-  <h2>集成开关</h2>
-  <form method="POST" action="/settings/obsidian">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-  <input type="hidden" name="action" value="toggle">
-  <input type="hidden" name="vault_path" value="{{ view.vault_path }}">
-  <p>当前：<strong>{% if view.enabled %}已启用{% else %}已禁用{% endif %}</strong></p>
-  <div class="btn-group">
-    {% if view.enabled %}
-    <button type="submit" name="enabled" value="false" class="btn btn-warning">禁用集成</button>
-    {% else %}
-    <button type="submit" name="enabled" value="true" class="btn btn-success">启用集成</button>
-    {% endif %}
-  </div>
-  </form>
-  {% if not view.enabled %}
-  <div class="message-info">禁用不会删除 Vault 文件或 SQLite 数据。路径配置保留以便恢复。</div>
   {% endif %}
 </div>
 
@@ -196,22 +172,14 @@
 <!-- Danger zone -->
 <div class="card" style="border-color: #dc3545;">
   <h2 style="color: #dc3545;">&#9888; 危险操作</h2>
-  <h3>禁用集成</h3>
-  <p>禁用不会删除任何数据。Vault 文件和 SQLite 完整保留。可随时重新启用。</p>
-  {% if view.enabled %}
-  <form method="POST" action="/settings/obsidian/disable">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-  <div class="btn-group"><button type="submit" class="btn btn-warning">禁用集成</button></div>
-  </form>
-  {% endif %}
 
-  <h3>清除保存的路径</h3>
-  <p>清除配置中的路径，不删除 Vault 文件。</p>
+  <h3>停用 Obsidian 集成</h3>
+  <p>清除保存的 Vault 路径即可停用集成。不会删除任何 Vault 文件或 SQLite 数据。随时可以重新配置路径恢复使用。</p>
   {% if view.vault_path %}
   <form method="POST" action="/settings/obsidian/clear-path"
-        onsubmit="return confirm('确定清除路径吗？不会删除文件。');">
+        onsubmit="return confirm('确定清除路径吗？不会删除 Vault 文件。');">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-  <div class="btn-group"><button type="submit" class="btn btn-danger">清除路径</button></div>
+  <div class="btn-group"><button type="submit" class="btn btn-danger">清除路径，停用集成</button></div>
   </form>
   {% endif %}
 </div>

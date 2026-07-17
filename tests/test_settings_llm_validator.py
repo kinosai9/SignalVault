@@ -74,13 +74,58 @@ class TestErrorClassification:
         assert result.error_type == ValidationErrorType.AUTH_FAILED.value
 
     @pytest.mark.anyio
-    async def test_model_not_found(self):
+    async def test_model_not_found_404(self):
         client = _make_client(_mock_transport(404))
         result = await validate_llm_config(
             "https://api.example.com", "sk-test", client=client,
         )
         assert result.ok is False
         assert result.error_type == ValidationErrorType.MODEL_NOT_FOUND.value
+
+    @pytest.mark.anyio
+    async def test_model_not_found_400_deepseek_style(self):
+        """DeepSeek returns HTTP 400 when model doesn't exist."""
+        client = _make_client(_mock_transport(400, {
+            "error": {"message": "The model `deepseek-chat` does not exist",
+                       "type": "invalid_request_error"}
+        }))
+        result = await validate_llm_config(
+            "https://api.example.com", "sk-test", model="deepseek-chat",
+            client=client,
+        )
+        assert result.ok is False
+        assert result.error_type == ValidationErrorType.MODEL_NOT_FOUND.value
+
+    @pytest.mark.anyio
+    async def test_model_not_found_400_message_match(self):
+        """Various model-not-found message patterns on HTTP 400."""
+        patterns = [
+            {"error": {"message": "model not found"}},
+            {"error": {"message": "invalid model"}},
+            {"error": {"message": "no such model"}},
+            {"error": {"message": "model not available"}},
+        ]
+        for body in patterns:
+            client = _make_client(_mock_transport(400, body))
+            result = await validate_llm_config(
+                "https://api.example.com", "sk-test", client=client,
+            )
+            assert result.error_type == ValidationErrorType.MODEL_NOT_FOUND.value, (
+                f"Pattern not matched: {body}"
+            )
+
+    @pytest.mark.anyio
+    async def test_http_400_not_model_related(self):
+        """HTTP 400 without model-not-found signal should be generic error."""
+        client = _make_client(_mock_transport(400, {
+            "error": {"message": "invalid request body"}
+        }))
+        result = await validate_llm_config(
+            "https://api.example.com", "sk-test", client=client,
+        )
+        assert result.ok is False
+        assert result.error_type != ValidationErrorType.MODEL_NOT_FOUND.value
+        assert result.error_type == ValidationErrorType.PROTOCOL_INCOMPATIBLE.value
 
     @pytest.mark.anyio
     async def test_rate_limited(self):
@@ -99,6 +144,34 @@ class TestErrorClassification:
         )
         assert result.ok is False
         assert result.error_type == ValidationErrorType.QUOTA_EXCEEDED.value
+
+    @pytest.mark.anyio
+    async def test_upstream_unavailable_502(self):
+        client = _make_client(_mock_transport(502))
+        result = await validate_llm_config(
+            "https://api.example.com", "sk-test", client=client,
+        )
+        assert result.ok is False
+        assert result.error_type == ValidationErrorType.UPSTREAM_UNAVAILABLE.value
+        assert "代理" in result.user_message or "网关" in result.user_message
+
+    @pytest.mark.anyio
+    async def test_upstream_unavailable_503(self):
+        client = _make_client(_mock_transport(503))
+        result = await validate_llm_config(
+            "https://api.example.com", "sk-test", client=client,
+        )
+        assert result.ok is False
+        assert result.error_type == ValidationErrorType.UPSTREAM_UNAVAILABLE.value
+
+    @pytest.mark.anyio
+    async def test_upstream_unavailable_504(self):
+        client = _make_client(_mock_transport(504))
+        result = await validate_llm_config(
+            "https://api.example.com", "sk-test", client=client,
+        )
+        assert result.ok is False
+        assert result.error_type == ValidationErrorType.UPSTREAM_UNAVAILABLE.value
 
     @pytest.mark.anyio
     async def test_timeout(self):

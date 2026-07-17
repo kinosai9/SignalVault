@@ -219,7 +219,7 @@ class TestSettingsOverview:
     def test_overview_obsidian_card(self, client):
         resp = client.get("/settings")
         assert "Obsidian" in resp.text
-        assert "已禁用" in resp.text
+        assert "未配置" in resp.text
 
     def test_overview_system_card(self, client):
         resp = client.get("/settings")
