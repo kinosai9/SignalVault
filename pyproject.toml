@@ -42,6 +42,14 @@ signalvault = "signalvault.cli:app"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+signalvault = [
+    "web/templates/**/*.html",
+    "web/static/*.css",
+    "web/static/*.js",
+    "web/static/*.svg",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

@@ -1,0 +1,4 @@
+graft src/signalvault/web/templates
+graft src/signalvault/web/static
+include README.md
+include LICENSE
