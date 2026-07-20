@@ -419,8 +419,12 @@ def launch(config: LauncherConfig | None = None) -> int:
 
     host = config.host  # always 127.0.0.1
     pid_path = _pid_file_path()
+    log_path = _get_log_path()
 
     _configure_launcher_logging()
+
+    print("SignalVault 正在启动…")
+    print(f"日志位置：{log_path}")
 
     logger.info("SignalVault Launcher starting (version=%s)", _get_version())
     logger.info("PID file: %s", pid_path)
@@ -430,8 +434,14 @@ def launch(config: LauncherConfig | None = None) -> int:
     if existing is not None:
         url = f"http://{existing.host}:{existing.port}"
         logger.info("Reusing existing instance at %s", url)
-        if config.open_browser:
-            _open_browser(url)
+        print("SignalVault 已在运行，正在打开现有页面。")
+        print(f"访问地址：{url}")
+        if config.open_browser and not _open_browser(url):
+            logger.warning(
+                "Failed to reopen browser for existing instance; open manually: %s",
+                url,
+            )
+            print(f"无法自动打开浏览器，请手动访问：{url}", file=sys.stderr)
         # If user wants to open the existing instance, we are done
         return 0
 
@@ -443,10 +453,18 @@ def launch(config: LauncherConfig | None = None) -> int:
             f"(starting from {config.preferred_port})"
         )
         logger.error(msg)
-        print(f"SignalVault 无法启动：{msg}", file=sys.stderr)
+        print(
+            "SignalVault 无法启动：端口 "
+            f"{config.preferred_port}–{config.preferred_port + config.max_port_attempts - 1} "
+            "均被占用。\n请关闭占用端口的程序，或使用 --port 指定其他端口。\n"
+            f"日志位置：{log_path}",
+            file=sys.stderr,
+        )
         return 1
 
     logger.info("Selected port: %d", port)
+    if port != config.preferred_port:
+        print(f"端口 {config.preferred_port} 已被占用，改用 {port}。")
 
     # ── 3. Write PID file (preliminary) ───────────────────────────────────
     instance_id = uuid.uuid4().hex[:12]
@@ -495,13 +513,19 @@ def launch(config: LauncherConfig | None = None) -> int:
         except HealthTimeoutError as e:
             logger.error("Health check failed: %s", e)
             print(
-                f"SignalVault 无法启动。\n请查看日志：\n{_get_log_path()}",
+                "SignalVault 无法启动：本地服务未能就绪。\n"
+                "请稍后重试；如果仍然失败，请查看日志：\n"
+                f"{log_path}",
                 file=sys.stderr,
             )
             runner.request_shutdown()
             runner.wait(timeout=5.0)
             _remove_pid_file(pid_path)
             return 1
+
+        print("SignalVault 启动成功。")
+        print(f"访问地址：{url}")
+        print("按 Ctrl+C 停止服务；关闭浏览器不会停止服务。")
 
         # ── 6. Open browser ───────────────────────────────────────────────
         if config.open_browser:
@@ -533,6 +557,11 @@ def launch(config: LauncherConfig | None = None) -> int:
 
     except Exception:
         logger.exception("Unhandled exception in launcher")
+        print(
+            "SignalVault 无法启动。请确认数据目录可写后重试；"
+            f"详细信息见日志：{log_path}",
+            file=sys.stderr,
+        )
         runner.request_shutdown()
         runner.wait(timeout=5.0)
         return 1

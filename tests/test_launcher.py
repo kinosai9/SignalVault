@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import tempfile
+import threading
 import uuid
 from pathlib import Path
 from typing import Any
@@ -385,6 +387,110 @@ class TestLaunchHealthFailure:
 
 
 class TestBrowserBehavior:
+    def test_webbrowser_exception_is_converted_to_false(self):
+        with mock.patch.object(
+            launcher_mod.webbrowser, "open", side_effect=RuntimeError("browser unavailable")
+        ):
+            assert launcher_mod._webbrowser_open("http://127.0.0.1:8000") is False
+
+    def test_existing_instance_browser_failure_shows_manual_url(self, capsys):
+        """Browser failure while reusing an instance keeps it usable."""
+        path = _tmp_pid_file()
+        _write_pid_file(path, _make_record(pid=os.getpid(), port=9004))
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _process_exists=lambda pid: True,
+            _health_check=lambda host, port, timeout: {
+                "status": "ok",
+                "app": "signalvault",
+            },
+            _open_browser=lambda url: False,
+        )
+        try:
+            assert launch(LauncherConfig()) == 0
+            captured = capsys.readouterr()
+            assert "SignalVault 已在运行" in captured.out
+            assert "http://127.0.0.1:9004" in captured.out
+            assert "请手动访问：http://127.0.0.1:9004" in captured.err
+            assert path.exists()
+        finally:
+            _restore(saved)
+            _remove_pid_file(path)
+
+    def test_new_instance_browser_failure_keeps_service_until_signal(self, capsys):
+        path = _tmp_pid_file()
+        signal_sent = False
+
+        def stop_after_browser_failure(_seconds):
+            nonlocal signal_sent
+            if not signal_sent:
+                signal_sent = True
+                signal.raise_signal(signal.SIGINT)
+
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _port_in_use=lambda host, port: False,
+            _health_check=lambda host, port, timeout: {
+                "status": "ok",
+                "app": "signalvault",
+            },
+            _open_browser=lambda url: False,
+            _sleep=stop_after_browser_failure,
+        )
+        with (
+            mock.patch.object(launcher_mod, "_UvicornRunner") as mock_runner,
+            mock.patch.object(launcher_mod, "_configure_launcher_logging"),
+            mock.patch.object(launcher_mod, "_shutdown_background_tasks"),
+        ):
+            mock_runner.return_value._thread = mock.Mock()
+            mock_runner.return_value._thread.is_alive.return_value = True
+            try:
+                assert launch(LauncherConfig()) == 0
+            finally:
+                _restore(saved)
+
+        captured = capsys.readouterr()
+        assert "SignalVault 启动成功" in captured.out
+        assert "请手动访问：http://127.0.0.1:8000" in captured.err
+        assert mock_runner.return_value.request_shutdown.called
+        assert not path.exists()
+
+    def test_new_instance_browser_uses_selected_port(self):
+        path = _tmp_pid_file()
+        browser_hits: list[str] = []
+        signal_sent = False
+
+        def stop_after_open(_seconds):
+            nonlocal signal_sent
+            if not signal_sent:
+                signal_sent = True
+                signal.raise_signal(signal.SIGINT)
+
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _port_in_use=lambda host, port: port < 8003,
+            _health_check=lambda host, port, timeout: {
+                "status": "ok",
+                "app": "signalvault",
+            },
+            _open_browser=lambda url: browser_hits.append(url) or True,
+            _sleep=stop_after_open,
+        )
+        with (
+            mock.patch.object(launcher_mod, "_UvicornRunner") as mock_runner,
+            mock.patch.object(launcher_mod, "_configure_launcher_logging"),
+            mock.patch.object(launcher_mod, "_shutdown_background_tasks"),
+        ):
+            mock_runner.return_value._thread = mock.Mock()
+            mock_runner.return_value._thread.is_alive.return_value = True
+            try:
+                assert launch(LauncherConfig()) == 0
+            finally:
+                _restore(saved)
+
+        assert browser_hits == ["http://127.0.0.1:8003"]
+        assert not path.exists()
+
     def test_no_browser_flag(self):
         """--no-browser: launch exits 0, browser not called."""
         path = _tmp_pid_file()
@@ -418,12 +524,95 @@ class TestBrowserBehavior:
                     _remove_pid_file(path)
 
 
+class TestLauncherUserFeedback:
+    def test_port_fallback_and_success_are_visible(self, capsys):
+        path = _tmp_pid_file()
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _port_in_use=lambda host, port: port == 8000,
+            _health_check=lambda host, port, timeout: {
+                "status": "ok",
+                "app": "signalvault",
+            },
+            _sleep=lambda seconds: None,
+        )
+        with (
+            mock.patch.object(launcher_mod, "_UvicornRunner") as mock_runner,
+            mock.patch.object(launcher_mod, "_configure_launcher_logging"),
+            mock.patch.object(launcher_mod, "_shutdown_background_tasks"),
+        ):
+            mock_runner.return_value._thread = mock.Mock()
+            mock_runner.return_value._thread.is_alive.side_effect = [True, False, False]
+            try:
+                assert launch(LauncherConfig(open_browser=False)) == 0
+            finally:
+                _restore(saved)
+
+        captured = capsys.readouterr()
+        assert "SignalVault 正在启动" in captured.out
+        assert "端口 8000 已被占用，改用 8001" in captured.out
+        assert "SignalVault 启动成功" in captured.out
+        assert "访问地址：http://127.0.0.1:8001" in captured.out
+        assert "关闭浏览器不会停止服务" in captured.out
+
+    def test_all_ports_busy_shows_action_and_log(self, capsys):
+        path = _tmp_pid_file()
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _port_in_use=lambda host, port: True,
+        )
+        try:
+            assert launch(LauncherConfig(max_port_attempts=10)) == 1
+        finally:
+            _restore(saved)
+
+        captured = capsys.readouterr()
+        assert "端口 8000–8009 均被占用" in captured.err
+        assert "--port" in captured.err
+        assert "日志位置" in captured.err
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 18–20. Signal handling and PID cleanup
 # ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestSignalHandling:
+    @pytest.mark.parametrize("requested_signal", [signal.SIGINT, signal.SIGTERM])
+    def test_controlled_signal_exits_and_cleans_pid(self, requested_signal):
+        path = _tmp_pid_file()
+        signal_sent = False
+
+        def send_signal_once(_seconds):
+            nonlocal signal_sent
+            if not signal_sent:
+                signal_sent = True
+                signal.raise_signal(requested_signal)
+
+        saved = _inject(
+            _pid_file_path=lambda: path,
+            _port_in_use=lambda host, port: False,
+            _health_check=lambda host, port, timeout: {
+                "status": "ok",
+                "app": "signalvault",
+            },
+            _sleep=send_signal_once,
+        )
+        with (
+            mock.patch.object(launcher_mod, "_UvicornRunner") as mock_runner,
+            mock.patch.object(launcher_mod, "_configure_launcher_logging"),
+            mock.patch.object(launcher_mod, "_shutdown_background_tasks"),
+        ):
+            mock_runner.return_value._thread = mock.Mock()
+            mock_runner.return_value._thread.is_alive.return_value = True
+            try:
+                assert launch(LauncherConfig(open_browser=False)) == 0
+                assert mock_runner.return_value.request_shutdown.called
+            finally:
+                _restore(saved)
+
+        assert not path.exists()
+
     def test_launch_cleanup_on_server_thread_exit(self):
         """PID file is cleaned up after normal exit."""
         path = _tmp_pid_file()
@@ -550,6 +739,25 @@ class TestBackgroundShutdown:
         # After cleanup, threads list is empty and event IS set (one-shot)
         # The event stays set — subsequent shutdowns just re-set it.
         assert is_shutdown_requested() is True
+
+    def test_short_task_finishes_during_controlled_shutdown(self):
+        from signalvault.services import job_service
+
+        started = threading.Event()
+
+        def worker():
+            started.set()
+            job_service._shutdown_event.wait()
+
+        thread = threading.Thread(target=worker, name="short-qa-task")
+        thread.start()
+        assert started.wait(timeout=1.0)
+        job_service._register_thread(thread)
+
+        job_service.shutdown_background_jobs(timeout=1.0)
+
+        assert not thread.is_alive()
+        assert job_service._active_threads == []
 
 
 # ═══════════════════════════════════════════════════════════════════════════
