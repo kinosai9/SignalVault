@@ -15,6 +15,9 @@ def create_app() -> FastAPI:
         from signalvault.db.session import init_db
         init_db()
         yield
+        # M2: graceful shutdown of background threads
+        from signalvault.services.job_service import shutdown_background_jobs
+        shutdown_background_jobs(timeout=5.0)
 
     app = FastAPI(
         title="SignalVault 多源投资研究助手 API",

@@ -158,6 +158,45 @@ class AnalysisJob:
 _JOBS: dict[str, AnalysisJob] = {}
 _lock = threading.Lock()
 
+# ── M2: Graceful shutdown support ─────────────────────────────────────────
+_shutdown_event = threading.Event()
+_active_threads: list[threading.Thread] = []
+
+
+def is_shutdown_requested() -> bool:
+    """Return True if the launcher has requested background task shutdown."""
+    return _shutdown_event.is_set()
+
+
+def shutdown_background_jobs(timeout: float = 5.0) -> None:
+    """Signal all background threads to stop and wait for them to finish.
+
+    This is called from the FastAPI lifespan shutdown and the Launcher
+    exit path.  Threads should check ``is_shutdown_requested()`` at
+    reasonable boundaries.
+    """
+    _shutdown_event.set()
+    _log.info(
+        "Shutdown event set; waiting up to %.1fs for %d active thread(s)",
+        timeout, len(_active_threads),
+    )
+    deadline = _time.monotonic() + timeout
+    for t in list(_active_threads):
+        remaining = max(0.0, deadline - _time.monotonic())
+        if t.is_alive():
+            t.join(timeout=remaining)
+            if t.is_alive():
+                _log.warning("Thread %s did not exit within shutdown window", t.name)
+    _active_threads.clear()
+    _log.info("Background task shutdown complete")
+
+
+def _register_thread(t: threading.Thread) -> None:
+    """Register a background thread for shutdown tracking."""
+    _active_threads.append(t)
+    # Prune dead threads
+    _active_threads[:] = [th for th in _active_threads if th.is_alive()]
+
 
 def create_job(
     youtube_url: str,
@@ -1144,6 +1183,7 @@ def start_job(job: AnalysisJob, progress_callback: Callable | None = None) -> No
                                             report_id=report_id_for_wb)
 
     t = threading.Thread(target=_run, daemon=True)
+    _register_thread(t)
     t.start()
 
 
@@ -1198,6 +1238,7 @@ def start_sync_job(job: AnalysisJob) -> None:
                 _writeback_sync_result(job.report_id, status="failed", error=str(e))
 
     t = threading.Thread(target=_run, daemon=True)
+    _register_thread(t)
     t.start()
 
 
@@ -1480,4 +1521,5 @@ def start_channel_refresh_job(job: AnalysisJob) -> None:
                        message="频道视频列表获取失败，请稍后重试或检查频道链接。")
 
     t = threading.Thread(target=_run, daemon=True)
+    _register_thread(t)
     t.start()

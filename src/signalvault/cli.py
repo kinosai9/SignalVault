@@ -4198,6 +4198,39 @@ def serve(
     )
 
 
+@app.command("launch")
+def launch(
+    port: int = typer.Option(8000, "--port", help="首选本地端口（默认 8000）"),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="不自动打开浏览器"
+    ),
+    health_timeout: float = typer.Option(
+        15.0, "--health-timeout", help="健康检查超时（秒）"
+    ),
+    # --host is intentionally not exposed to the user.
+    # The launcher always binds 127.0.0.1.
+) -> None:
+    """桌面启动模式：管理实例生命周期、打开浏览器、优雅退出。
+
+    与 ``serve`` 不同，``launch`` 会：
+    - 检测已有实例（避免重复启动）
+    - 自动选择可用端口
+    - 等待服务健康后打开浏览器
+    - 处理 SIGINT/SIGTERM 优雅退出
+    - 总是绑定 127.0.0.1（不暴露局域网）
+    """
+    from signalvault.launcher import LauncherConfig
+    from signalvault.launcher import launch as run_launch
+
+    config = LauncherConfig(
+        preferred_port=port,
+        open_browser=not no_browser,
+        health_timeout=health_timeout,
+    )
+    exit_code = run_launch(config)
+    raise typer.Exit(code=exit_code)
+
+
 # ---------------------------------------------------------------------------
 # search 命令（P5-A：统一搜索）
 # ---------------------------------------------------------------------------
