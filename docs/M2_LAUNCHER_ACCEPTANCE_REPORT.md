@@ -436,7 +436,7 @@ health 成功前 server 线程退出 → 立即失败，不等待完整 health t
 
 ### Windows 实测
 
-（待人工执行）
+2026-07-21 已完成 Windows 人工验收与 Codex 聚焦复验。重复启动复用原 PID/端口，Ctrl+C 人工通过；冲突不覆盖 PID，服务提前退出返回非零。详细证据见 `docs/M2_WINDOWS_UX_QA_REPORT.md` 第 16 节。
 
 ### 剩余 macOS 门禁
 
@@ -454,11 +454,11 @@ health 成功前 server 线程退出 → 立即失败，不等待完整 health t
 | P0-1: Windows 重复启动识别 | ✅ 已修复（Win32 API + health-first 状态机） |
 | P0-2: 统一异常边界 | ✅ 已修复 |
 | P0-3: 服务提前退出判定 | ✅ 已修复 |
-| P1-4: Ctrl+C 人工验收 | ⏳ 待人工执行 |
+| P1-4: Ctrl+C 人工验收 | ✅ 已通过 |
 | 87 launcher tests 通过 | ✅ |
 | ruff 通过 | ✅ |
 | 全量无 M2-R 新回归 | ✅ |
-| Windows 实测 | ⏳ 待执行 |
+| Windows 实测 | ✅ 已通过 |
 | macOS 实机验证 | ⏳ 待执行 |
 
-**Windows 实测 + Ctrl+C 人工验收完成后可进入 M3-A Briefcase spike。macOS 实机验证是后续独立门禁。**
+**M2 已正式通过，可以进入 M3-A Briefcase spike。macOS Finder / Dock / Cmd+Q、Application Support 实际权限与 macOS 默认浏览器仍未验证；它们不阻塞 M3-A，但阻塞 M3 最终验收。**
