@@ -3,8 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+*.dist-info/
 dist/
 build/
+.briefcase/
 *.egg
 
 # Environment & secrets
