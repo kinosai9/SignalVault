@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "signalvault"
 version = "0.1.0"
 description = "SignalVault — 多源投资研究助手，结构化提取投资观点、标的、风险与信号"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "typer>=0.12,<0.27",
@@ -56,3 +58,32 @@ pythonpath = ["src"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+# ── M3-A: Briefcase Spike ──────────────────────────────────────────────────
+# Minimal configuration for macOS .app skeleton feasibility.
+# Does NOT imply: signing, notarization, DMG, auto-update, or release packaging.
+
+[tool.briefcase]
+project_name = "SignalVault"
+bundle = "com.kinosai.signalvault"
+version = "0.1.0"
+license = "MIT"
+license_files = ["LICENSE"]
+url = "https://github.com/kinosai9/SignalVault"
+author = "Kinosai"
+
+[tool.briefcase.app.signalvault]
+formal_name = "SignalVault"
+description = "多源投资研究助手"
+entry_point = "signalvault.app:main"
+sources = ["src/signalvault"]
+# requires is intentionally left empty so Briefcase reads from
+# [project.dependencies].  Do NOT duplicate the dependency list here.
+requires = []
+
+[tool.briefcase.app.signalvault.macOS]
+# macOS-specific: arm64 only, minimum macOS 12 (Monterey)
+requires = []
+universal_build = false
+arch = "arm64"
+min_os_version = "12.0"
