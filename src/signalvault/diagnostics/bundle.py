@@ -104,7 +104,36 @@ def redact_value(key: str, value: Any) -> Any:
         if len(value) > 1000:
             return value[:500] + "...[truncated]"
 
+        # Defense-in-depth: scan any remaining string value for key-like patterns
+        # regardless of key name. Catches secrets in error_detail, summary, etc.
+        if _string_contains_secret_pattern(value):
+            return "[REDACTED — secret pattern detected in value]"
+
     return value
+
+
+def _string_contains_secret_pattern(value: str) -> bool:
+    """Check if a string value contains patterns that look like API keys or tokens.
+
+    This is defense-in-depth: even if the key name doesn't match REDACT_KEYS,
+    we scan the value for obvious secret patterns.
+    """
+    import re
+
+    # Common API key prefixes (OpenAI, Anthropic, Google, etc.)
+    # Minimum lengths are kept low (12) to catch short test/mock keys
+    # while avoiding false positives on normal words.
+    key_prefixes = [
+        r'sk-[a-zA-Z0-9_-]{12,}',       # OpenAI / compatible
+        r'sk-proj-[a-zA-Z0-9_-]{12,}',  # OpenAI project key
+        r'sk-ant-[a-zA-Z0-9_-]{12,}',   # Anthropic
+        r'sk-or-[a-zA-Z0-9_-]{12,}',    # OpenRouter
+        r'AIza[0-9A-Za-z_-]{20,}',      # Google
+        r'Bearer\s+[a-zA-Z0-9._\-+=]{12,}',  # Bearer token
+        r'key-[a-zA-Z0-9_-]{12,}',      # Generic key- prefix
+        r'secret-[a-zA-Z0-9_-]{12,}',   # Secret prefix
+    ]
+    return any(re.search(pattern, value) for pattern in key_prefixes)
 
 
 def redact_dict(data: dict, depth: int = 0, max_depth: int = 10) -> dict:
@@ -208,6 +237,10 @@ class DiagnosticBundleBuilder:
                 "existence_keys": sorted(EXISTENCE_KEYS),
                 "max_value_length": MAX_VALUE_LENGTH,
             },
+            "runtime_status": self._get_runtime_status(),
+            "health": self._get_health_snapshot(),
+            "database_status": self._get_database_status(),
+            "paths": self._get_paths_snapshot(),
             "warnings": [],
         }
         self._add_file("manifest.json", to_json_safe(manifest))
@@ -456,6 +489,104 @@ class DiagnosticBundleBuilder:
     def _warn(self, msg: str) -> None:
         self._warnings.append(msg)
         logger.warning("Bundle warning: %s", msg)
+
+    # ── Manifest sub-collectors ──────────────────────────────────────────
+
+    @staticmethod
+    def _get_runtime_status() -> dict:
+        """Capture a lightweight runtime status snapshot."""
+        import os
+        import sys
+        import threading
+        return {
+            "pid": os.getpid(),
+            "python": sys.version.split()[0],
+            "platform": sys.platform,
+            "active_threads": threading.active_count(),
+            "daemon_threads": sum(1 for t in threading.enumerate() if t.daemon),
+        }
+
+    @staticmethod
+    def _get_health_snapshot() -> dict:
+        """Capture overall system health from DiagnosticsCenter."""
+        try:
+            from signalvault.diagnostics.summary import DiagnosticsCenter
+            summary = DiagnosticsCenter.get_summary()
+            return {
+                "overall_status": summary.overall_status,
+                "blocked_count": summary.blocked_count,
+                "attention_count": summary.attention_count,
+                "open_review_count": summary.open_review_count,
+                "recent_failure_count": len(summary.recent_failures),
+            }
+        except Exception:
+            return {"overall_status": "unknown", "error": "failed to collect health snapshot"}
+
+    @staticmethod
+    def _get_database_status() -> dict:
+        """Capture database existence, schema version, and table counts."""
+        import sqlite3
+        from pathlib import Path
+
+        try:
+            from signalvault.config import DB_PATH
+        except Exception:
+            DB_PATH = ""
+
+        db_info = {
+            "db_exists": False,
+            "db_path_configured": bool(DB_PATH),
+            "sqlite_version": sqlite3.sqlite_version,
+            "table_count": 0,
+            "schema_version": 0,
+            "file_size_bytes": 0,
+        }
+
+        if DB_PATH:
+            db_path = Path(DB_PATH)
+            db_info["db_exists"] = db_path.exists()
+            if db_path.exists():
+                db_info["file_size_bytes"] = db_path.stat().st_size
+                try:
+                    conn = sqlite3.connect(str(db_path))
+                    cur = conn.execute(
+                        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' "
+                        "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'fts_%_content' "
+                        "AND name NOT LIKE 'fts_%_idx'"
+                    )
+                    db_info["table_count"] = cur.fetchone()[0]
+                    # Read schema version if available
+                    try:
+                        cur2 = conn.execute("SELECT schema_version FROM _schema_version")
+                        row = cur2.fetchone()
+                        if row:
+                            db_info["schema_version"] = row[0]
+                    except Exception:
+                        pass
+                    conn.close()
+                except Exception:
+                    pass
+
+        return db_info
+
+    @staticmethod
+    def _get_paths_snapshot() -> dict:
+        """Capture app paths without revealing full user paths."""
+        from pathlib import Path
+
+        try:
+            from signalvault.settings.app_paths import AppPaths
+            paths = AppPaths.resolve()
+            return {
+                "data_dir_exists": Path(paths.data_dir).exists() if paths.data_dir else False,
+                "config_dir_exists": Path(paths.config_dir).exists() if paths.config_dir else False,
+                "log_dir_exists": Path(paths.log_dir).exists() if paths.log_dir else False,
+                "cache_dir_exists": Path(paths.cache_dir).exists() if paths.cache_dir else False,
+                "runtime_dir_exists": Path(paths.runtime_dir).exists() if paths.runtime_dir else False,
+                "db_in_data_dir": True,  # path itself is redacted to existence check
+            }
+        except Exception:
+            return {"error": "failed to collect paths snapshot"}
 
     @staticmethod
     def _get_version() -> str:

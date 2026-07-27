@@ -2,11 +2,87 @@
 {% block title %}{{ status_code }} — SignalVault{% endblock %}
 
 {% block content %}
-<div class="error-page">
-    <h2>{{ status_code }}</h2>
-    <p>{{ detail }}</p>
-    <p style="margin-top: 16px;">
-        <a href="/reports">返回报告库</a>
-    </p>
+<div class="error-page" style="max-width: 640px; margin: 40px auto; padding: 0 16px;">
+
+{% if status_code == 404 %}
+  {# ── 页面不存在 ── #}
+  <div class="card" style="text-align: center;">
+    <h2 style="font-size: 48px; margin: 0 0 8px;">&#128269;</h2>
+    <h2>页面未找到</h2>
+    <p>你要找的页面可能已被移动、删除，或地址输入有误。</p>
+    {% if detail %}<p style="color: #666;">{{ detail }}</p>{% endif %}
+    <div class="btn-group" style="margin-top: 20px; justify-content: center;">
+      <a href="/dashboard" class="btn btn-primary">返回变化雷达</a>
+      <a href="/search" class="btn btn-secondary">搜索知识库</a>
+      <a href="/sources/import/new" class="btn btn-secondary">导入资料</a>
+    </div>
+  </div>
+
+{% elif status_code == 403 %}
+  {# ── 无权限 / CSRF 失败 ── #}
+  <div class="card" style="text-align: center; border-color: #fd7e14;">
+    <h2 style="font-size: 48px; margin: 0 0 8px;">&#128274;</h2>
+    <h2>操作被拒绝</h2>
+    <p>出于安全原因，本次操作无法继续。</p>
+    <p style="color: #666; font-size: 13px;">可能原因：页面停留时间过长导致会话过期，或从非本地地址发起请求。</p>
+    {% if detail %}<p style="color: #856404; background: #fff3cd; padding: 8px 12px; border-radius: 4px;">{{ detail }}</p>{% endif %}
+    <div class="btn-group" style="margin-top: 20px; justify-content: center;">
+      <a href="/dashboard" class="btn btn-primary">返回变化雷达</a>
+      <a href="javascript:history.back()" class="btn btn-secondary">返回上一页</a>
+    </div>
+  </div>
+
+{% elif status_code == 500 %}
+  {# ── 内部错误 ── #}
+  <div class="card" style="text-align: center; border-color: #dc3545;">
+    <h2 style="font-size: 48px; margin: 0 0 8px;">&#9888;</h2>
+    <h2>服务暂时不可用</h2>
+    <p>SignalVault 遇到了一个内部错误。</p>
+    {% if detail %}<p style="color: #666;">{{ detail }}</p>{% endif %}
+
+    <div class="message-info" style="margin-top: 16px; text-align: left;">
+      <strong>你可以尝试：</strong>
+      <ol style="margin: 8px 0 0 16px; padding: 0;">
+        <li>刷新页面，看看问题是否消失</li>
+        <li>如果问题持续，导出诊断包发送给技术支持</li>
+        <li>查看日志文件了解详细错误信息</li>
+      </ol>
+      <p style="margin-top: 8px; font-size: 13px; color: #666;">日志位置通常在 SignalVault 数据目录下的 <code>logs/</code> 文件夹中。</p>
+    </div>
+
+    <div class="btn-group" style="margin-top: 20px; justify-content: center;">
+      <a href="/dashboard" class="btn btn-primary">返回变化雷达</a>
+      <a href="/tasks/diagnostics/export" class="btn btn-secondary">导出诊断包</a>
+      <a href="/tasks" class="btn btn-secondary">任务与诊断</a>
+    </div>
+  </div>
+
+{% elif status_code == 503 %}
+  {# ── 服务启动中 ── #}
+  <div class="card" style="text-align: center;">
+    <h2 style="font-size: 48px; margin: 0 0 8px;">&#9200;</h2>
+    <h2>服务正在启动</h2>
+    <p>SignalVault 正在初始化。请稍等几秒后刷新页面。</p>
+    {% if detail %}<p style="color: #666;">{{ detail }}</p>{% endif %}
+    <p style="color: #666; font-size: 13px;">如果长时间未恢复，请检查应用是否正常启动，或查看日志。</p>
+    <div class="btn-group" style="margin-top: 20px; justify-content: center;">
+      <a href="javascript:location.reload()" class="btn btn-primary">刷新页面</a>
+      <a href="/dashboard" class="btn btn-secondary">返回变化雷达</a>
+    </div>
+  </div>
+
+{% else %}
+  {# ── 通用错误 ── #}
+  <div class="card" style="text-align: center;">
+    <h2 style="font-size: 48px; margin: 0 0 8px;">&#10067;</h2>
+    <h2>出了点问题</h2>
+    <p>{% if detail %}{{ detail }}{% else %}SignalVault 遇到了一个未预期的状态。{% endif %}</p>
+    <div class="btn-group" style="margin-top: 20px; justify-content: center;">
+      <a href="/dashboard" class="btn btn-primary">返回变化雷达</a>
+      <a href="/tasks" class="btn btn-secondary">任务与诊断</a>
+    </div>
+  </div>
+{% endif %}
+
 </div>
 {% endblock %}
