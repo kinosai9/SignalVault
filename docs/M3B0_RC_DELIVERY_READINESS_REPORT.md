@@ -176,7 +176,22 @@ docs/
 - 已有 HTML 模板（除 error.html 和 about.html）
 - 已有测试（追加不修改）
 
-## 十、已知限制（M3-B0 范围外）
+## 十、版本号策略
+
+| 阶段 | 版本号 | 说明 |
+|------|--------|------|
+| 当前开发 | `0.1.0` | pyproject.toml |
+| RC 发布 | `0.1.0rc1` | PEP 440 pre-release，pip 原生识别 |
+| 正式发布 | `0.1.0` | 去掉 rc 后缀 |
+
+**版本读取路径**：
+- 正常（editable install / wheel）：`importlib.metadata.version("signalvault")` → 从 `.dist-info` 读
+- 回退（Briefcase bundle / 裸源码）：`__init__.py` 硬编码 fallback `"0.1.0"`
+- 已修复：fallback 从 `"0.1.0.dev0"` 改为 `"0.1.0"`，避免 Briefcase bundle 中显示 `.dev0`
+
+**RC 切版操作**：在 `pyproject.toml` 中将 `version = "0.1.0"` 改为 `version = "0.1.0rc1"`，同步更新 `__init__.py` fallback。
+
+## 十一、已知限制（M3-B0 范围外）
 
 1. **Splash screen**：macOS `.app` 双击后，用户在浏览器打开前看不到任何反馈。需在 M3-B1 实机验证后评估是否需要 splash screen
 2. **Web 错误页面未集成 P7-A Error Taxonomy**：error.html 现在是分场景模板，但尚未动态加载 ErrorCodeRegistry 中的结构化错误码和恢复建议
@@ -184,7 +199,7 @@ docs/
 4. **Quick_Start.pdf**：当前为 Markdown，PDF 版本需在正式发布前用 Pandoc/浏览器打印生成
 5. **Release_Notes.md**：需在正式 RC 发布前从 CHANGELOG.md 提取
 
-## 十一、是否具备进入 M3-B1
+## 十二、是否具备进入 M3-B1
 
 ### 进入条件检查
 
@@ -207,7 +222,7 @@ docs/
 
 所有 M3-B0 交付物已完成。没有阻断 M3-B1 进入的问题。
 
-## 十二、M3-B1 下一步
+## 十三、M3-B1 下一步
 
 M3-B1 需在 macOS 实机上执行：
 
