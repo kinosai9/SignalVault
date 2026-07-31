@@ -161,9 +161,16 @@ python -m signalvault launch
 python -m pip install -e ".[dev]"
 ```
 
-### macOS `.app`
+### 桌面应用打包
 
-macOS arm64、macOS 12+ 的 Briefcase 打包配置与 RC 用户交付准备已经完成，但 `.app` 尚未完成 macOS 实机生成、运行与发布验证。当前公开可用的安装方式仍是源码安装；不要把仓库中的打包配置视为已发布的桌面安装包。
+SignalVault 基于 [Briefcase](https://beeware.org/) 实验性地支持桌面应用打包：
+
+| 平台 | 打包状态 | 说明 |
+|------|----------|------|
+| **macOS** (.app) | 配置就绪，待实机验证 | arm64 / macOS 12+. 需真实 Mac 环境构建与测试。 |
+| **Windows** (.msi) | Spike 已完成，Runtime 待修复 | x86_64 / Windows 10+. `briefcase create/build/package` 全部通过，MSI 安装成功；运行时因嵌入式 Python 3.14.4 与系统 Python 3.14 的 `libffi` DLL 版本冲突，GUI stub 启动失败。详见 [`docs/M3-B2_WINDOWS_SPIKE_REPORT.md`](docs/M3-B2_WINDOWS_SPIKE_REPORT.md)。 |
+
+**当前唯一的生产安装方式仍是源码安装。** 不要把仓库中的打包配置视为已发布的桌面安装包。
 
 ## First Run Guide
 

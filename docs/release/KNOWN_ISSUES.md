@@ -78,11 +78,30 @@
 
 ## Windows 特定
 
-### 没有 Windows .app 等价物
+### Windows 桌面应用打包 (M3-B2 Spike)
 
-**影响**：Windows 版本的桌面启动体验（`.exe` / MSI 安装包）尚未进入开发阶段。
+**影响**：Windows 原生桌面启动（`.exe`）的 MSI 安装包已可生成（Briefcase 0.4.4），但 GUI stub 在 Python 3.14.4 嵌入式环境下存在间歇性启动失败。
 
-**当前状态**：Windows 用户需要通过命令行 `python -m signalvault launch` 启动。
+**当前状态**：
+- `briefcase create / build / package` — 通过 ✅
+- MSI 安装 — 通过 ✅ (45.92 MB, 安装至 `%LOCALAPPDATA%\Programs\Kinosai\SignalVault\`)
+- 应用代码 Windows 兼容 — 通过 ✅ (系统 Python + 已安装包验证)
+- Briefcase GUI stub 启动 — 不稳定 ❌ (`GUI-Stub-3.14-amd64-b11`, 退出码 1, 无日志)
+
+**技术细节**：
+- Briefcase 版本: 0.4.4
+- 嵌入式 Python: 3.14.4
+- Stub 二进制: `GUI-Stub-3.14-amd64-b11`
+- 应用层已验证: `signalvault.launcher.launch()` 通过系统 Python 正常运行，health check OK
+- 参考: [`docs/M3-B2_WINDOWS_SPIKE_REPORT.md`](../M3-B2_WINDOWS_SPIKE_REPORT.md)
+
+**临时运行方式**（需要系统 Python 3.14）：
+```powershell
+$env:PYTHONPATH = "$env:LOCALAPPDATA\Programs\Kinosai\SignalVault\app;$env:LOCALAPPDATA\Programs\Kinosai\SignalVault\app_packages"
+python -c "from signalvault.launcher import launch; launch()"
+```
+
+**计划**：调查 Briefcase stub 兼容性，或切换为自定义 Console 子系统启动器。
 
 ---
 

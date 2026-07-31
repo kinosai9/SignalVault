@@ -87,3 +87,9 @@ requires = []
 universal_build = false
 arch = "arm64"
 min_os_version = "12.0"
+
+[tool.briefcase.app.signalvault.Windows]
+# M3-B2: Windows packaging spike — minimal configuration
+# Does NOT imply: signing, MSI/installer, auto-update, or release packaging.
+requires = []
+description = "Multi-source Investment Research Assistant"
