@@ -7,10 +7,10 @@ SignalVault has moved from a YouTube/podcast transcript research tool to a multi
 Current verified collection count (2026-07-15):
 
 ```bash
-python -m pytest --collect-only -q  # 2013 tests collected
+python -m pytest --collect-only -q  # 2738 tests collected
 ```
 
-Backend/CLI capabilities through P7, the four frontend user flows, and the first SourceDocument/SourceSegment provenance layer are implemented. The active track is Release Engineering closeout:
+Backend/CLI capabilities through P7, the four frontend user flows, SourceDocument/SourceSegment provenance layer, and M4-A/B/C Research Asset Lifecycle are implemented. The active track is M4-D Product UX:
 
 - documentation and terminology alignment
 - repeatable test/lint/UI verification
@@ -50,12 +50,15 @@ See `docs/FRONTEND_EXPERIENCE_EXECUTION_PLAN.md`.
 | P6 | ZSXQ read-only subscription import + topic analysis | ✅ |
 | P7 | Error taxonomy, operation logs, diagnostics center, diagnostic bundle, recovery actions, CLI + Web integration | ✅ |
 | Provenance-1 | SourceDocument/SourceSegment schema, YouTube/PDF/ZSXQ/file hooks, report transcript, translation, search/graph query support | ✅ |
+| M4-A | Source Lifecycle: SourceItem + ProcessingJob models, migration, CRUD services | ✅ |
+| M4-B | Research Asset Pipeline: PipelineOrchestrator, ClaimExtractor, GraphSyncService, Search扩展 | ✅ |
+| M4-C | Automation: DesktopScheduler, JobConsumer, 自动化设置UI, 零新依赖 | ✅ |
 
 ## Active
 
 | Track | Description | Status |
 |---|---|---|
-| REL-1 | Release Engineering closeout: docs, packaging, regression, delivery checklist | In progress |
+| M4-D | Product UX: Intake 统一入口, 主导航重构, 用户反馈机制 | Planned |
 
 ## Implemented Frontend Phases
 

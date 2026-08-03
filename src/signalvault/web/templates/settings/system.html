@@ -144,74 +144,46 @@
   </table>
 </div>
 
-<!-- 自动化设置 (M3-C-3c) -->
+<!-- 自动化状态 (M4-C) -->
 <div class="card">
-  <h2>&#9881; 自动化设置</h2>
-  <form id="automation-form" action="/api/settings/automation" method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}" />
-    <table class="prop-table">
-      <tr>
-        <td><label for="auto_analysis_mode">自动分析模式</label></td>
-        <td>
-          <select id="auto_analysis_mode" name="auto_analysis_mode" style="width: 100%;">
-            <option value="off" {% if info.auto_analysis_mode == "off" %}selected{% endif %}>关闭（人工确认每个来源）</option>
-            <option value="high_value" {% if info.auto_analysis_mode == "high_value" %}selected{% endif %}>高价值来源（仅自动处理 YouTube 频道、PDF 等高质量来源）</option>
-            <option value="all" {% if info.auto_analysis_mode == "all" %}selected{% endif %}>全部来源（自动处理所有可识别来源）</option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>
-          <button type="submit" class="btn-primary">保存设置</button>
-          <span id="automation-status" style="margin-left: 1em;"></span>
-        </td>
-      </tr>
-    </table>
-  </form>
-  <details>
-    <summary>模式说明</summary>
-    <ul>
-      <li><strong>关闭</strong>：所有来源都需要人工在处理中心确认后才会归档或分析（默认，推荐新用户使用）</li>
-      <li><strong>高价值来源</strong>：YouTube 频道、PDF 文档等高质量来源自动归档，其他来源仍需人工确认</li>
-      <li><strong>全部来源</strong>：所有可识别的来源自动归档（适合有明确研究目标的资深用户）</li>
-    </ul>
-    <p style="color: #666; margin-top: 0.5em;">自动归档仅生成处理建议，不会立即调用 LLM 分析，可在处理中心查看并恢复。</p>
-  </details>
+  <h2>&#9881; 自动化</h2>
+  <table class="prop-table">
+    <tr>
+      <td>自动分析模式</td>
+      <td>
+        {% if info.auto_analysis_mode == "off" %}关闭{% elif info.auto_analysis_mode == "high_value" %}高价值来源{% elif info.auto_analysis_mode == "all" %}全部来源{% else %}{{ info.auto_analysis_mode }}{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>调度器</td>
+      <td><span id="scheduler-quick-status">—</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><a href="/settings/automation" class="btn-secondary">管理自动化设置 &#8594;</a></td>
+    </tr>
+  </table>
 </div>
 
 <script>
-// Handle automation form submission
-document.getElementById('automation-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const statusEl = document.getElementById('automation-status');
-  const btn = form.querySelector('button[type="submit"]');
-
-  btn.disabled = true;
-  statusEl.textContent = '保存中...';
-
+// Quick scheduler status poll
+(async () => {
   try {
-    const formData = new FormData(form);
-    const resp = await fetch(form.action, {
-      method: 'POST',
-      headers: {'X-CSRF-Token': formData.get('_csrf_token')},
-      body: formData
-    });
-
+    const resp = await fetch('/api/settings/automation');
     const data = await resp.json();
-    if (data.ok) {
-      statusEl.innerHTML = '<span style="color: green;">&#10003; 已保存</span>';
-    } else {
-      statusEl.innerHTML = `<span style="color: red;">&#10007; ${data.error || '保存失败'}</span>`;
+    if (data.ok && data.data?.scheduler) {
+      const s = data.data.scheduler;
+      const el = document.getElementById('scheduler-quick-status');
+      if (s.running && !s.paused) {
+        el.innerHTML = '<span style="color: green;">&#9989; 运行中</span>';
+      } else if (s.paused) {
+        el.innerHTML = '<span style="color: #d97706;">&#9888; 已暂停</span>';
+      } else {
+        el.innerHTML = '<span style="color: #999;">未启动</span>';
+      }
     }
-  } catch (err) {
-    statusEl.innerHTML = '<span style="color: red;">&#10007; 网络错误</span>';
-  } finally {
-    btn.disabled = false;
-    setTimeout(() => statusEl.textContent = '', 3000);
-  }
-});
+  } catch (e) {}
+})();
 </script>
 
 {% endblock %}

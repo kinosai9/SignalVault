@@ -21,6 +21,7 @@ class ConfigCategory(Enum):
     LOGGING = "logging"
     ANALYSIS = "analysis"
     INTEGRATIONS = "integrations"
+    AUTOMATION = "automation"
     META = "meta"
 
 
@@ -208,6 +209,62 @@ RUNTIME_SCHEMA: dict[str, ConfigItem] = {
         description="自动分析模式: off(关闭，默认) / high_value(仅高价值来源) / all(全部)",
         web_editable=True, restart_required=False,
         validator=lambda v: v in ("off", "high_value", "all"),
+    ),
+    # ── Automation (M4-C) ────────────────────────────────────────────────
+    "automation.enabled": ConfigItem(
+        key="automation.enabled",
+        type=bool, default=True,
+        category=ConfigCategory.AUTOMATION,
+        description="启用后台自动化调度（频道刷新、来源扫描、队列消费）",
+        web_editable=True, restart_required=True,
+    ),
+    "automation.channel_refresh_hours": ConfigItem(
+        key="automation.channel_refresh_hours",
+        type=int, default=24,
+        category=ConfigCategory.AUTOMATION,
+        description="频道自动刷新间隔（小时）",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, int) and 1 <= v <= 168,
+    ),
+    "automation.tracked_source_scan_minutes": ConfigItem(
+        key="automation.tracked_source_scan_minutes",
+        type=int, default=60,
+        category=ConfigCategory.AUTOMATION,
+        description="跟踪信息来源扫描间隔（分钟）",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, int) and 5 <= v <= 1440,
+    ),
+    "automation.daily_llm_budget": ConfigItem(
+        key="automation.daily_llm_budget",
+        type=int, default=10,
+        category=ConfigCategory.AUTOMATION,
+        description="每日 LLM 调用次数上限（0=不限）",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, int) and v >= 0,
+    ),
+    "automation.quiet_hours_start": ConfigItem(
+        key="automation.quiet_hours_start",
+        type=str, default="23:00",
+        category=ConfigCategory.AUTOMATION,
+        description="静默时段开始（HH:MM），此时间段内暂停自动化任务",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, str) and len(v) == 5 and ":" in v,
+    ),
+    "automation.quiet_hours_end": ConfigItem(
+        key="automation.quiet_hours_end",
+        type=str, default="07:00",
+        category=ConfigCategory.AUTOMATION,
+        description="静默时段结束（HH:MM）",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, str) and len(v) == 5 and ":" in v,
+    ),
+    "automation.queue_poll_seconds": ConfigItem(
+        key="automation.queue_poll_seconds",
+        type=int, default=60,
+        category=ConfigCategory.AUTOMATION,
+        description="处理队列轮询间隔（秒）",
+        web_editable=True, restart_required=False,
+        validator=lambda v: isinstance(v, int) and 10 <= v <= 600,
     ),
     # ── Integrations ─────────────────────────────────────────────────────
     "integrations.zsxq_cli_path": ConfigItem(

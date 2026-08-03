@@ -407,13 +407,66 @@ async def api_update_obsidian_settings(request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Automation settings (M3-C-3c)
+# Automation settings (M3-C-3c → M4-C expanded)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+_AUTOMATION_FIELDS = {
+    "auto_analysis_mode": ("intake.auto_analysis_mode", str, "off"),
+    "automation_enabled": ("automation.enabled", bool, True),
+    "channel_refresh_hours": ("automation.channel_refresh_hours", int, 24),
+    "tracked_source_scan_minutes": ("automation.tracked_source_scan_minutes", int, 60),
+    "daily_llm_budget": ("automation.daily_llm_budget", int, 10),
+    "quiet_hours_start": ("automation.quiet_hours_start", str, "23:00"),
+    "quiet_hours_end": ("automation.quiet_hours_end", str, "07:00"),
+    "queue_poll_seconds": ("automation.queue_poll_seconds", int, 60),
+}
+
+_AUTOMATION_VALIDATORS = {
+    "auto_analysis_mode": lambda v: v in ("off", "high_value", "all"),
+    "channel_refresh_hours": lambda v: isinstance(v, int) and 1 <= v <= 168,
+    "tracked_source_scan_minutes": lambda v: isinstance(v, int) and 5 <= v <= 1440,
+    "daily_llm_budget": lambda v: isinstance(v, int) and v >= 0,
+    "quiet_hours_start": lambda v: isinstance(v, str) and len(v) == 5 and ":" in v,
+    "quiet_hours_end": lambda v: isinstance(v, str) and len(v) == 5 and ":" in v,
+    "queue_poll_seconds": lambda v: isinstance(v, int) and 10 <= v <= 600,
+}
+
+
+@router.get("/api/settings/automation")
+async def get_automation_settings(request: Request):
+    """Read automation configuration and scheduler status."""
+    from signalvault.settings.service import get_config_service
+
+    svc = get_config_service()
+    config: dict[str, object] = {}
+
+    for field_name, (config_key, _type, _default) in _AUTOMATION_FIELDS.items():
+        if _type is bool:
+            config[field_name] = svc.get_bool(config_key)
+        elif _type is int:
+            config[field_name] = svc.get_int(config_key)
+        else:
+            config[field_name] = svc.get_string(config_key)
+
+    # Add scheduler status
+    scheduler_status: dict[str, object] = {"running": False, "paused": False}
+    try:
+        from signalvault.services.desktop_scheduler import get_desktop_scheduler
+        scheduler = get_desktop_scheduler()
+        scheduler_status = scheduler.get_status()
+    except Exception:
+        pass
+
+    return _ok({"config": config, "scheduler": scheduler_status})
 
 
 @router.post("/api/settings/automation")
 async def update_automation_settings(request: Request):
-    """Update automation settings (auto_analysis_mode). CSRF-protected."""
+    """Update automation settings. CSRF-protected.
+
+    Accepts any subset of automation fields plus auto_analysis_mode.
+    After saving, reloads scheduler intervals if scheduler is running.
+    """
     csrf_err = _csrf_guard(request)
     if csrf_err is not None:
         return csrf_err
@@ -423,15 +476,78 @@ async def update_automation_settings(request: Request):
     except Exception:
         return _err("Invalid JSON body")
 
-    mode = body.get("auto_analysis_mode", "off")
-    if mode not in ("off", "high_value", "all"):
-        return _err("auto_analysis_mode 必须是 off / high_value / all")
+    from signalvault.settings.service import get_config_service
+
+    svc = get_config_service()
+    updated: list[str] = []
+    errors: list[str] = []
+
+    for field_name, value in body.items():
+        if field_name not in _AUTOMATION_FIELDS:
+            continue
+
+        config_key, _type, _default = _AUTOMATION_FIELDS[field_name]
+
+        # Validate
+        validator = _AUTOMATION_VALIDATORS.get(field_name)
+        if validator and not validator(value):
+            errors.append(f"{field_name} 值无效: {value}")
+            continue
+
+        try:
+            svc.set_user_value(config_key, _type(value))
+            updated.append(field_name)
+        except Exception as e:
+            errors.append(f"{field_name}: {e}")
+
+    # Reload scheduler intervals if running
+    if updated:
+        try:
+            from signalvault.services.desktop_scheduler import get_desktop_scheduler
+            scheduler = get_desktop_scheduler()
+            if scheduler.is_running:
+                scheduler.reload_intervals()
+                if "daily_llm_budget" in updated:
+                    scheduler._refresh_budget_config()
+        except Exception:
+            pass
+
+    if errors and not updated:
+        return _err("; ".join(errors))
+
+    return _ok({
+        "updated": updated,
+        "errors": errors if errors else None,
+    })
+
+
+@router.post("/api/settings/automation/scheduler/pause")
+async def pause_scheduler(request: Request):
+    """Pause the desktop scheduler."""
+    csrf_err = _csrf_guard(request)
+    if csrf_err is not None:
+        return csrf_err
 
     try:
-        from signalvault.settings.service import get_config_service
-        svc = get_config_service()
-        svc.set_user_value("intake.auto_analysis_mode", mode)
-        return _ok({"auto_analysis_mode": mode})
+        from signalvault.services.desktop_scheduler import get_desktop_scheduler
+        scheduler = get_desktop_scheduler()
+        scheduler.pause()
+        return _ok({"paused": True})
     except Exception as e:
-        logger.exception("Failed to update automation settings")
-        return _err(f"保存失败: {e}")
+        return _err(f"暂停失败: {e}")
+
+
+@router.post("/api/settings/automation/scheduler/resume")
+async def resume_scheduler(request: Request):
+    """Resume the desktop scheduler."""
+    csrf_err = _csrf_guard(request)
+    if csrf_err is not None:
+        return csrf_err
+
+    try:
+        from signalvault.services.desktop_scheduler import get_desktop_scheduler
+        scheduler = get_desktop_scheduler()
+        scheduler.resume()
+        return _ok({"paused": False})
+    except Exception as e:
+        return _err(f"恢复失败: {e}")

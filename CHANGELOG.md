@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### M4-C: Automation (2026-08-03)
+
+**Desktop Scheduler** (`services/desktop_scheduler.py`)：
+- 后台 daemon 线程轮询循环：可配置 tick 间隔（默认 30s）
+- 周期任务注册表：{task_id: {fn, interval_seconds, last_run, enabled}}
+- 三层门禁：automation.enabled → 每日 LLM 预算 → 静默时段（HH:MM 窗口）
+- BudgetTracker：每日 LLM 调用计数（0=无限制），午夜自动重置
+- 生命周期管理：start() / stop() / pause() / resume()
+- 状态查询：get_status() → {running, paused, tasks, budget}
+- 启动恢复：自动重设 stuck "running" ProcessingJobs → "pending"
+- 零外部依赖：纯 threading + time，与现有 job_service.py 模式一致
+
+**Job Consumer** (`services/job_consumer.py`)：
+- 消费 ProcessingJob 队列：按优先级取 pending job → 门禁检查 → PipelineOrchestrator 执行
+- 预算/静默门禁：超预算或处于静默时段时跳过
+- 执行调度：analyze → PipelineOrchestrator.run()；sync_graph → GraphSyncService 直调；extract_claims → ClaimExtractor 直调
+- 失败重试：retry_count < max_retries 时自动 reset_for_retry
+- 批量消费：consume_batch(max_n)
+
+**三个预注册周期任务**：
+- 队列消费：每 60s（`automation.queue_poll_seconds` 可配置 10-600s）
+- 频道自动刷新：每 24h（`automation.channel_refresh_hours` 可配置 1-168h），遍历活跃 Channel 调用 `start_channel_refresh_job()`
+- 信息来源扫描：每 1h（`automation.tracked_source_scan_minutes` 可配置 5-1440min），遍历 enabled TrackedSource 调用 `refresh_tracked_source()`
+
+**自动化配置与 UI**：
+- Settings schema：新增 `ConfigCategory.AUTOMATION` + 7 个 ConfigItem（enabled/channel_refresh_hours/tracked_source_scan_minutes/daily_llm_budget/quiet_hours_start/quiet_hours_end/queue_poll_seconds）
+- API：GET/POST `/api/settings/automation` + POST pause/resume 端点
+- 新页面：`/settings/automation` — 调度器状态、任务列表、预算面板、完整配置表单
+- 导航：settings 导航栏新增"自动化"标签
+- 系统页：`/settings/system` 自动化状态卡片（含调度器实时状态轮询）
+- App 集成：FastAPI lifespan startup 启动调度器，shutdown 停止
+
+**技术决策**：
+- 零新依赖：纯 stdlib threading — 桌面应用不需要 cron 精度，符合现有架构风格
+- 所有间隔实时可调：配置变更后 `reload_intervals()` 即时生效
+- 调度器可在运行中暂停/恢复：不影响已注册任务状态
+
+**测试覆盖**：
+- 新增 38 个 M4-C 专项测试（25 DesktopScheduler + 13 JobConsumer）
+- BudgetTracker：初始状态、限额调整、消耗递减、无限制模式、日期重置、状态查询
+- 静默时段：过夜窗口活跃/非活跃、同日窗口、无效格式容错
+- 调度器生命周期：启动/停止/暂停/恢复/幂等/安全停止
+- 任务管理：注册/启禁/注销/执行/暂停阻塞/异常捕获
+- 消费者：三层门禁、队列空处理、job type 分发、错误处理、重试耗尽边界
+
 ### M4-B: Research Asset Pipeline (2026-08-03)
 
 **Pipeline Orchestrator** (`services/pipeline_orchestrator.py`)：

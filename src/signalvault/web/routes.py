@@ -5838,6 +5838,38 @@ async def settings_system_page(request: Request):
     return _render_settings("system.html", request, info=info, nav_current="system")
 
 
+@router.get("/settings/automation", response_class=HTMLResponse)
+async def settings_automation_page(request: Request):
+    """Automation settings page — scheduler status, config, budget."""
+    from signalvault.settings.service import get_config_service
+
+    svc = get_config_service()
+    config = {
+        "auto_analysis_mode": svc.get_string("intake.auto_analysis_mode") or "off",
+        "automation_enabled": svc.get_bool("automation.enabled") is not False,
+        "channel_refresh_hours": svc.get_int("automation.channel_refresh_hours") or 24,
+        "tracked_source_scan_minutes": svc.get_int("automation.tracked_source_scan_minutes") or 60,
+        "daily_llm_budget": svc.get_int("automation.daily_llm_budget") or 10,
+        "quiet_hours_start": svc.get_string("automation.quiet_hours_start") or "23:00",
+        "quiet_hours_end": svc.get_string("automation.quiet_hours_end") or "07:00",
+        "queue_poll_seconds": svc.get_int("automation.queue_poll_seconds") or 60,
+    }
+
+    scheduler_status = {"running": False, "paused": False, "tasks": {}, "tick_seconds": 30, "budget": {}}
+    try:
+        from signalvault.services.desktop_scheduler import get_desktop_scheduler
+        scheduler = get_desktop_scheduler()
+        scheduler_status = scheduler.get_status()
+    except Exception:
+        pass
+
+    return _render_settings(
+        "automation.html", request,
+        config=config, scheduler=scheduler_status,
+        nav_current="automation",
+    )
+
+
 @router.get("/settings/about", response_class=HTMLResponse)
 async def settings_about_page(request: Request):
     """About page — version, license, diagnostics entry."""

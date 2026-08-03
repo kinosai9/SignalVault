@@ -23,17 +23,16 @@ def client():
 
 
 def test_settings_system_shows_automation_card(client: TestClient) -> None:
-    """/settings/system 展示"自动化设置"卡片，包含三档开关。"""
+    """/settings/system 展示自动化状态卡片（M4-C：卡片含状态指示和跳转链接）。"""
     resp = client.get("/settings/system")
     assert resp.status_code == 200
-    # 卡片标题
-    assert "自动化设置" in resp.text
-    # 三档选项
-    assert 'value="off"' in resp.text
-    assert 'value="high_value"' in resp.text
-    assert 'value="all"' in resp.text
-    # 下拉框或选择器
-    assert 'name="auto_analysis_mode"' in resp.text
+    # 卡片标题（M4-C 改为"自动化"）
+    assert "自动化" in resp.text
+    # 三档标签仍显示当前模式
+    content = resp.text
+    assert ("关闭" in content or "高价值来源" in content or "全部来源" in content)
+    # 链接到独立自动化设置页面
+    assert "/settings/automation" in resp.text
 
 
 def test_settings_system_shows_current_mode(client: TestClient) -> None:

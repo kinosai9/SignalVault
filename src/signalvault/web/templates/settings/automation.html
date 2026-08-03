@@ -1,0 +1,270 @@
+{% extends "settings/base.html" %}
+
+{% block title %}自动化 — SignalVault{% endblock %}
+
+{% block breadcrumb_tail %}
+  <span aria-hidden="true">›</span>
+  <a href="/settings/automation">自动化</a>
+{% endblock %}
+
+{% block page_title %}自动化设置{% endblock %}
+{% block page_description %}配置后台自动刷新、来源扫描和分析调度。{% endblock %}
+
+{% block settings_content %}
+<div class="card">
+  <h2>&#x1F504; 调度器状态</h2>
+  <table class="prop-table">
+    <tr>
+      <td>状态</td>
+      <td>
+        <span id="scheduler-running-status">
+        {% if scheduler.running %}
+          {% if scheduler.paused %}
+            <span class="badge badge-warning">已暂停</span>
+          {% else %}
+            <span class="badge badge-ok">运行中</span>
+          {% endif %}
+        {% else %}
+          <span class="badge badge-off">未启动</span>
+        {% endif %}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td>调度间隔</td>
+      <td>每 {{ scheduler.tick_seconds }} 秒</td>
+    </tr>
+    <tr>
+      <td>控制</td>
+      <td>
+        {% if scheduler.running and not scheduler.paused %}
+        <button id="btn-pause" class="btn-secondary" onclick="togglePause(true)">暂停调度</button>
+        {% elif scheduler.paused %}
+        <button id="btn-resume" class="btn-primary" onclick="togglePause(false)">恢复调度</button>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>&#x1F4CB; 已注册任务</h2>
+  {% if scheduler.tasks %}
+  <table class="prop-table">
+    <thead>
+      <tr><th>任务</th><th>状态</th><th>间隔</th><th>上次执行</th><th>下次执行</th></tr>
+    </thead>
+    <tbody>
+      {% for tid, tdef in scheduler.tasks.items() %}
+      <tr>
+        <td>
+          {% if tid == "consume_queue" %}处理队列消费{% elif tid == "refresh_channels" %}频道自动刷新{% elif tid == "scan_tracked_sources" %}信息来源扫描{% else %}{{ tid }}{% endif %}
+        </td>
+        <td>{% if tdef.enabled %}&#9989; 启用{% else %}&#10060; 禁用{% endif %}</td>
+        <td>{% if tdef.interval_seconds >= 3600 %}{{ (tdef.interval_seconds / 3600) | round(1) }} 小时{% elif tdef.interval_seconds >= 60 %}{{ (tdef.interval_seconds / 60) | int }} 分钟{% else %}{{ tdef.interval_seconds }} 秒{% endif %}</td>
+        <td>{{ tdef.last_run or "尚未执行" }}</td>
+        <td>{{ tdef.next_run }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">暂无注册任务。调度器启动后会自动注册。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>&#x1F4CA; LLM 预算</h2>
+  <table class="prop-table">
+    <tr>
+      <td>每日上限</td>
+      <td>{% if scheduler.budget.daily_limit == 0 %}无限制{% else %}{{ scheduler.budget.daily_limit }} 次{% endif %}</td>
+    </tr>
+    <tr>
+      <td>今日已用</td>
+      <td>{{ scheduler.budget.used_today }} 次</td>
+    </tr>
+    <tr>
+      <td>今日剩余</td>
+      <td>
+        {% if scheduler.budget.remaining > 10000 %}
+          无限制
+        {% else %}
+          {{ scheduler.budget.remaining }} 次
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>&#x2699; 自动化配置</h2>
+  <form id="automation-form" action="/api/settings/automation" method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}" />
+    <table class="prop-table">
+      <tr>
+        <td><label for="auto_analysis_mode">自动分析模式</label></td>
+        <td>
+          <select id="auto_analysis_mode" name="auto_analysis_mode" style="width: 100%;">
+            <option value="off" {% if config.auto_analysis_mode == "off" %}selected{% endif %}>关闭（人工确认每个来源）</option>
+            <option value="high_value" {% if config.auto_analysis_mode == "high_value" %}selected{% endif %}>高价值来源（仅自动处理高质量来源）</option>
+            <option value="all" {% if config.auto_analysis_mode == "all" %}selected{% endif %}>全部来源（自动处理所有可识别来源）</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="automation_enabled">启用后台自动化</label></td>
+        <td>
+          <label class="switch">
+            <input type="checkbox" id="automation_enabled" name="automation_enabled"
+                   {% if config.automation_enabled is not defined or config.automation_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+          <span class="hint">关闭后所有定时任务停止（需重启生效）</span>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="channel_refresh_hours">频道刷新间隔（小时）</label></td>
+        <td>
+          <input type="number" id="channel_refresh_hours" name="channel_refresh_hours"
+                 value="{{ config.channel_refresh_hours or 24 }}" min="1" max="168" style="width: 8em;">
+          <span class="hint">1–168 小时</span>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="tracked_source_scan_minutes">信息来源扫描间隔（分钟）</label></td>
+        <td>
+          <input type="number" id="tracked_source_scan_minutes" name="tracked_source_scan_minutes"
+                 value="{{ config.tracked_source_scan_minutes or 60 }}" min="5" max="1440" style="width: 8em;">
+          <span class="hint">5–1440 分钟</span>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="daily_llm_budget">每日 LLM 调用预算</label></td>
+        <td>
+          <input type="number" id="daily_llm_budget" name="daily_llm_budget"
+                 value="{{ config.daily_llm_budget or 10 }}" min="0" style="width: 8em;">
+          <span class="hint">0 = 不限制</span>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="queue_poll_seconds">队列轮询间隔（秒）</label></td>
+        <td>
+          <input type="number" id="queue_poll_seconds" name="queue_poll_seconds"
+                 value="{{ config.queue_poll_seconds or 60 }}" min="10" max="600" style="width: 8em;">
+          <span class="hint">10–600 秒</span>
+        </td>
+      </tr>
+      <tr>
+        <td><label>静默时段</label></td>
+        <td>
+          <input type="text" id="quiet_hours_start" name="quiet_hours_start"
+                 value="{{ config.quiet_hours_start or '23:00' }}" maxlength="5" style="width: 5em;"
+                 placeholder="23:00">
+          <span>—</span>
+          <input type="text" id="quiet_hours_end" name="quiet_hours_end"
+                 value="{{ config.quiet_hours_end or '07:00' }}" maxlength="5" style="width: 5em;"
+                 placeholder="07:00">
+          <span class="hint">格式 HH:MM，此间暂停自动化任务</span>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>
+          <button type="submit" class="btn-primary">保存配置</button>
+          <span id="automation-status" style="margin-left: 1em;"></span>
+        </td>
+      </tr>
+    </table>
+  </form>
+  <details>
+    <summary>模式说明</summary>
+    <ul>
+      <li><strong>关闭</strong>：所有来源都需要人工在处理中心确认后才会归档或分析（默认，推荐新用户使用）</li>
+      <li><strong>高价值来源</strong>：YouTube 频道、PDF 文档等高质量来源自动归档，其他来源仍需人工确认</li>
+      <li><strong>全部来源</strong>：所有可识别的来源自动归档（适合有明确研究目标的资深用户）</li>
+    </ul>
+    <p style="color: #666; margin-top: 0.5em;">自动归档仅生成处理建议，不会立即调用 LLM 分析，可在处理中心查看并恢复。</p>
+  </details>
+</div>
+
+<script>
+// Handle automation config form submission
+document.getElementById('automation-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const statusEl = document.getElementById('automation-status');
+  const btn = form.querySelector('button[type="submit"]');
+
+  btn.disabled = true;
+  statusEl.textContent = '保存中...';
+
+  const formData = new FormData(form);
+  const body = {};
+  for (const [key, val] of formData.entries()) {
+    if (key === '_csrf_token') continue;
+    // Convert booleans and integers
+    if (key === 'automation_enabled') {
+      body[key] = form.querySelector(`#${key}`)?.checked === true;
+    } else if (['channel_refresh_hours', 'tracked_source_scan_minutes', 'daily_llm_budget', 'queue_poll_seconds'].includes(key)) {
+      body[key] = parseInt(val, 10) || 0;
+    } else {
+      body[key] = val;
+    }
+  }
+
+  try {
+    const resp = await fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': formData.get('_csrf_token'),
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+    if (data.ok) {
+      statusEl.innerHTML = '<span style="color: green;">&#10003; 已保存</span>';
+      if (data.data?.errors?.length) {
+        statusEl.innerHTML += `<span style="color: #d97706;"> (部分字段保存失败: ${data.data.errors.join(', ')})</span>`;
+      }
+    } else {
+      statusEl.innerHTML = `<span style="color: red;">&#10007; ${data.error || '保存失败'}</span>`;
+    }
+  } catch (err) {
+    statusEl.innerHTML = '<span style="color: red;">&#10007; 网络错误</span>';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => statusEl.textContent = '', 5000);
+  }
+});
+
+// Scheduler pause/resume controls
+async function togglePause(shouldPause) {
+  const csrfToken = document.querySelector('input[name="_csrf_token"]')?.value || '';
+  const action = shouldPause ? 'pause' : 'resume';
+  const btn = document.getElementById(shouldPause ? 'btn-pause' : 'btn-resume');
+  if (btn) btn.disabled = true;
+
+  try {
+    const resp = await fetch(`/api/settings/automation/scheduler/${action}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+    });
+
+    const data = await resp.json();
+    if (data.ok) {
+      // Reload to reflect new status
+      location.reload();
+    } else {
+      alert((shouldPause ? '暂停' : '恢复') + '失败: ' + (data.error || '未知错误'));
+    }
+  } catch (err) {
+    alert('请求失败');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}
