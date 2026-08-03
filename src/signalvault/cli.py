@@ -4374,9 +4374,9 @@ def mcp_serve(
     console.print("  Transport: stdio")
     console.print(f"  Database: {resolved_db}")
     console.print("  Mode: read-only")
-    console.print("  Tools: 8 (search_reports, get_report, list_channels, "
-                 "search_entities, get_entity_profile, list_investment_views, "
-                 "list_tracking_signals, list_review_items)")
+    from signalvault.mcp_server.tools import TOOLS as _MCP_TOOLS
+    _tool_names = ", ".join(t.name for t in _MCP_TOOLS)
+    console.print(f"  Tools: {len(_MCP_TOOLS)} ({_tool_names})")
     console.print("[dim]等待 MCP 客户端连接...[/dim]", file=sys.stderr)
 
     from signalvault.mcp_server import run_mcp_server

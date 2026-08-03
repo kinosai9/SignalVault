@@ -33,12 +33,29 @@ def _get_vault_path() -> str:
 
 
 def _redirect_vault_required(message: str) -> RedirectResponse:
-    """Redirect to Obsidian setup page when vault path is missing or invalid."""
+    """Redirect to Obsidian settings page when vault path is missing or invalid.
+
+    M3-C-1: 目标从一次性首配向导(/setup/obsidian)改为设置中心(/settings/obsidian)。
+    vault 缺失是长期使用中的日常故障，不应弹回首配向导。
+    """
     from urllib.parse import quote
     return RedirectResponse(
-        url=f"/setup/obsidian?msg=error:{quote(message)}",
+        url=f"/settings/obsidian?msg=error:{quote(message)}",
         status_code=303,
     )
+
+
+def _needs_onboarding() -> bool:
+    """True when the first-run wizard should still be shown (M3-C-1).
+
+    Wraps onboarding_service so /setup/* GET handlers can guard against
+    already-configured users re-entering the one-time wizard.
+    """
+    try:
+        from signalvault.services.onboarding_service import should_enter_onboarding
+        return should_enter_onboarding()
+    except Exception:
+        return False
 
 
 def _flash(request: Request) -> dict:
@@ -973,6 +990,8 @@ def _render_setup_obsidian(
 
 @router.get("/setup/welcome", response_class=HTMLResponse)
 async def setup_welcome_page(request: Request):
+    if not _needs_onboarding():
+        return RedirectResponse(url="/settings", status_code=303)
     return _render_setup("welcome.html", request, current_step=1)
 
 
@@ -1003,6 +1022,8 @@ async def setup_skip_all(request: Request):
 
 @router.get("/setup/ai", response_class=HTMLResponse)
 async def setup_ai_page(request: Request):
+    if not _needs_onboarding():
+        return RedirectResponse(url="/settings", status_code=303)
     return _render_setup_ai(request)
 
 
@@ -1087,6 +1108,8 @@ async def setup_ai_test(request: Request):
 
 @router.get("/setup/obsidian", response_class=HTMLResponse)
 async def setup_obsidian_page(request: Request):
+    if not _needs_onboarding():
+        return RedirectResponse(url="/settings", status_code=303)
     return _render_setup_obsidian(request)
 
 
@@ -1248,6 +1271,8 @@ async def setup_obsidian_repair(request: Request):
 
 @router.get("/setup/complete", response_class=HTMLResponse)
 async def setup_complete_page(request: Request):
+    if not _needs_onboarding():
+        return RedirectResponse(url="/settings", status_code=303)
     from signalvault.services.onboarding_service import get_completion_summary
 
     return _render_setup(
@@ -1809,25 +1834,188 @@ def action_watchlist_remove(request: Request, item_type: str = Form(...), name: 
 
 @router.get("/content/new")
 def page_content_new(request: Request):
-    """P2-K.1: Add new content form page."""
-    vault_path_str = _get_vault_path()
-    ctx = {"request": request, "vault_configured": bool(vault_path_str)}
-    ctx.update(_flash(request))
+    """M3-C-2c: 旧 YouTube 表单页已收敛到 Universal Intake 唯一入口。"""
+    return RedirectResponse(url="/intake", status_code=301)
 
-    # Load watchlist topics as focus suggestions
-    focus_suggestions = ["AI Agents", "Enterprise AI", "AI Infrastructure",
-                         "Semiconductor", "AI Applications", "Business Model"]
-    if vault_path_str:
-        vp = Path(vault_path_str)
-        try:
-            from signalvault.workspace.watchlist import load_watchlist
-            config = load_watchlist(vp)
-            if config.topics:
-                focus_suggestions = config.topics[:6]
-        except Exception:
-            pass
-    ctx["focus_suggestions"] = focus_suggestions
-    return _render("content_new.html", ctx)
+
+# ── M3-C-2c: Universal Intake（唯一用户入口） ──────────────────────────────
+
+
+@router.get("/intake", response_class=HTMLResponse)
+def page_intake(request: Request):
+    """Universal Intake 入口页：粘贴链接或上传文件，系统自动识别处理。"""
+    ctx = {"request": request}
+    ctx.update(_flash(request))
+    ctx["recent"] = _recent_intake_items()
+    return _render("intake.html", ctx)
+
+
+@router.get("/intake/resolve", response_class=HTMLResponse)
+def intake_resolve(request: Request, query: str = ""):
+    """识别用户输入并给出处理路径（detect → route → handler 映射）。"""
+    raw = (query or "").strip()
+    if not raw:
+        return RedirectResponse(url="/intake", status_code=303)
+    from signalvault.services.intake_orchestrator import orchestrate_intake
+
+    result = orchestrate_intake(raw)
+    return _render(
+        "intake_result.html",
+        {"request": request, "result": _intake_result_view(result)},
+    )
+
+
+# ── M3-C-2c: Intake helpers ─────────────────────────────────────────────────
+
+
+_DETECTED_KIND_LABELS = {
+    "youtube_video": "YouTube 视频",
+    "youtube_channel": "YouTube 频道",
+    "web_url": "网页",
+    "pdf_file": "PDF 文档",
+    "docx_file": "DOCX 文档",
+    "text_file": "文本文件",
+    "unknown": "未识别",
+}
+
+
+def _intake_result_view(result) -> dict:
+    """把 IntakeResult 转成模板友好的 dict。"""
+    from signalvault.services.intake_orchestrator import handler_label
+
+    kind_value = result.detection.kind.value
+    return {
+        "kind_label": _DETECTED_KIND_LABELS.get(kind_value, kind_value),
+        "confidence_percent": int(result.detection.confidence * 100),
+        "handler_label": handler_label(result.handler),
+        "handler": result.handler,
+        "source_value": result.detection.source_value,
+        "routing": result.routing,
+    }
+
+
+def _recent_intake_items(limit: int = 5) -> list[dict]:
+    """最近处理的项目（从 jobs 表），用于 intake 入口的「最近处理」区。"""
+    try:
+        from signalvault.db.models import Job
+
+        session = _get_session()
+        jobs = session.query(Job).order_by(Job.created_at.desc()).limit(limit).all()
+        items: list[dict] = []
+        for j in jobs:
+            status = (j.status or "").lower()
+            if status in ("completed", "success", "done"):
+                icon, detail = "✓", "已生成研究报告"
+            elif status in ("running", "processing"):
+                icon, detail = "⋯", "分析中"
+            elif status in ("pending", "queued"):
+                icon, detail = "·", "排队中"
+            else:
+                icon, detail = "·", status or "已处理"
+            items.append(
+                {
+                    "title": j.title or j.job_type or "未命名",
+                    "detail": detail,
+                    "icon": icon,
+                }
+            )
+        return items
+    except Exception:
+        return []
+
+
+# ── M3-C-3: 处理中心（自动化可解释入口） ────────────────────────────────────
+
+
+_PROCESSING_STATUS_LABELS = {
+    "pending_preview": "待确认",
+    "preview_failed": "预览失败",
+    "confirmed_archive": "已归档",
+    "confirmed_deep_notes": "已导入笔记",
+    "confirmed_derived_only": "已导入独立笔记",
+    "confirmed_linked": "已关联",
+    "skipped": "已跳过",
+    "expired": "已过期",
+    "overwritten": "已覆盖",
+    "auto_archived": "自动归档",
+    "auto_ignored": "自动忽略",
+}
+_RESTORABLE_STATUSES = frozenset({"auto_ignored", "skipped", "expired"})
+
+
+@router.get("/processing", response_class=HTMLResponse)
+def page_processing(request: Request):
+    """处理中心：自动/人工处理的可解释入口（已完成/待确认/已忽略 + 原因 + 恢复）。"""
+    from signalvault.sources.ingest_jobs import IngestJobManager
+
+    counts = IngestJobManager.count_by_status()
+    done = sum(
+        counts.get(s, 0)
+        for s in (
+            "auto_archived",
+            "confirmed_archive",
+            "confirmed_deep_notes",
+            "confirmed_derived_only",
+            "confirmed_linked",
+            "overwritten",
+        )
+    )
+    pending = sum(counts.get(s, 0) for s in ("pending_preview", "preview_failed"))
+    ignored = sum(counts.get(s, 0) for s in ("auto_ignored", "skipped", "expired"))
+    jobs = IngestJobManager.list_jobs(limit=30)
+    from signalvault.settings.service import get_config_service
+    auto_mode = str(get_config_service().get("intake.auto_analysis_mode"))
+    ctx = {
+        "request": request,
+        "done": done,
+        "pending": pending,
+        "ignored": ignored,
+        "jobs": jobs,
+        "status_labels": _PROCESSING_STATUS_LABELS,
+        "restorable_statuses": _RESTORABLE_STATUSES,
+        "auto_mode": auto_mode,
+    }
+    ctx.update(_flash(request))
+    return _render("processing.html", ctx)
+
+
+@router.post("/processing/{job_id}/restore")
+def processing_restore(job_id: int):
+    """恢复被忽略/跳过/过期的 job 到待确认（用户撤销自动决策）。"""
+    from signalvault.sources.ingest_jobs import IngestJobManager
+
+    IngestJobManager.restore_job(job_id)
+    return RedirectResponse(
+        url="/processing?msg=success:已恢复到待确认", status_code=303
+    )
+
+
+@router.post("/processing/auto-mode")
+def processing_set_auto_mode(mode: str = Form("off")):
+    """M3-C-3c: 保存自动分析模式（off / high_value / all）。"""
+    from signalvault.settings.service import get_config_service
+
+    if mode not in ("off", "high_value", "all"):
+        mode = "off"
+    get_config_service().set_user_value("intake.auto_analysis_mode", mode)
+    return RedirectResponse(
+        url=f"/processing?msg=success:自动分析模式已设为 {mode}", status_code=303
+    )
+
+
+@router.post("/processing/auto-process")
+def processing_auto_process():
+    """M3-C-3c: 按当前自动分析模式，自动处理待确认的来源。"""
+    from signalvault.services.intake_orchestrator import auto_process_pending
+    from signalvault.settings.service import get_config_service
+
+    auto_mode = str(get_config_service().get("intake.auto_analysis_mode"))
+    stats = auto_process_pending(auto_mode)
+    msg = (
+        f"自动处理完成：归档 {stats['auto_archived']}，"
+        f"忽略 {stats['auto_ignored']}，保留人工 {stats['kept_manual']}"
+    )
+    return RedirectResponse(url=f"/processing?msg=success:{msg}", status_code=303)
 
 
 @router.post("/content/analyze")
@@ -4985,14 +5173,15 @@ async def action_source_file_preview(
 
     # ── Validate extension early ────────────────────────────────────────
     from signalvault.sources.file_profile import (
+        ALL_ACCEPTED_EXTENSIONS,
         ALLOWED_PDF_EXTENSIONS,
-        ALLOWED_TEXT_EXTENSIONS,
         UNSUPPORTED_MESSAGE,
     )
 
     ext = Path(file.filename).suffix.lower()
     is_pdf = ext in ALLOWED_PDF_EXTENSIONS
-    if ext not in ALLOWED_TEXT_EXTENSIONS and not is_pdf:
+    # M3-C-2a: 放行 .docx（含在 ALL_ACCEPTED_EXTENSIONS）
+    if ext not in ALL_ACCEPTED_EXTENSIONS:
         return RedirectResponse(
             url=f"/sources/files/import?msg=error:{UNSUPPORTED_MESSAGE}", status_code=303,
         )
@@ -5429,12 +5618,22 @@ def _get_ai_view():
 
 @router.get("/settings/obsidian", response_class=HTMLResponse)
 async def settings_obsidian_page(request: Request):
-    """Obsidian integration configuration page."""
+    """Obsidian integration configuration page.
+
+    M3-C-1: 接受 ?msg=error:... 闪现（_redirect_vault_required 改指向本页后，
+    vault 缺失的日常故障引导到此而非首配向导）。
+    """
     from signalvault.services.obsidian_settings_service import (
         get_obsidian_settings_view,
     )
     view = get_obsidian_settings_view()
-    return _render_settings("obsidian.html", request, view=view, nav_current="obsidian")
+    flash = _flash(request)
+    kwargs: dict = {"view": view, "nav_current": "obsidian"}
+    if flash.get("flash_type") == "error":
+        kwargs["error"] = flash.get("flash_msg", "")
+    elif flash.get("flash_type") == "success":
+        kwargs["message"] = flash.get("flash_msg", "")
+    return _render_settings("obsidian.html", request, **kwargs)
 
 
 @router.post("/settings/obsidian", response_class=HTMLResponse)

@@ -38,14 +38,14 @@
             <div class="nav-label">每日工作</div>
             <nav class="side-nav" aria-label="每日工作导航">
                 <a href="/dashboard"{% if current == '/dashboard' %} class="active"{% endif %}>变化雷达</a>
+                <a href="/intake"{% if current.startswith('/intake') %} class="active"{% endif %}>添加信息</a>
                 <a href="/watchlist"{% if current.startswith('/watchlist') %} class="active"{% endif %}>我的关注</a>
                 <a href="/search"{% if current == '/search' %} class="active"{% endif %}>知识搜索</a>
             </nav>
 
             <div class="nav-label">资料与资产</div>
             <nav class="side-nav" aria-label="资料与资产导航">
-                <a href="/sources/import/new"{% if current == '/sources/import/new' %} class="active"{% endif %}>导入中心</a>
-                <a href="/sources"{% if current == '/sources' %} class="active"{% endif %}>信息源工作台</a>
+                <a href="/sources"{% if current == '/sources' or current.startswith('/sources/') %} class="active"{% endif %}>信息源工作台</a>
                 <a href="/reports"{% if current.startswith('/reports') %} class="active"{% endif %}>报告库</a>
             </nav>
 
@@ -53,12 +53,8 @@
             <nav class="side-nav side-nav-secondary" aria-label="配置中心导航">
                 <a href="/settings"{% if current.startswith('/settings') %} class="active"{% endif %}>系统与集成</a>
                 <a href="/tasks"{% if current.startswith('/tasks') or current.startswith('/content/jobs') or current.startswith('/sync/jobs') %} class="active"{% endif %}>任务与诊断</a>
+                <a href="/processing"{% if current.startswith('/processing') %} class="active"{% endif %}>处理中心</a>
                 <a href="/docs"{% if current.startswith('/docs') %} class="active"{% endif %}>API</a>
-                <a href="/sources/channels"{% if current == '/sources/channels' or current.startswith('/sources/channels/') %} class="active"{% endif %}>YouTube</a>
-                <a href="/sources/import"{% if current == '/sources/import' %} class="active"{% endif %}>网页</a>
-                <a href="/sources/tracked"{% if current.startswith('/sources/tracked') %} class="active"{% endif %}>固定源</a>
-                <a href="/sources/files/import"{% if current.startswith('/sources/files') %} class="active"{% endif %}>文件 / PDF</a>
-                <a href="/sources/zsxq"{% if current.startswith('/sources/zsxq') %} class="active"{% endif %}>知识星球</a>
             </nav>
         </aside>
 

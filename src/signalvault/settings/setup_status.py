@@ -82,13 +82,18 @@ class SetupStatus:
         *,
         vault_path: str = "",
         manifest_path: str = "",
+        onboarding_completed: bool = False,
     ) -> "SetupStatus":
         """Compute status from observable facts.
 
         No ConfigService dependency — callers pass pre-resolved values.
         This keeps the model testable without mocking the full config stack.
+
+        M3-C-1: onboarding_completed drives wizard_completed / needs_onboarding,
+        replacing the previous dead field that evaluate() never set.
         """
         status = SetupStatus()
+        status.wizard_completed = onboarding_completed
 
         # System
         status.system_initialized = True  # process is running = initialized

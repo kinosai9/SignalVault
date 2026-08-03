@@ -138,7 +138,7 @@ def _unified_search_like(
     pattern = f"%{keyword}%"
     results: list[UnifiedSearchResult] = []
     seen: set[str] = set()
-    types = set(result_types) if result_types else {"report", "investment_view", "tracking_signal", "entity"}
+    types = set(result_types) if result_types else {"report", "investment_view", "tracking_signal", "entity", "source_document", "claim"}
 
     kw_lower = keyword.lower()
 
@@ -379,7 +379,47 @@ def _unified_search_like(
                 _dedup_key=key,
             ))
 
-    # 6. Source Segments (by text content)
+    # 6. Claims (M4-B: search core investment judgments)
+    if "claim" in types:
+        from signalvault.db.models import Claim
+        rows = (
+            session.query(Claim)
+            .filter(
+                or_(
+                    Claim.claim_text.like(pattern),
+                    Claim.source_quote.like(pattern),
+                )
+            )
+            .order_by(Claim.created_at.desc())
+            .limit(limit * 2)
+            .all()
+        )
+        for claim in rows:
+            key = f"claim:{claim.id}"
+            if key in seen:
+                continue
+            seen.add(key)
+            snippet = _clean_snippet(claim.claim_text, keyword)
+            results.append(UnifiedSearchResult(
+                result_type="claim",
+                title=claim.claim_text[:120],
+                snippet=snippet,
+                relevance_score=0.25 * claim.confidence,
+                matched_fields=["claim_text"],
+                report_id=claim.source_report_id,
+                source_quote=(claim.source_quote or "")[:200],
+                timestamp=claim.timestamp or "",
+                page_number=claim.evidence_page,
+                metadata={
+                    "claim_id": claim.id,
+                    "claim_type": claim.claim_type,
+                    "confidence": claim.confidence,
+                    "confidence_source": claim.confidence_source,
+                },
+                _dedup_key=key,
+            ))
+
+    # 7. Source Segments (by text content)
     if "source_segment" in types:
         from signalvault.db.models import SourceDocument as SD
         from signalvault.db.models import SourceSegment as SS
@@ -473,7 +513,7 @@ def _unified_search_fts(
     """FTS5-based unified search. Returns None if FTS is unavailable."""
     from signalvault.db.fts import search_fts
 
-    types = set(result_types) if result_types else {"report", "investment_view", "tracking_signal", "entity"}
+    types = set(result_types) if result_types else {"report", "investment_view", "tracking_signal", "entity", "source_document", "claim"}
     if "report" not in types:
         # FTS currently only indexes reports — fall through to LIKE for other types
         return None

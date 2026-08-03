@@ -63,6 +63,10 @@ def extract_text_from_uploaded_file(
             quality_warnings=[f"无法读取文件: {e}"],
         )
 
+    # M3-C-2a: DOCX 是二进制(zip)格式，必须走专用解析器，不能文本解码
+    if ext == ".docx":
+        return _extract_docx(file_path, content_hash, ext, original_filename)
+
     try:
         text = raw_bytes.decode(detected_encoding)
     except (UnicodeDecodeError, LookupError):
@@ -387,5 +391,83 @@ def _extract_html_regex_fallback(
         content_hash=content_hash, extension=ext,
         blocks_count=blocks_count,
         excerpt=excerpt,
+        parse_quality="good",
+    )
+
+
+def _extract_docx(
+    file_path: Path,
+    content_hash: str,
+    ext: str,
+    original_filename: str,
+) -> ExtractedFileContent:
+    """Extract text from DOCX (.docx) using python-docx (M3-C-2a).
+
+    DOCX is a binary (zip) format — must NOT go through text decoding.
+    Extracts paragraphs and table cell text.
+    """
+    try:
+        from docx import Document
+        doc = Document(str(file_path))
+    except ImportError:
+        return ExtractedFileContent(
+            content_hash=content_hash,
+            extension=ext,
+            parse_quality="minimal",
+            quality_warnings=["python-docx 未安装，无法解析 DOCX。"],
+        )
+    except Exception as e:
+        return ExtractedFileContent(
+            content_hash=content_hash,
+            extension=ext,
+            parse_quality="minimal",
+            quality_warnings=[f"无法解析 DOCX: {e}"],
+        )
+
+    paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    table_lines: list[str] = []
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [c.text.strip() for c in row.cells if c.text.strip()]
+            if cells:
+                table_lines.append(" | ".join(cells))
+
+    title = paragraphs[0][:200] if paragraphs else ""
+    if not title:
+        stem = Path(original_filename).stem
+        title = stem.replace("_", " ").replace("-", " ").strip()[:200]
+
+    sections: list[str] = []
+    if paragraphs:
+        sections.append("\n".join(paragraphs))
+    if table_lines:
+        sections.append("\n## 表格\n")
+        sections.append("\n".join(table_lines))
+
+    text = "\n\n".join(sections)
+    blocks_count = len(paragraphs) + len(table_lines)
+    excerpt = text[:500]
+    text_length = len(text)
+
+    if text_length < 50:
+        return ExtractedFileContent(
+            text=text, title=title, encoding="binary",
+            content_hash=content_hash, extension=ext,
+            blocks_count=blocks_count, excerpt=excerpt,
+            parse_quality="minimal",
+            quality_warnings=["DOCX 文本内容过短。"],
+        )
+    if text_length < 200:
+        return ExtractedFileContent(
+            text=text, title=title, encoding="binary",
+            content_hash=content_hash, extension=ext,
+            blocks_count=blocks_count, excerpt=excerpt,
+            parse_quality="degraded",
+            quality_warnings=["DOCX 文本内容较短（不足 200 字）。"],
+        )
+    return ExtractedFileContent(
+        text=text, title=title, encoding="binary",
+        content_hash=content_hash, extension=ext,
+        blocks_count=blocks_count, excerpt=excerpt,
         parse_quality="good",
     )

@@ -418,6 +418,9 @@ class TestDashboardIntegration:
 
     def test_dashboard_shows_sources_link(self, api_client):
         """Dashboard nav should have '信息源' link pointing to /sources."""
+        # M3-C-1: /dashboard 有 onboarding 守卫，测试需标记已完成以进入日常视图。
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
         resp = api_client.get("/dashboard")
         assert resp.status_code == 200
         html = resp.text

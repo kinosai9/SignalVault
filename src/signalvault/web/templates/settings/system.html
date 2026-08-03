@@ -108,6 +108,30 @@
   </table>
 </div>
 
+<!-- 数据健康 (M3-C-0.5) -->
+<div class="card">
+  <h2>&#129658; 数据健康</h2>
+  <table class="prop-table">
+    <tr>
+      <td>完整性检查</td>
+      <td>{{ info.db_integrity_status }}
+        {% if info.db_integrity_detail %}<span class="path-type">{{ info.db_integrity_detail }}</span>{% endif %}
+      </td>
+    </tr>
+    <tr><td>最新备份</td><td>{{ info.db_last_backup_at }}</td></tr>
+    <tr><td>备份份数</td><td>{{ info.db_backup_count }} / {{ info.db_backup_max }}（自动滚动保留）</td></tr>
+  </table>
+
+  <h3>数据统计</h3>
+  <table class="prop-table">
+    <tr><td>报告</td><td>{{ info.stat_reports }}</td></tr>
+    <tr><td>投资观点</td><td>{{ info.stat_investment_views }}</td></tr>
+    <tr><td>跟踪信号</td><td>{{ info.stat_tracking_signals }}</td></tr>
+    <tr><td>实体</td><td>{{ info.stat_entities }}</td></tr>
+    <tr><td>原文文档</td><td>{{ info.stat_source_documents }}</td></tr>
+  </table>
+</div>
+
 <!-- 服务 -->
 <div class="card">
   <h2>&#127760; 服务</h2>
@@ -119,5 +143,75 @@
     <tr><td>自动重载</td><td>{% if info.web_reload %}已开启（开发模式）{% else %}已关闭{% endif %}</td></tr>
   </table>
 </div>
+
+<!-- 自动化设置 (M3-C-3c) -->
+<div class="card">
+  <h2>&#9881; 自动化设置</h2>
+  <form id="automation-form" action="/api/settings/automation" method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}" />
+    <table class="prop-table">
+      <tr>
+        <td><label for="auto_analysis_mode">自动分析模式</label></td>
+        <td>
+          <select id="auto_analysis_mode" name="auto_analysis_mode" style="width: 100%;">
+            <option value="off" {% if info.auto_analysis_mode == "off" %}selected{% endif %}>关闭（人工确认每个来源）</option>
+            <option value="high_value" {% if info.auto_analysis_mode == "high_value" %}selected{% endif %}>高价值来源（仅自动处理 YouTube 频道、PDF 等高质量来源）</option>
+            <option value="all" {% if info.auto_analysis_mode == "all" %}selected{% endif %}>全部来源（自动处理所有可识别来源）</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>
+          <button type="submit" class="btn-primary">保存设置</button>
+          <span id="automation-status" style="margin-left: 1em;"></span>
+        </td>
+      </tr>
+    </table>
+  </form>
+  <details>
+    <summary>模式说明</summary>
+    <ul>
+      <li><strong>关闭</strong>：所有来源都需要人工在处理中心确认后才会归档或分析（默认，推荐新用户使用）</li>
+      <li><strong>高价值来源</strong>：YouTube 频道、PDF 文档等高质量来源自动归档，其他来源仍需人工确认</li>
+      <li><strong>全部来源</strong>：所有可识别的来源自动归档（适合有明确研究目标的资深用户）</li>
+    </ul>
+    <p style="color: #666; margin-top: 0.5em;">自动归档仅生成处理建议，不会立即调用 LLM 分析，可在处理中心查看并恢复。</p>
+  </details>
+</div>
+
+<script>
+// Handle automation form submission
+document.getElementById('automation-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const statusEl = document.getElementById('automation-status');
+  const btn = form.querySelector('button[type="submit"]');
+
+  btn.disabled = true;
+  statusEl.textContent = '保存中...';
+
+  try {
+    const formData = new FormData(form);
+    const resp = await fetch(form.action, {
+      method: 'POST',
+      headers: {'X-CSRF-Token': formData.get('_csrf_token')},
+      body: formData
+    });
+
+    const data = await resp.json();
+    if (data.ok) {
+      statusEl.innerHTML = '<span style="color: green;">&#10003; 已保存</span>';
+    } else {
+      statusEl.innerHTML = `<span style="color: red;">&#10007; ${data.error || '保存失败'}</span>`;
+    }
+  } catch (err) {
+    statusEl.innerHTML = '<span style="color: red;">&#10007; 网络错误</span>';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => statusEl.textContent = '', 3000);
+  }
+});
+</script>
 
 {% endblock %}

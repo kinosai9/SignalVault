@@ -10,6 +10,9 @@ class SubtitleSegment(BaseModel):
     start_time: str
     end_time: str
     text: str
+    # M3-C-2b: 可选追溯元数据（page/file/url/source）。向后兼容——pipeline 不读此字段，
+    # 旧代码不传 metadata 仍正常工作。由 segment_builders 填充，供证据链/原文层使用。
+    metadata: dict[str, str] = Field(default_factory=dict)
 
 
 class Evidence(BaseModel):

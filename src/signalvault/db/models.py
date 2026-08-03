@@ -271,6 +271,10 @@ class IngestJob(Base):
     result_message: Mapped[str] = mapped_column(Text, default="")
     error_message: Mapped[str] = mapped_column(Text, default="")
 
+    # M3-C-3: auto-processing traceability (处理中心可解释性)
+    reason: Mapped[str] = mapped_column(String(500), default="")  # 自动决策理由
+    is_auto: Mapped[bool] = mapped_column(Boolean, default=False)  # 人工 vs 自动
+
     # References
     tracked_source_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tracked_entry_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -531,3 +535,125 @@ class SchemaVersion(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     description: Mapped[str] = mapped_column(String(200), default="")
     applied_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# M4-A: Source Lifecycle 统一
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class SourceItem(Base):
+    """M4-A: 信息源对象 - 表示"这个信息是什么"
+
+    统一管理所有来源（YouTube/PDF/网页/文件/RSS等），
+    作为 Research Asset Lifecycle 的起点。
+    """
+
+    __tablename__ = "source_items"
+
+    # 基础标识
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_type: Mapped[str] = mapped_column(String(50), nullable=False)  # youtube_video / pdf_document / web_page / text_file
+    source_uri: Mapped[str] = mapped_column(String(1000), nullable=False)  # URL / 文件路径
+
+    # 内容元数据
+    title: Mapped[str] = mapped_column(String(500), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    extra_metadata: Mapped[str] = mapped_column("metadata", Text, default="")  # JSON（列名保留 metadata，属性名避开保留字）
+
+    # 内容追踪
+    content_hash: Mapped[str] = mapped_column(String(64), default="")
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    provenance: Mapped[str] = mapped_column(String(100), default="")  # user_intake / auto_discover / refresh
+
+    # 状态管理
+    status: Mapped[str] = mapped_column(String(30), default="captured")  # captured / processing / processed / archived / failed
+
+    # 关联
+    source_document_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # 用户反馈
+    user_rating: Mapped[str] = mapped_column(String(20), default="")  # valuable / neutral / irrelevant
+    user_notes: Mapped[str] = mapped_column(Text, default="")
+
+    # 时间戳
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class ProcessingJob(Base):
+    """M4-A: 处理任务 - 表示"系统要对它执行什么处理"
+
+    管理 extract_text / OCR / analyze / summarize / embed / sync_graph 等任务。
+    支持优先级、重试、成本统计。
+    """
+
+    __tablename__ = "processing_jobs"
+
+    # 基础标识
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_item_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # 任务定义
+    job_type: Mapped[str] = mapped_column(String(30), nullable=False)  # extract_text / OCR / analyze / summarize / embed / sync_graph
+    priority: Mapped[int] = mapped_column(Integer, default=5)  # 0-9, 越高越优先
+
+    # 参数
+    params: Mapped[str] = mapped_column(Text, default="")  # JSON
+
+    # 状态管理
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending / running / completed / failed / cancelled
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # 结果
+    result_type: Mapped[str] = mapped_column(String(30), default="")  # research_asset / error
+    result_ref: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 关联的 ResearchAsset ID
+    error_message: Mapped[str] = mapped_column(Text, default="")
+
+    # 成本统计
+    llm_calls: Mapped[int] = mapped_column(Integer, default=0)
+    tokens_used: Mapped[int] = mapped_column(Integer, default=0)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
+
+    # 重试
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, default=3)
+
+    # 时间戳
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Claim(Base):
+    """M4-B: 核心判断层 - 投资研究的核心是判断，而非报告
+
+    从 Report/View/Signal 提取核心判断陈述，
+    支持 Claim Graph（supports / contradicts 关系）。
+    """
+
+    __tablename__ = "claims"
+
+    # 基础标识
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # 判断内容
+    claim_text: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_type: Mapped[str] = mapped_column(String(20), default="prediction")  # fact / prediction / opinion
+
+    # 置信度
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)  # 0.0-1.0
+    confidence_source: Mapped[str] = mapped_column(String(20), default="")  # speaker / llm / system
+
+    # 来源追溯
+    source_report_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_view_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_quote: Mapped[str] = mapped_column(Text, default="")
+    timestamp: Mapped[str] = mapped_column(String(20), default="")
+    evidence_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # 支持证据
+    supporting_sources: Mapped[str] = mapped_column(Text, default="")  # JSON array of source_doc_ids
+
+    # 时间戳
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

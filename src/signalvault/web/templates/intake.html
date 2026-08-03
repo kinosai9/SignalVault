@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}添加信息 — SignalVault{% endblock %}
+
+{% block content %}
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<section class="intake-hero">
+  <h1 class="page-title">添加信息</h1>
+  <p class="page-desc">粘贴链接或上传文件，系统会自动识别类型并选择处理方式。无需选择「导入 PDF」还是「导入网页」。</p>
+
+  <div class="section-card intake-card">
+    <form method="get" action="/intake/resolve" class="intake-form">
+      <div class="form-group">
+        <label class="form-label" for="query">粘贴链接</label>
+        <input type="text" id="query" name="query" class="form-input"
+               placeholder="YouTube 链接、网页链接…" required autofocus>
+        <p class="form-help">支持 YouTube 视频 / 网页链接。系统会自动判断。</p>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-action">识别并处理</button>
+      </div>
+    </form>
+
+    <div class="intake-or"><span>或</span></div>
+
+    <a href="/sources/files/import" class="intake-file-link">
+      <span class="intake-file-icon">&#11014;</span>
+      <span>拖入或选择文件</span>
+      <span class="form-help">PDF / DOCX / Markdown / TXT / HTML</span>
+    </a>
+  </div>
+
+  <div class="intake-supports">
+    <span class="form-help">支持：</span>
+    <span class="badge">PDF</span>
+    <span class="badge">DOCX</span>
+    <span class="badge">Markdown</span>
+    <span class="badge">网页</span>
+    <span class="badge">YouTube</span>
+  </div>
+</section>
+
+{% if recent %}
+<section class="section-card intake-recent">
+  <h2 class="card-title">最近处理</h2>
+  <ul class="intake-recent-list">
+    {% for item in recent %}
+    <li class="intake-recent-item">
+      <span class="intake-recent-icon">{{ item.icon }}</span>
+      <div class="intake-recent-body">
+        <div class="intake-recent-title">{{ item.title }}</div>
+        <div class="form-help">{{ item.detail }}</div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

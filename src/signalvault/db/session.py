@@ -1,3 +1,6 @@
+import contextlib
+import logging
+import shutil
 from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
@@ -8,16 +11,105 @@ from signalvault.db.models import Base
 
 _engine = None
 _SessionLocal = None
+# Actual DB path bound to the current engine. Tracked so that init_db can
+# back up the right file even when init_engine was called earlier with a
+# different path (e.g. a test fixture).
+_current_db_path: str | None = None
+
+logger = logging.getLogger(__name__)
+
+# ── Schema versioning & data-upgrade protection (M3-C-0) ─────────────────────
+# CURRENT_SCHEMA_VERSION marks the schema baseline known to this codebase.
+# Increment it whenever a new _migrate_* step ships. Existing installs upgrade
+# forward-only (ADD COLUMN, never DROP/RENAME), and a DB backup is taken before
+# every migration run so a failed upgrade is always recoverable from backups/.
+CURRENT_SCHEMA_VERSION = 3  # 1 = P0–P7 baseline; 2 = M3-C-0; 3 = M4-A Source Lifecycle
+
+# How many pre-migration DB snapshots to retain in backups/.
+MAX_DB_BACKUPS = 10
+
+
+def _resolve_backup_dir() -> Path:
+    """Resolve the backup directory from AppPaths.
+
+    Kept as a thin module-level function so tests can monkeypatch it to a
+    tmp directory without ever writing into the real platform user dir.
+    """
+    try:
+        from signalvault.settings.app_paths import AppPaths
+        return AppPaths.resolve().backup_dir
+    except Exception:
+        # Never block startup over a missing path resolver.
+        return Path.cwd() / "backups"
+
+
+def _create_pre_migration_backup(db_path: str) -> str | None:
+    """迁移前把已有 DB 复制到 backups/，保证升级失败可回滚。
+
+    - 首次启动或空 DB（size == 0）：跳过，返回 None。
+    - 备份失败：仅记录 warning，绝不阻塞启动（返回 None）。
+    - 保留最近 MAX_DB_BACKUPS 份，更老的自动清理。
+    """
+    from datetime import datetime
+
+    src = Path(db_path)
+    try:
+        if not src.exists() or src.stat().st_size == 0:
+            return None  # 首次启动或空文件，无需保护
+    except OSError:
+        return None
+
+    try:
+        backup_dir = _resolve_backup_dir()
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        dst = backup_dir / f"signalvault-{ts}.db"
+        shutil.copy2(src, dst)
+
+        # 只保留最近 MAX_DB_BACKUPS 份，清理更老的快照
+        old = sorted(
+            backup_dir.glob("signalvault-*.db"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        for stale in old[:-MAX_DB_BACKUPS]:
+            with contextlib.suppress(OSError):
+                stale.unlink()
+        logger.info("Pre-migration DB backup created: %s", dst)
+        return str(dst)
+    except Exception as exc:
+        logger.warning("Pre-migration DB backup failed (non-fatal): %s", exc)
+        return None
+
+
+def check_db_integrity() -> tuple[str, str]:
+    """对当前 engine 跑 PRAGMA integrity_check。
+
+    返回 (status, detail)，status ∈ {"ok", "warning", "error"}。
+    供数据健康视图（M3-C-0.5）按需调用，不在每次启动强制执行。
+    """
+    if _engine is None:
+        return ("error", "数据库未初始化")
+    try:
+        with _engine.connect() as conn:
+            result = conn.execute(text("PRAGMA integrity_check"))
+            rows = result.fetchall()
+        msg = rows[0][0] if rows else "unknown"
+        if msg == "ok":
+            return ("ok", "数据库完整性检查通过")
+        return ("warning", str(msg))
+    except Exception as exc:
+        return ("error", f"完整性检查失败: {exc}")
 
 
 def init_engine(db_path: str | None = None) -> None:
-    global _engine, _SessionLocal
+    global _engine, _SessionLocal, _current_db_path
     path = db_path or str(DB_PATH)
     # Ensure parent directory exists — DB_PATH may point to a platform
     # directory that hasn't been created yet (e.g. first launch).
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     _engine = create_engine(f"sqlite:///{path}", echo=False)
     _SessionLocal = sessionmaker(bind=_engine)
+    _current_db_path = path
 
 
 def _migrate_episodes_table(engine) -> None:
@@ -185,7 +277,9 @@ def _migrate_ingest_jobs_table(engine) -> None:
                     tracked_entry_id INTEGER,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     confirmed_at DATETIME,
-                    expires_at DATETIME
+                    expires_at DATETIME,
+                    reason VARCHAR(500) DEFAULT '',
+                    is_auto BOOLEAN DEFAULT 0
                 )
             """))
     # Ensure indexes exist (runs on fresh AND upgraded DBs)
@@ -204,6 +298,19 @@ def _migrate_ingest_jobs_table(engine) -> None:
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS idx_ingest_jobs_expires ON ingest_jobs(expires_at)"
         ))
+
+    # M3-C-3a: add auto-processing columns to existing tables (forward-compatible)
+    if "ingest_jobs" in insp.get_table_names():
+        existing = {col["name"] for col in insp.get_columns("ingest_jobs")}
+        with engine.begin() as conn:
+            if "reason" not in existing:
+                conn.execute(text(
+                    "ALTER TABLE ingest_jobs ADD COLUMN reason VARCHAR(500) DEFAULT ''"
+                ))
+            if "is_auto" not in existing:
+                conn.execute(text(
+                    "ALTER TABLE ingest_jobs ADD COLUMN is_auto BOOLEAN DEFAULT 0"
+                ))
 
 
 def _migrate_review_items_table(engine) -> None:
@@ -468,9 +575,119 @@ def _migrate_source_provenance_fks(engine) -> None:
                 ))
 
 
+def _migrate_source_lifecycle_tables(engine) -> None:
+    """M4-A: Create source_items, processing_jobs, and claims tables if not exist."""
+    insp = inspect(engine)
+    existing_tables = insp.get_table_names()
+
+    # source_items 表
+    if "source_items" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE source_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_type TEXT NOT NULL,
+                    source_uri TEXT NOT NULL,
+                    title TEXT DEFAULT '',
+                    description TEXT DEFAULT '',
+                    metadata TEXT DEFAULT '{}',
+                    content_hash TEXT DEFAULT '',
+                    captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    provenance TEXT DEFAULT '',
+                    status TEXT DEFAULT 'captured',
+                    source_document_id TEXT,
+                    user_rating TEXT DEFAULT '',
+                    user_notes TEXT DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_source_items_type ON source_items(source_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_source_items_hash ON source_items(content_hash)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_source_items_status ON source_items(status)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_source_items_captured ON source_items(captured_at)"
+        ))
+
+    # processing_jobs 表
+    if "processing_jobs" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE processing_jobs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_item_id INTEGER NOT NULL,
+                    job_type TEXT NOT NULL,
+                    priority INTEGER DEFAULT 5,
+                    params TEXT DEFAULT '{}',
+                    status TEXT DEFAULT 'pending',
+                    started_at TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    result_type TEXT DEFAULT '',
+                    result_ref INTEGER,
+                    error_message TEXT DEFAULT '',
+                    llm_calls INTEGER DEFAULT 0,
+                    tokens_used INTEGER DEFAULT 0,
+                    duration_seconds INTEGER DEFAULT 0,
+                    retry_count INTEGER DEFAULT 0,
+                    max_retries INTEGER DEFAULT 3,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_processing_jobs_status ON processing_jobs(status)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_processing_jobs_source ON processing_jobs(source_item_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_processing_jobs_type ON processing_jobs(job_type)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_processing_jobs_priority ON processing_jobs(priority)"
+        ))
+
+    # claims 表（M4-B 前瞻）
+    if "claims" not in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE claims (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    claim_text TEXT NOT NULL,
+                    claim_type TEXT DEFAULT 'prediction',
+                    confidence REAL DEFAULT 0.0,
+                    confidence_source TEXT DEFAULT '',
+                    source_report_id INTEGER NOT NULL,
+                    source_view_id INTEGER,
+                    source_quote TEXT DEFAULT '',
+                    timestamp TEXT DEFAULT '',
+                    evidence_page INTEGER,
+                    supporting_sources TEXT DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_claims_report ON claims(source_report_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS idx_claims_type ON claims(claim_type)"
+        ))
+
+
 def init_db(db_path: str | None = None) -> None:
     if _engine is None:
         init_engine(db_path)
+    # M3-C-0: 迁移前备份已有 DB，保证升级失败可回滚。首次启动 / 空 DB 时为 no-op。
+    _create_pre_migration_backup(_current_db_path or str(DB_PATH))
     Base.metadata.create_all(_engine)
     _migrate_episodes_table(_engine)
     _migrate_channels_table(_engine)
@@ -483,11 +700,12 @@ def init_db(db_path: str | None = None) -> None:
     _migrate_operation_logs_table(_engine)
     _migrate_source_provenance_tables(_engine)
     _migrate_source_provenance_fks(_engine)
+    _migrate_source_lifecycle_tables(_engine)  # M4-A
     _track_schema_version(_engine)
 
 
-def _track_schema_version(engine, target_version: int = 1) -> None:
-    """Ensure schema_version table has a row tracking the current version."""
+def _track_schema_version(engine, target_version: int = CURRENT_SCHEMA_VERSION) -> None:
+    """Ensure schema_version table records the current codebase schema baseline."""
     from datetime import datetime
     try:
         with engine.begin() as conn:
@@ -502,12 +720,18 @@ def _track_schema_version(engine, target_version: int = 1) -> None:
                     ),
                     {
                         "ver": target_version,
-                        "desc": "P0-P7 delivered: 18 tables, provenance layer, diagnostics",
+                        "desc": (
+                            f"upgraded to schema v{target_version} "
+                            f"(codebase baseline={CURRENT_SCHEMA_VERSION})"
+                        ),
                         "ts": datetime.now(),
                     },
                 )
-    except Exception:
-        pass  # schema_version table may not exist yet (first run)
+                logger.info("Schema version recorded: %d", target_version)
+    except Exception as exc:
+        # schema_version table may not exist yet (first run before create_all),
+        # or this is a read-only / headless context — never block on it.
+        logger.debug("schema_version tracking skipped: %s", exc)
 
 
 def get_session() -> Session:
@@ -518,8 +742,9 @@ def get_session() -> Session:
 
 def reset_engine() -> None:
     """重置全局 engine（供测试 teardown 使用）。"""
-    global _engine, _SessionLocal
+    global _engine, _SessionLocal, _current_db_path
     if _engine is not None:
         _engine.dispose()
     _engine = None
     _SessionLocal = None
+    _current_db_path = None

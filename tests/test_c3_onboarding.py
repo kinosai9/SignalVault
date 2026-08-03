@@ -106,11 +106,20 @@ class TestWizardPages:
         response = _post(client, "/setup/welcome")
         assert response.url.path == "/setup/ai"
 
-    def test_settings_center_can_reopen_wizard(self, client):
+    def test_settings_center_hides_wizard_reopen(self, client):
+        """M3-C-1 (约束 A): 设置中心不再暴露'重新打开向导'入口。"""
         response = client.get("/settings")
         assert response.status_code == 200
-        assert 'href="/setup/welcome"' in response.text
-        assert "首次使用向导" in response.text
+        assert "重新打开向导" not in response.text
+
+    def test_completed_user_redirected_away_from_wizard(self, client):
+        """M3-C-1: 已完成首配的用户访问 /setup/* 被重定向到 /settings。"""
+        from signalvault.services.onboarding_service import complete_onboarding
+        complete_onboarding()
+        for path in ("/setup/welcome", "/setup/ai", "/setup/obsidian", "/setup/complete"):
+            resp = client.get(path, follow_redirects=False)
+            assert resp.status_code == 303
+            assert resp.headers["location"] == "/settings"
 
     def test_complete_summary_contains_no_vault_path(self, client, tmp_path):
         from signalvault.services.obsidian_settings_service import (

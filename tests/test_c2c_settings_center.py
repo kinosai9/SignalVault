@@ -49,6 +49,9 @@ def _isolate(tmp_path, monkeypatch):
     _override_config_service(svc)
     svc.delete_user_value("obsidian.vault_path")
     svc.delete_user_value("obsidian.export_enabled")
+    # M3-C-1: 测试基线为「已配置」日常用户，避免 /dashboard onboarding 守卫拦截。
+    from signalvault.services.onboarding_service import complete_onboarding
+    complete_onboarding()
     yield
     _override_config_service(None)
 
@@ -295,6 +298,15 @@ class TestSystemPage:
     def test_system_page_shows_readonly_notice(self, client):
         resp = client.get("/settings/system")
         assert "只读" in resp.text
+
+    def test_system_page_shows_data_health(self, client):
+        """M3-C-0.5: 数据健康卡片含完整性检查、备份信息、数据统计。"""
+        resp = client.get("/settings/system")
+        assert resp.status_code == 200
+        assert "数据健康" in resp.text
+        assert "完整性检查" in resp.text
+        assert "最新备份" in resp.text
+        assert "数据统计" in resp.text
 
 
 # ══════════════════════════════════════════════════════════════════════

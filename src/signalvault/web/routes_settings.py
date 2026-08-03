@@ -103,9 +103,13 @@ async def get_public_settings_status(request: Request):
 
     # Add SetupStatus
     try:
+        from signalvault.services.onboarding_service import should_enter_onboarding
         from signalvault.settings.setup_status import SetupStatus
         vault_path = str(svc.get("obsidian.vault_path"))
-        status = SetupStatus.evaluate(vault_path=vault_path)
+        status = SetupStatus.evaluate(
+            vault_path=vault_path,
+            onboarding_completed=not should_enter_onboarding(),
+        )
         status.llm_provider = view.provider
         status.llm_configured = view.api_key_configured or view.provider == "mock"
         status.llm_validated = view.last_validation_ok and not view.validation_stale
@@ -400,3 +404,34 @@ async def api_update_obsidian_settings(request: Request):
     if result.get("ok"):
         return _ok(result)
     return _err(result.get("error", "保存失败"))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Automation settings (M3-C-3c)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.post("/api/settings/automation")
+async def update_automation_settings(request: Request):
+    """Update automation settings (auto_analysis_mode). CSRF-protected."""
+    csrf_err = _csrf_guard(request)
+    if csrf_err is not None:
+        return csrf_err
+
+    try:
+        body = await request.json()
+    except Exception:
+        return _err("Invalid JSON body")
+
+    mode = body.get("auto_analysis_mode", "off")
+    if mode not in ("off", "high_value", "all"):
+        return _err("auto_analysis_mode 必须是 off / high_value / all")
+
+    try:
+        from signalvault.settings.service import get_config_service
+        svc = get_config_service()
+        svc.set_user_value("intake.auto_analysis_mode", mode)
+        return _ok({"auto_analysis_mode": mode})
+    except Exception as e:
+        logger.exception("Failed to update automation settings")
+        return _err(f"保存失败: {e}")

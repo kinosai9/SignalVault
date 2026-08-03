@@ -153,12 +153,28 @@ class SystemInfo:
     db_last_updated: str = ""
     db_writable: bool = False
 
+    # Database health (M3-C-0.5)
+    db_integrity_status: str = ""
+    db_integrity_detail: str = ""
+    db_last_backup_at: str = ""
+    db_backup_count: int = 0
+    db_backup_max: int = 10
+    stat_reports: int = 0
+    stat_investment_views: int = 0
+    stat_tracking_signals: int = 0
+    stat_entities: int = 0
+    stat_source_documents: int = 0
+
     # Service
     web_host: str = "127.0.0.1"
     web_port: int = 8000
     web_local_only: bool = True
     web_url: str = ""
     web_reload: bool = False
+
+    # Automation (M3-C-3c)
+    auto_analysis_mode: str = "off"
+    auto_analysis_label: str = "关闭"
 
 
 def get_system_info() -> SystemInfo:
@@ -206,6 +222,21 @@ def get_system_info() -> SystemInfo:
     info.db_last_updated = _get_db_last_updated()
     info.db_writable = _check_db_writable()
 
+    # Database health (M3-C-0.5)
+    try:
+        from signalvault.db.session import MAX_DB_BACKUPS
+        info.db_backup_max = MAX_DB_BACKUPS
+    except Exception:
+        pass
+    info.db_integrity_status, info.db_integrity_detail = _get_integrity_status()
+    info.db_last_backup_at, info.db_backup_count = _get_backup_info()
+    _stats = _get_data_stats()
+    info.stat_reports = _stats.get("reports", 0)
+    info.stat_investment_views = _stats.get("investment_views", 0)
+    info.stat_tracking_signals = _stats.get("tracking_signals", 0)
+    info.stat_entities = _stats.get("entities", 0)
+    info.stat_source_documents = _stats.get("source_documents", 0)
+
     # Service
     try:
         from signalvault.settings.service import get_config_service
@@ -218,6 +249,16 @@ def get_system_info() -> SystemInfo:
 
     info.web_local_only = info.web_host in ("127.0.0.1", "localhost", "::1")
     info.web_url = f"http://{info.web_host}:{info.web_port}"
+
+    # Automation (M3-C-3c)
+    try:
+        from signalvault.settings.service import get_config_service
+        svc = get_config_service()
+        info.auto_analysis_mode = str(svc.get("intake.auto_analysis_mode"))
+        mode_labels = {"off": "关闭", "high_value": "高价值来源", "all": "全部来源"}
+        info.auto_analysis_label = mode_labels.get(info.auto_analysis_mode, "关闭")
+    except Exception:
+        pass
 
     return info
 
@@ -330,7 +371,10 @@ def _get_build_commit() -> str:
 
 
 def _get_db_status() -> tuple[str, int]:
-    """Return (status_label, schema_version)."""
+    """Return (status_label, schema_version).
+
+    M3-C-0: 真实查询 schema_version 表，不再硬编码为 1。
+    """
     try:
         from signalvault.db.session import _engine
         if _engine is None:
@@ -338,9 +382,78 @@ def _get_db_status() -> tuple[str, int]:
         from sqlalchemy import text
         with _engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return ("正常", 1)
+            # M3-C-0: 读取已应用的最高 schema 版本
+            try:
+                result = conn.execute(
+                    text("SELECT MAX(version) FROM schema_version")
+                )
+                row = result.fetchone()
+                version = int(row[0]) if row and row[0] is not None else 0
+            except Exception:
+                version = 0  # schema_version 表缺失（极旧或异常）→ 0，不阻塞
+        return ("正常", version)
     except Exception:
         return ("异常", 0)
+
+
+def _get_integrity_status() -> tuple[str, str]:
+    """Map check_db_integrity() to a Chinese status label + detail (M3-C-0.5)."""
+    try:
+        from signalvault.db.session import check_db_integrity
+        status, detail = check_db_integrity()
+        label = {"ok": "正常", "warning": "警告", "error": "异常"}.get(status, "未知")
+        return (label, detail)
+    except Exception:
+        return ("未知", "")
+
+
+def _get_backup_info() -> tuple[str, int]:
+    """Scan backups/ for the latest snapshot timestamp + count (M3-C-0.5)."""
+    try:
+        from signalvault.db.session import _resolve_backup_dir
+        backup_dir = _resolve_backup_dir()
+        backups = sorted(
+            backup_dir.glob("signalvault-*.db"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        if not backups:
+            return ("从未备份", 0)
+        latest = backups[-1]
+        ts = datetime.fromtimestamp(latest.stat().st_mtime).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        return (ts, len(backups))
+    except Exception:
+        return ("未知", 0)
+
+
+def _get_data_stats() -> dict[str, int]:
+    """Count rows in core content tables for the data-health view (M3-C-0.5)."""
+    try:
+        from signalvault.db.session import _engine
+        if _engine is None:
+            return {}
+        from sqlalchemy import text
+        tables = [
+            "reports",
+            "investment_views",
+            "tracking_signals",
+            "entities",
+            "source_documents",
+        ]
+        stats: dict[str, int] = {}
+        with _engine.connect() as conn:
+            for table in tables:
+                try:
+                    row = conn.execute(
+                        text(f"SELECT COUNT(*) FROM {table}")
+                    ).fetchone()
+                    stats[table] = int(row[0]) if row else 0
+                except Exception:
+                    stats[table] = 0
+        return stats
+    except Exception:
+        return {}
 
 
 def _count_db_tables() -> tuple[int, int]:

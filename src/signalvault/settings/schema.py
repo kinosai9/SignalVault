@@ -200,6 +200,15 @@ RUNTIME_SCHEMA: dict[str, ConfigItem] = {
         description="Default YouTube subtitle language priority",
         web_editable=False, restart_required=False,
     ),
+    # ── Intake / Automation (M3-C-3c) ───────────────────────────────────
+    "intake.auto_analysis_mode": ConfigItem(
+        key="intake.auto_analysis_mode",
+        type=str, default="off",
+        category=ConfigCategory.ANALYSIS,
+        description="自动分析模式: off(关闭，默认) / high_value(仅高价值来源) / all(全部)",
+        web_editable=True, restart_required=False,
+        validator=lambda v: v in ("off", "high_value", "all"),
+    ),
     # ── Integrations ─────────────────────────────────────────────────────
     "integrations.zsxq_cli_path": ConfigItem(
         key="integrations.zsxq_cli_path",

@@ -12,14 +12,17 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB (text files)
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB (text/doc files)
 MAX_PDF_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB (PDF files)
 ALLOWED_TEXT_EXTENSIONS: set[str] = {".md", ".txt", ".html", ".htm"}
 ALLOWED_PDF_EXTENSIONS: set[str] = {".pdf"}
-ALL_ACCEPTED_EXTENSIONS: set[str] = ALLOWED_TEXT_EXTENSIONS | ALLOWED_PDF_EXTENSIONS
+ALLOWED_DOC_EXTENSIONS: set[str] = {".docx"}  # M3-C-2a: binary (zip) format
+ALL_ACCEPTED_EXTENSIONS: set[str] = (
+    ALLOWED_TEXT_EXTENSIONS | ALLOWED_PDF_EXTENSIONS | ALLOWED_DOC_EXTENSIONS
+)
 
 UNSUPPORTED_MESSAGE = (
-    "当前支持 .md / .txt / .html / .htm 文本文件和 .pdf 文档。"
+    "当前支持 .md / .txt / .html / .htm 文本文件、.pdf 文档和 .docx 文档。"
     "其他格式将在后续版本支持。"
 )
 
@@ -56,7 +59,7 @@ def profile_uploaded_file(
     ext = _normalize_extension(original_filename)
 
     # ── Guard 1: Extension check ───────────────────────────────────────
-    if ext not in ALLOWED_TEXT_EXTENSIONS:
+    if ext not in ALLOWED_TEXT_EXTENSIONS and ext not in ALLOWED_DOC_EXTENSIONS:
         return UploadedFileProfile(
             filename=file_path.name,
             original_filename=original_filename,
@@ -107,27 +110,43 @@ def profile_uploaded_file(
     content_hash = hashlib.sha256(raw_bytes).hexdigest()[:32]
 
     # ── Encoding detection + text extraction ────────────────────────────
-    text = ""
-    detected_encoding = None
-    for enc in _ENCODING_CANDIDATES:
-        try:
-            text = raw_bytes.decode(enc)
-            detected_encoding = enc
-            break
-        except (UnicodeDecodeError, LookupError):
-            continue
+    # M3-C-2a: DOCX 是二进制(zip)格式，不走文本编码检测，直接用 python-docx 提取。
+    if ext in ALLOWED_DOC_EXTENSIONS:
+        text = _extract_docx_plain_text(raw_bytes)
+        if text is None:
+            return UploadedFileProfile(
+                filename=file_path.name,
+                original_filename=original_filename,
+                extension=ext,
+                file_size_bytes=file_size,
+                supported=False,
+                unsupported_reason="无法解析 DOCX 文件（可能已损坏或非标准 .docx）。",
+                content_hash=content_hash,
+                parse_quality="minimal",
+            )
+        detected_encoding = "binary"
+    else:
+        text = ""
+        detected_encoding = None
+        for enc in _ENCODING_CANDIDATES:
+            try:
+                text = raw_bytes.decode(enc)
+                detected_encoding = enc
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
 
-    if text is None or detected_encoding is None:
-        return UploadedFileProfile(
-            filename=file_path.name,
-            original_filename=original_filename,
-            extension=ext,
-            file_size_bytes=file_size,
-            supported=False,
-            unsupported_reason="无法识别文件编码。已尝试 UTF-8、UTF-8-SIG、GB18030。",
-            content_hash=content_hash,
-            parse_quality="minimal",
-        )
+        if text is None or detected_encoding is None:
+            return UploadedFileProfile(
+                filename=file_path.name,
+                original_filename=original_filename,
+                extension=ext,
+                file_size_bytes=file_size,
+                supported=False,
+                unsupported_reason="无法识别文件编码。已尝试 UTF-8、UTF-8-SIG、GB18030。",
+                content_hash=content_hash,
+                parse_quality="minimal",
+            )
 
     # ── Text metrics ────────────────────────────────────────────────────
     text_length = len(text)
@@ -165,10 +184,40 @@ def is_pdf_file(filename: str) -> bool:
     return _normalize_extension(filename) in ALLOWED_PDF_EXTENSIONS
 
 
+def is_docx_file(filename: str) -> bool:
+    """Check if a filename has a .docx extension (M3-C-2a)."""
+    return _normalize_extension(filename) in ALLOWED_DOC_EXTENSIONS
+
+
 def _normalize_extension(filename: str) -> str:
     """Normalize file extension to lowercase with leading dot."""
     ext = Path(filename).suffix.lower()
     return ext
+
+
+def _extract_docx_plain_text(raw_bytes: bytes) -> str | None:
+    """Extract plain text from DOCX bytes for profiling (M3-C-2a).
+
+    DOCX is a binary zip format — uses python-docx to read paragraphs and
+    table cells. Returns None on any parse failure (corrupt/non-standard).
+    """
+    try:
+        import io
+
+        from docx import Document
+        doc = Document(io.BytesIO(raw_bytes))
+    except Exception:
+        return None
+    parts: list[str] = []
+    for p in doc.paragraphs:
+        if p.text.strip():
+            parts.append(p.text.strip())
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [c.text.strip() for c in row.cells if c.text.strip()]
+            if cells:
+                parts.append(" | ".join(cells))
+    return "\n".join(parts)
 
 
 def _count_text_blocks(text: str, extension: str) -> int:

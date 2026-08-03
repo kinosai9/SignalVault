@@ -1,6 +1,6 @@
 """MCP tool definitions and handler for signalvault read-only queries.
 
-All 8 tools are read-only — they query the SQLite DB and return
+All tools are read-only — they query the SQLite DB and return
 JSON-serializable dicts/lists. No writes, no vault modification.
 """
 

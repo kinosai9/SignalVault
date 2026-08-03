@@ -2,6 +2,86 @@
 
 ## Unreleased
 
+### M4-B: Research Asset Pipeline (2026-08-03)
+
+**Pipeline Orchestrator** (`services/pipeline_orchestrator.py`)：
+- 四阶段统一流水线：Extract → Analyze → Claim Extract → Graph Sync
+- SourceItem 驱动的编排：任何 `source_type` 进入同一管道
+- ProcessingJob 追踪：每个阶段创建/更新 ProcessingJob（成本统计、状态管理）
+- 优雅降级：单阶段失败不阻断下游；来源类型路由（YouTube/PDF/文本文件跳过策略）
+- `PipelineResult` + `StageResult` 数据类：全链路结果聚合和统计
+
+**Claim Extractor** (`services/claim_extractor.py`)：
+- 从 InvestmentView/TrackingSignal 确定性提取 Claim（无需 LLM）
+- 置信度映射：speaker_confidence (high/medium/low) → 数值 (0.85/0.65/0.40)
+- 幂等提取：同一 report+view 不重复创建
+- 批量提取：`extract_all()` 处理所有现有报告
+- Claims 已写入 M4-A 创建的 `claims` 表
+
+**Graph Sync Service** (`services/graph_sync_service.py`)：
+- 增量同步：`sync_report_to_graph(report_id)` 按报告同步（不重建全图）
+- 6 阶段节点/边构建：Report → View+Entity → Signal → Evidence → Claim → SourceDocument
+- 边分类：确定性边 (mentioned_in, derived_from, tracks, cites) + 推断边 (supports, contradicts)
+- 推断边启发式：相同实体+相同方向 → supports (0.7)，相反方向 → contradicts (0.6)
+- 幂等 upsert：复用 `knowledge_graph._upsert_node/edge`
+
+**统一搜索扩展** (`db/unified_search.py` update)：
+- 新增 `claim` 作为可搜索类型
+- 默认搜索类型扩展为 `{report, investment_view, tracking_signal, entity, source_document, claim}`
+- Claim 搜索结果携带 claim_type、confidence 元数据
+
+**技术要点**：
+- Pipeline 层不重复实现分析逻辑，委托给现有 `analyze_youtube_url()` / `analyze_pdf()`
+- Graph Sync 复用现有 `knowledge_graph.py` 的 `_upsert_node` / `_upsert_edge`
+- Claim 提取基于确定性规则（不从 LLM 推断），保持计算成本为零
+
+**测试覆盖**：
+- 新增 30 个 M4-B 专项测试（7 Pipeline + 9 Claim + 8 Graph Sync + 4 Search + 2 Integration）
+- M4-A 回归 27 tests 全部通过
+- 知识图谱回归 27 tests 无破坏
+- 统一搜索回归 35 tests 无破坏
+- ruff lint clean
+
+**架构价值**：
+- Source → Asset → Graph 完整链路首次贯通
+- Claim 层落地：投资研究核心是判断而非报告
+- Graph 从"手动重建"升级为"增量同步"，成为核心价值承载层
+- 为 M4-C (Automation) 和 M4-D (Product UX) 提供完整后端能力
+
+**交付文档**：
+- `docs/M4B_ACCEPTANCE_REPORT.md`：完整验收报告
+
+### M4-A: Source Lifecycle Unified (2026-08-03)
+
+**新增数据模型（M4-A 核心交付）**：
+- `SourceItem`：信息源对象，统一管理 YouTube/PDF/网页/文件/RSS 等所有来源
+- `ProcessingJob`：处理任务，管理 extract_text/OCR/analyze/summarize/embed/sync_graph 等流水线
+- `Claim`：判断层（M4-B 前瞻），从 Report/View/Signal 提取核心投资判断
+
+**数据库迁移**：
+- 新增 `_migrate_source_lifecycle_tables()` 创建 `source_items`、`processing_jobs`、`claims` 三张表及索引
+- 升级 `CURRENT_SCHEMA_VERSION` 到 3
+- 迁移脚本路径：`migrations/004_source_lifecycle.sql`（文档用，实际执行在 `session.py`）
+
+**业务服务层**：
+- `SourceItemManager`：SourceItem CRUD（创建、查询、状态更新、用户反馈）
+- `ProcessingJobManager`：ProcessingJob CRUD、状态机（pending/running/completed/failed/cancelled）、重试逻辑、成本统计
+
+**技术要点**：
+- 解决 SQLAlchemy `metadata` 保留字冲突：属性名 `extra_metadata`，列名保持 `metadata`
+- 测试隔离：每个测试使用 `tmp_path` 创建独立数据库，避免状态污染
+
+**测试覆盖**：
+- 新增 27 个单元测试（12 个 SourceItem + 15 个 ProcessingJob）
+- 所有 M4-A 测试通过
+- 核心集成测试 171 passed
+- 全量测试 1466 passed（1 个无关 entry point 测试失败）
+
+**架构价值**：
+- 统一的信息生命周期起点：所有来源进入 SourceDocument 体系前的统一抽象层
+- 可扩展的处理流水线：支持优先级调度、重试、成本统计
+- 为 M4-B（Research Asset Pipeline）和 M4-C（Automation）奠定数据基础
+
 ### C3 First-run Onboarding (2026-07-17)
 
 - Added a focused four-page onboarding flow: welcome/local-data disclosure → AI setup or skip → optional Obsidian validation/initialization or skip → completion summary and Dashboard.

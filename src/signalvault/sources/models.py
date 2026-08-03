@@ -20,6 +20,10 @@ class ActionEnum(str, Enum):
     archive_only = "archive_only"
     # File upload actions
     confirm_archive = "confirm_archive"
+    # M3-C-2b: LLM analysis action. Not the sole terminal action — RoutingDecision
+    # keeps should_analyze / requires_confirmation separate so archive + analyze
+    # can compose (e.g. auto-archive then analyze under a budget).
+    analyze = "analyze"
     # Universal
     skip = "skip"
 
@@ -58,6 +62,7 @@ ACTION_LABELS: dict[str, str] = {
     "import_as_deep_notes_derived_only": "导入为独立精读笔记",
     "skip": "跳过",
     "overwrite_deep_notes": "覆盖精读笔记",
+    "analyze": "AI 分析",
     "refresh": "更新",
     "batch_import": "导入选中项",
     "back": "返回修改",
@@ -76,6 +81,7 @@ ACTION_DESCRIPTIONS: dict[str, str] = {
     "skip": "跳过，不写入任何内容",
     "overwrite_deep_notes": "覆盖已有精读笔记（危险操作）",
     "confirm_archive": "确认归档至 SourceArchive",
+    "analyze": "触发 AI 分析，生成投资研究报告（消耗 LLM 调用）",
 }
 
 # Unified suggested action → user-facing label

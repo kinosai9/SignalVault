@@ -35,6 +35,8 @@ VALID_STATUSES = frozenset({
     "skipped",
     "expired",
     "overwritten",
+    "auto_archived",  # M3-C-3: 自动归档完成
+    "auto_ignored",   # M3-C-3: 自动忽略（低质量/不支持）
 })
 
 TERMINAL_STATUSES = frozenset({
@@ -45,6 +47,8 @@ TERMINAL_STATUSES = frozenset({
     "skipped",
     "expired",
     "overwritten",
+    "auto_archived",  # M3-C-3
+    "auto_ignored",   # M3-C-3
 })
 
 
@@ -426,6 +430,108 @@ class IngestJobManager:
             if _close and _session:
                 _session.close()
 
+    # ── M3-C-3: Auto-processing (可解释自动化) ────────────────────────────
+
+    @staticmethod
+    def auto_archive_job(
+        preview_id: str, reason: str = "", result_path: str = "", session=None
+    ) -> dict | None:
+        """自动归档一个 pending_preview job（写 reason + is_auto）。"""
+        _session = session
+        _close = session is None
+        try:
+            if _session is None:
+                _session = get_session()
+            job = (
+                _session.query(IngestJob)
+                .filter_by(preview_id=preview_id, status="pending_preview")
+                .first()
+            )
+            if job is None:
+                return None
+            job.status = "auto_archived"
+            job.action = "auto_archive"
+            job.action_label = "自动归档"
+            job.reason = reason
+            job.is_auto = True
+            job.result_path = result_path
+            job.confirmed_at = _now()
+            _session.commit()
+            return IngestJobManager._row_to_dict(job)
+        except Exception as e:
+            if _session:
+                with contextlib.suppress(Exception):
+                    _session.rollback()
+            logger.error("auto_archive_job failed %s: %s", preview_id, e)
+            return None
+        finally:
+            if _close and _session:
+                _session.close()
+
+    @staticmethod
+    def auto_ignore_job(
+        preview_id: str, reason: str = "", session=None
+    ) -> dict | None:
+        """自动忽略一个 pending_preview job（低质量/不支持，写 reason）。"""
+        _session = session
+        _close = session is None
+        try:
+            if _session is None:
+                _session = get_session()
+            job = (
+                _session.query(IngestJob)
+                .filter_by(preview_id=preview_id, status="pending_preview")
+                .first()
+            )
+            if job is None:
+                return None
+            job.status = "auto_ignored"
+            job.action = "auto_ignore"
+            job.action_label = "自动忽略"
+            job.reason = reason
+            job.is_auto = True
+            job.confirmed_at = _now()
+            _session.commit()
+            return IngestJobManager._row_to_dict(job)
+        except Exception as e:
+            if _session:
+                with contextlib.suppress(Exception):
+                    _session.rollback()
+            logger.error("auto_ignore_job failed %s: %s", preview_id, e)
+            return None
+        finally:
+            if _close and _session:
+                _session.close()
+
+    @staticmethod
+    def restore_job(job_id: int, session=None) -> dict | None:
+        """恢复 auto_ignored/skipped/expired job 到 pending_preview（用户撤销自动决策）。"""
+        _session = session
+        _close = session is None
+        try:
+            if _session is None:
+                _session = get_session()
+            job = _session.get(IngestJob, job_id)
+            if job is None:
+                return None
+            if job.status not in ("auto_ignored", "skipped", "expired"):
+                return None
+            job.status = "pending_preview"
+            job.is_auto = False
+            job.reason = ""
+            job.expires_at = _now() + timedelta(hours=DEFAULT_EXPIRY_HOURS)
+            _session.commit()
+            return IngestJobManager._row_to_dict(job)
+        except Exception as e:
+            if _session:
+                with contextlib.suppress(Exception):
+                    _session.rollback()
+            logger.error("restore_job failed %s: %s", job_id, e)
+            return None
+        finally:
+            if _close and _session:
+                _session.close()
+
     # ── Statistics ────────────────────────────────────────────────────────
 
     @staticmethod
@@ -487,6 +593,8 @@ class IngestJobManager:
             "result_path": job.result_path,
             "result_message": job.result_message,
             "error_message": job.error_message,
+            "reason": job.reason,
+            "is_auto": job.is_auto,
             "tracked_source_id": job.tracked_source_id,
             "tracked_entry_id": job.tracked_entry_id,
             "created_at": (

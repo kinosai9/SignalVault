@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}识别结果 — SignalVault{% endblock %}
+
+{% block content %}
+<a href="/intake" class="back-link">&larr; 返回添加信息</a>
+
+<section class="section-card intake-result">
+  <h2 class="page-title">识别结果</h2>
+
+  <div class="intake-detected">
+    <span class="badge badge-large">{{ result.kind_label }}</span>
+    <p class="form-help">置信度 {{ result.confidence_percent }}% · {{ result.handler_label }}</p>
+  </div>
+
+  <p class="page-desc intake-source-value">{{ result.source_value }}</p>
+
+  {% if result.routing.ignore %}
+  <div class="alert alert-warning">
+    <strong>{{ result.routing.reason }}</strong>
+    <p class="form-help">无法识别该输入。请粘贴 YouTube 链接、网页链接，或上传支持的文件。</p>
+  </div>
+  {% else %}
+  <div class="intake-decision">
+    <p>{{ result.routing.reason }}</p>
+    <div class="intake-badges">
+      {% if result.routing.archive %}<span class="badge">可归档</span>{% endif %}
+      {% if result.routing.analyze %}<span class="badge">可分析</span>{% endif %}
+      {% if result.routing.review %}<span class="badge">需确认</span>{% endif %}
+      {% if result.routing.should_analyze %}<span class="badge badge-accent">建议自动分析</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="form-actions intake-actions">
+    {% if result.handler == 'youtube_analyze' %}
+    <form method="post" action="/content/analyze">
+      <input type="hidden" name="youtube_url" value="{{ result.source_value }}">
+      <input type="hidden" name="flow_mode" value="full">
+      <button type="submit" class="btn-action">分析此视频</button>
+    </form>
+    {% elif result.handler == 'url_import' %}
+    <a href="/sources/import" class="btn-action">导入此网页</a>
+    {% elif result.handler == 'file_import' %}
+    <a href="/sources/files/import" class="btn-action">上传文件</a>
+    {% elif result.handler == 'channel_manage' %}
+    <a href="/sources/channels" class="btn-action">管理频道</a>
+    {% endif %}
+    <a href="/intake" class="btn-action btn-secondary">处理另一个</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}处理中心 — SignalVault{% endblock %}
+
+{% block content %}
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<h1 class="page-title">处理中心</h1>
+<p class="page-desc">查看自动与人工处理的来源，理解每个决策的原因，可恢复被忽略的项目。</p>
+
+<div class="processing-summary">
+  <div class="summary-card">
+    <div class="summary-num summary-done">{{ done }}</div>
+    <div class="summary-label">已完成</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-num summary-pending">{{ pending }}</div>
+    <div class="summary-label">待确认</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-num summary-ignored">{{ ignored }}</div>
+    <div class="summary-label">已忽略</div>
+  </div>
+</div>
+
+<section class="section-card">
+  <h2 class="card-title">自动处理</h2>
+  <p class="form-help">系统按下方模式自动处理「待确认」的来源。自动分析会消耗 LLM 调用，请按需选择。</p>
+  <form method="post" action="/processing/auto-mode" class="auto-mode-form" style="display:flex;flex-direction:column;gap:8px">
+    <label><input type="radio" name="mode" value="off" {% if auto_mode=="off" %}checked{% endif %}> 关闭（全部人工确认）</label>
+    <label><input type="radio" name="mode" value="high_value" {% if auto_mode=="high_value" %}checked{% endif %}> 仅高价值来源（YouTube / PDF）</label>
+    <label><input type="radio" name="mode" value="all" {% if auto_mode=="all" %}checked{% endif %}> 全部</label>
+    <button class="btn-action btn-secondary" type="submit" style="align-self:flex-start">保存模式</button>
+  </form>
+  <form method="post" action="/processing/auto-process" style="margin-top:12px">
+    <button class="btn-action" type="submit">立即自动处理待确认</button>
+  </form>
+</section>
+
+<section class="section-card">
+  <h2 class="card-title">最近处理</h2>
+  {% if jobs %}
+  <table class="prop-table">
+    <tr>
+      <th>来源</th>
+      <th>状态</th>
+      <th>方式</th>
+      <th>原因</th>
+      <th>操作</th>
+    </tr>
+    {% for j in jobs %}
+    <tr>
+      <td>{{ j.source_name or j.source_url or j.source_type }}</td>
+      <td><span class="badge">{{ status_labels.get(j.status, j.status) }}</span></td>
+      <td>{% if j.is_auto %}<span class="badge badge-accent">自动</span>{% else %}人工{% endif %}</td>
+      <td class="form-help">{{ j.reason or "—" }}</td>
+      <td>
+        {% if j.status in restorable_statuses %}
+        <form method="post" action="/processing/{{ j.id }}/restore" style="display:inline">
+          <button class="btn-action btn-secondary" type="submit">恢复</button>
+        </form>
+        {% else %}
+        <span class="form-help">—</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="form-help">暂无处理记录。从「添加信息」导入内容后，处理记录会出现在这里。</p>
+  {% endif %}
+</section>
+{% endblock %}

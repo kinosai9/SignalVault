@@ -1503,20 +1503,11 @@ class TestUnifiedTasks:
 class TestFullFlow:
     """P2-K.3: full_flow mode chains analysis → sync automatically."""
 
-    def test_content_new_shows_flow_mode(self, api_client, tmp_path):
-        """/content/new page shows flow mode radio buttons."""
-        vault = tmp_path / "vault"
-        (vault / "99_System").mkdir(parents=True)
-
-        old = os.environ.get("OBSIDIAN_VAULT_PATH", "")
-        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
-        try:
-            resp = api_client.get("/content/new")
-            assert resp.status_code == 200
-            assert "整理进知识库" in resp.text
-            assert "仅生成报告" in resp.text
-        finally:
-            os.environ["OBSIDIAN_VAULT_PATH"] = old
+    def test_content_new_converged_to_intake(self, api_client, tmp_path):
+        """M3-C-2c: /content/new 旧表单页已收敛到 /intake 唯一入口（GET 301）。"""
+        resp = api_client.get("/content/new", follow_redirects=False)
+        assert resp.status_code == 301
+        assert resp.headers["location"] == "/intake"
 
     def test_flow_full_creates_full_flow_job(self, api_client, tmp_path, monkeypatch):
         """flow_mode=full creates a full_flow job."""
